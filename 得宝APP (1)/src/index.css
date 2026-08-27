@@ -1,0 +1,37 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --color-brand: #4C4BEA;
+  --color-brand-light: #F0F0FF;
+  --color-action: #C9F456;
+  --color-page: #F4F5F7;
+  --color-surface: #FFFFFF;
+  --color-ink: #171925;
+  --color-body: #5F6574;
+  --color-muted: #707684;
+  --color-line: #E5E7ED;
+  --color-success: #5DA765;
+  --color-error: #FF7252;
+
+  --color-lilac: #F0F0FF;
+  --color-mint: #EAF6EF;
+  --color-sky: #EDF5FF;
+  --color-gold: #FFF5DD;
+  --color-celadon: #EAF7F7;
+  --color-apricot: #FFF1E8;
+  --color-rose: #FFF0F5;
+}
+
+html, body, #root {
+  height: 100%;
+  font-family: 'Noto Sans SC', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; -ms-overflow-style: none; }

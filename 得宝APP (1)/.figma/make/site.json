@@ -1,0 +1,10 @@
+{
+  "description": "A professional mobile app offering comprehensive study tools, courses, and AI support for legal exam candidates to efficiently prepare and track progress.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
