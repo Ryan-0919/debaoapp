@@ -1,0 +1,4 @@
+patchedDependencies:
+  '@react-native-oh-tpl/async-storage@1.21.0-0.2.2': patches/@react-native-oh-tpl__async-storage@1.21.0-0.2.2.patch
+  '@react-native-oh-tpl/react-native-safe-area-context@4.7.4-0.2.1': patches/@react-native-oh-tpl__react-native-safe-area-context@4.7.4-0.2.1.patch
+  '@react-native-oh-tpl/react-native-svg@15.0.1-8': patches/@react-native-oh-tpl__react-native-svg@15.0.1-8.patch

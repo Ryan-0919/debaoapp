@@ -1,0 +1,16 @@
+**/node_modules/
+**/dist/
+**/build/
+**/.cache/
+**/.gradle/
+**/android/.cxx/
+**/android/app/.cxx/
+**/android/app/build/
+**/ios/Pods/
+**/ios/build/
+**/oh_modules/
+**/.hvigor/
+**/build-profile.json5.user
+*.log
+.env*
+!.env.example

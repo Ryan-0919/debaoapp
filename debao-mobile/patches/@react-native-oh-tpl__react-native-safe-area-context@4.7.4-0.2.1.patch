@@ -1,0 +1,19 @@
+diff --git a/package.json b/package.json
+index 700cc0e..1cc3515 100644
+--- a/package.json
++++ b/package.json
+@@ -7,7 +7,13 @@
+   "react-native": "src/index.tsx",
+   "types": "lib/typescript/index.d.ts",
+   "harmony": {
+-    "alias": "react-native-safe-area-context"
++    "alias": "react-native-safe-area-context",
++    "autolinking": {
++      "ohPackageName": "@react-native-oh-tpl/react-native-safe-area-context",
++      "cmakeLibraryTargetName": "rnoh_safe_area",
++      "cppPackageClassName": "SafeAreaViewPackage",
++      "etsPackageClassName": "SafeAreaViewPackage"
++    }
+   },
+   "publishConfig": {
+     "registry": "https://registry.npmjs.org/",

@@ -1,0 +1,19 @@
+diff --git a/package.json b/package.json
+index d468ded..1911f9e 100644
+--- a/package.json
++++ b/package.json
+@@ -31,7 +31,13 @@
+   },
+   "harmony": {
+     "alias": "react-native-svg",
+-    "redirectInternalImports": true
++    "redirectInternalImports": true,
++    "autolinking": {
++      "ohPackageName": "@react-native-oh-tpl/react-native-svg",
++      "cmakeLibraryTargetName": "rnoh_svg",
++      "cppPackageClassName": "SVGPackage",
++      "etsPackageClassName": "SvgPackage"
++    }
+   },
+   "files": [
+     "harmony",

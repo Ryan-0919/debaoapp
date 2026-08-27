@@ -1,0 +1,17 @@
+diff --git a/package.json b/package.json
+index cc1b115..bbf48c6 100644
+--- a/package.json
++++ b/package.json
+@@ -12,6 +12,12 @@
+   },
+   "harmony": {
+     "alias": "@react-native-async-storage/async-storage",
++    "autolinking": {
++      "ohPackageName": "@react-native-oh-tpl/async-storage",
++      "cmakeLibraryTargetName": "rnoh_async_storage",
++      "cppPackageClassName": "AsyncStoragePackage",
++      "etsPackageClassName": "AsyncStoragePackage"
++    },
+     "codegenConfig": {
+       "version": 2,
+       "specPaths": [
