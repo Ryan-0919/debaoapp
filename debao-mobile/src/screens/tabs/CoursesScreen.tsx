@@ -466,8 +466,8 @@ function AllCoursesView({navigation, onAdd, added}: {navigation: Navigation; onA
 
       <SectionLabel>音频课程</SectionLabel>
       <View style={styles.courseGroup}>
-        <MediaCourse icon="audio" name="民法音频精讲（通勤随听版）" detail="张明远主讲 · 共68讲 · 约52小时" progress={18} button="继续收听" onPress={() => navigation.navigate('AudioPlayer', {courseId: 'c2'})} />
-        <View style={styles.groupDivider}><MediaCourse icon="audio" name="法考全科音频串讲班" detail="多位名师主讲 · 共220讲 · 约160小时" button="开始收听" onPress={() => navigation.navigate('AudioPlayer', {courseId: 'c2'})} /></View>
+        <MediaCourse icon="audio" name="民法音频精讲（通勤随听版）" detail="张明远主讲 · 共68讲 · 约52小时" progress={18} button="继续收听" onPress={() => navigation.navigate('AudioPlayer', {courseId: 'c1'})} />
+        <View style={styles.groupDivider}><MediaCourse icon="audio" name="法考全科音频串讲班" detail="多位名师主讲 · 共220讲 · 约160小时" button="开始收听" onPress={() => navigation.navigate('AudioPlayer', {courseId: 'c1'})} /></View>
       </View>
 
       <SectionLabel>直播课程</SectionLabel>

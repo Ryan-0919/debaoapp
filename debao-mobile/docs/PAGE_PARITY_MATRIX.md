@@ -29,7 +29,7 @@
 | 12 | `src/pages/CourseDetail.tsx` | `src/screens/courses/CourseDetailScreen.tsx` | 已购/未购、章节展开、课时状态、视频和商品跳转 | 已完成 |
 | 13 | `src/pages/VideoPlayer.tsx` | `src/screens/courses/VideoPlayerScreen.tsx` | 播放控件显隐、播放/暂停、进度、倍速层、目录/讲义/笔记、章节展开、切课 | 已完成 |
 | 14 | `src/pages/LiveCourse.tsx` | `src/screens/courses/LiveCourseScreen.tsx` | 倒计时、课程/教师/人数信息、今日直播安排、预约提醒双态 | 已完成 |
-| 15 | `src/pages/AudioPlayer.tsx` | `src/screens/courses/MediaScreens.tsx` (`AudioPlayerScreen`) | 播放/暂停、进度、倍速层、循环、文稿/目录/笔记、新增笔记、切课 | 未开始 |
+| 15 | `src/pages/AudioPlayer.tsx` | `src/screens/courses/AudioPlayerScreen.tsx` | 播放/暂停、波形进度、15 秒跳转、倍速层、循环、字幕/目录/笔记、新增笔记、切课 | 已完成 |
 | 16 | `src/pages/LearningReport.tsx` | `src/screens/tools/ToolScreens.tsx` (`LearningReportScreen`) | 学习数据、图表/进度、薄弱项和专项练习跳转 | 未开始 |
 | 17 | `src/pages/LearningPlan.tsx` | `src/screens/tools/ToolScreens.tsx` (`LearningPlanScreen`) | 计划概览、每日任务、状态和操作按钮 | 未开始 |
 | 18 | `src/pages/MistakeBook.tsx` | `src/screens/tools/ToolScreens.tsx` (`MistakeBookScreen`) | 科目筛选、错题列表、复习跳转 | 未开始 |
@@ -181,3 +181,12 @@
 - 关键交互：Android 已验证预约前后按钮、人数和视觉状态；Jest 固定验证初始 `04:28:17` 倒计时、路由直播标题、张明远老师、`6,284` 人预约、三条今日安排及预约后 `6,285` 人和“已预约开播提醒”。
 - 数据与导航：学习日历和全部课程中的两个直播入口均携带对应标题；直播页保留 `courseId` 并使用原型同源受控本地 PNG。
 - 已知差异：原型源码包含聊天、课件、发言和点赞代码，但固定 `countdown` 状态使这些分支不可观察，不能作为运行态验收内容；React Native 严格复刻当前可达的倒计时与预约两态。Android UIAutomator 因每秒倒计时无法进入 idle，交互证据改用预约前后截图与 Jest 固定。尚未接入真实直播流、信令、聊天室和开播提醒服务。除此之外仅有平台必然差异。
+
+### 15. 音频播放
+
+- 原型源码：`得宝APP (1)/src/pages/AudioPlayer.tsx`、`src/pages/Courses.tsx`、`src/data.ts` 和 c1 完整课程目录已核对。
+- 原型截图：`docs/screenshots/figma-audio-player-transcript.png`、`figma-audio-player-playing.png`、`figma-audio-player-speed.png`、`figma-audio-player-notes.png`、`figma-audio-player-note-saved.png`、`figma-audio-player-catalog.png`，均为 390x844。
+- Android 截图：`docs/screenshots/android-audio-player-transcript.png`、`android-audio-player-playing.png`、`android-audio-player-speed.png`、`android-audio-player-notes.png`、`android-audio-player-catalog.png`。
+- 关键交互：Android 已验证课程页真实入口、模拟计时、播放视觉、完整六档倍速、字幕/笔记/目录三态、循环选中和目录切到第19讲；Jest 覆盖波形 50% 定位、前后 15 秒、循环、倍速关闭、字幕时间点、笔记保存和携带 `lessonId` 的 `replace`。
+- 数据与导航：音频页复用 `src/data/courses.ts` 的 c1 封面、老师和 13 个课时；课程列表两个音频入口均按原型传 `courseId: c1`，目录切课使用 `replace` 防止返回栈累积。
+- 已知差异：此前 RN 骨架错误传递 `c2`，现已按原型 `Courses.tsx` 修正为 `c1`。原型本身用计时器和波形模拟音频；React Native 同样实现可交互模拟状态，但尚未接入真实媒体源、后台播放、锁屏控制和离线下载。除此之外仅有平台状态栏、Safe Area 和字体栅格化差异。

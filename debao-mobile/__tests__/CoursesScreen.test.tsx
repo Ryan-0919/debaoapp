@@ -53,7 +53,7 @@ test('courses implements calendar states, sheets and all-course navigation', asy
   await press('courses-training-open-请求权基础答题训练');
   expect(mockNavigate).toHaveBeenCalledWith('CourseDetail', {courseId: 'c1'});
   await press('courses-media-audio-继续收听');
-  expect(mockNavigate).toHaveBeenCalledWith('AudioPlayer', {courseId: 'c2'});
+  expect(mockNavigate).toHaveBeenCalledWith('AudioPlayer', {courseId: 'c1'});
   await press('courses-media-live-进入直播间');
   expect(mockNavigate).toHaveBeenCalledWith('LiveCourse', {courseId: 'c3', title: '民法精讲第18讲：物权变动'});
 

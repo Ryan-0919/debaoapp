@@ -26,8 +26,9 @@
 | 课程详情 `CourseDetail.tsx` | 已完成 | c1 已购/c2 未购、完整章节、完成/当前/未学三态、章节开合和视频/商品导航均已迁移；原型三态、Android 三态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 视频播放 `VideoPlayer.tsx` | 已完成 | 沉浸播放器、控件显隐、计时/进度/跳转、六档倍速、目录/讲义/笔记、记笔记和切课均已迁移；原型与 Android 五态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 直播课堂 `LiveCourse.tsx` | 已完成 | 原型可达的倒计时、直播信息、今日安排和预约提醒双态均已迁移；原型与 Android 两态及 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
-| 其余 14 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做音频播放 `AudioPlayer.tsx` |
-| 三端 1:1 视觉验收 | 进行中 | Android 前 14 个页面已逐页验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
+| 音频播放 `AudioPlayer.tsx` | 已完成 | 波形进度、播放/跳转/循环、六档倍速、字幕/笔记/目录、记笔记和切课均已迁移；原型六态、Android 五态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
+| 其余 13 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做学习报告 `LearningReport.tsx` |
+| 三端 1:1 视觉验收 | 进行中 | Android 前 15 个页面已逐页验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
 
 ## P0
 
@@ -50,7 +51,7 @@
 | 客观题报告 | 已完成 | `ObjectiveReport` 接收正确数和总数并展示结果 | 真实报告生成与云端记录未接入 |
 | 课程详情 | 已完成 | `CourseDetail` 按 `courseId` 展示 c1/c2 完整原型数据，支持章节开合及携带 `lessonId` 的视频导航 | 课程授权状态仍为原型静态 Mock |
 | 视频页面 | 已完成 | `VideoPlayer` 完整原型状态机已实现，包含模拟播放计时、六档倍速、目录切课、讲义和时间点笔记 | 没有真实媒体源、解码、DRM、后台下载或系统全屏 |
-| 音频页面 | 已完成 | `AudioPlayer` UI 和媒体状态已实现 | 没有后台播放、锁屏控制或真实播放 |
+| 音频页面 | 已完成 | `AudioPlayer` 已按原型实现模拟计时、波形进度、15 秒跳转、循环、六档倍速、同步字幕、时间点笔记和目录切课 | 没有真实媒体源、后台播放、锁屏控制或离线下载 |
 | 直播页面 | 已完成 | `LiveCourse` 已按原型当前可观察运行态实现动态倒计时、直播信息、今日安排和预约人数切换 | 原型源码中的聊天室/课件分支由固定 `countdown` 状态阻断；没有信令、流媒体或真实直播 |
 | 商品详情 | 已完成 | `ProductDetail` 按 `productId` 展示 6 商品完整原型内容、状态与购买流程 | 真实库存、价格校验和 SKU 未接入 |
 | 购买结果 | 已完成 | Mock 支付后按商品展示自动开通/预约开课，并连接关联课程、课程 Tab、订单和首页 | 不会调用支付 SDK，也不会真实扣款 |
@@ -77,7 +78,7 @@
 
 | 项目 | 状态 | 验证结果 | 唯一明确的下一步 |
 |---|---|---|---|
-| TypeScript、Lint、单元测试 | 已完成 | `pnpm check` 已通过：16 suites / 21 tests；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
+| TypeScript、Lint、单元测试 | 已完成 | `pnpm check` 已通过：17 suites / 23 tests；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
 | Android production JS bundle | 已完成 | Metro production bundle 已生成成功 | 原生依赖变化后重新 bundle |
 | Android 原生构建与安装 | 已完成 | Debug APK 构建成功，并在 `Debao_API_36`（API 36 / x86_64）完成安装、冷启动、首页截图和五 Tab 烟雾测试；进程保持前台且无运行期崩溃 | 继续完成返回、键盘、旋转、小屏及真机矩阵 |
 | iOS production JS bundle | 已完成 | Windows 上 production JS bundle 已生成成功 | 原生依赖变化后在 macOS 再次 bundle |

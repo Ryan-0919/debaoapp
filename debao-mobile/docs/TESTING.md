@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 16 suites / 21 tests |
+| Jest | 通过 | 17 suites / 23 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -147,6 +147,14 @@ UIAutomator 确认倍速层六项 `0.75x/正常/1.25x/1.5x/1.75x/2x` 均完整�
 Android 两态：![Android 直播课堂倒计时](screenshots/android-live-course-countdown.png) ![Android 直播课堂已预约](screenshots/android-live-course-subscribed.png)
 
 原型 `LiveCourse.tsx` 的 `liveState` 固定为 `countdown`，聊天室、课件、发言和点赞代码在运行时不可达，因此不计入当前页面运行态完成范围。Android UIAutomator 因页面每秒更新倒计时无法进入 idle；预约交互改由前后截图确认，文本、人数和状态切换由 Jest 固定验证。
+
+音频播放页 1:1 回归已完成：c1 课程图片和课时、模拟计时、波形进度、前后 15 秒、循环、六档倍速、播放视觉、同步字幕、时间点笔记、扁平目录和切课均与原型运行态对应。课程列表中原有的错误 `c2` 参数已按原型修正为 `c1`。
+
+原型关键态：![Figma 音频字幕](screenshots/figma-audio-player-transcript.png) ![Figma 音频播放](screenshots/figma-audio-player-playing.png) ![Figma 音频倍速](screenshots/figma-audio-player-speed.png) ![Figma 音频笔记](screenshots/figma-audio-player-notes.png) ![Figma 音频目录](screenshots/figma-audio-player-catalog.png)
+
+Android 关键态：![Android 音频字幕](screenshots/android-audio-player-transcript.png) ![Android 音频播放](screenshots/android-audio-player-playing.png) ![Android 音频倍速](screenshots/android-audio-player-speed.png) ![Android 音频笔记](screenshots/android-audio-player-notes.png) ![Android 音频目录](screenshots/android-audio-player-catalog.png)
+
+UIAutomator 已确认 `audio-player-screen`、c1 第18讲标题、`0:38` 初始时间、三 Tab、循环选中态和 `audio-lesson-l9`；播放实测推进到 `1:28`，点击第19讲后标题变为“不动产登记”。新增笔记和波形精确定位由 Jest 固定验证，避免 Android 中文输入法和坐标取样影响自动化稳定性。
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 

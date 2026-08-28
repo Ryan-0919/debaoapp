@@ -19,7 +19,7 @@ export type RootStackParamList = {
   CourseDetail: {courseId: string};
   VideoPlayer: {courseId: string; lessonId?: string};
   LiveCourse: {courseId: string; title?: string};
-  AudioPlayer: {courseId: string};
+  AudioPlayer: {courseId: string; lessonId?: string};
   LearningReport: undefined;
   LearningPlan: undefined;
   MistakeBook: undefined;
