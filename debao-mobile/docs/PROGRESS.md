@@ -23,8 +23,9 @@
 | 客观题报告 `ObjectiveReport.tsx` | 已完成 | 动态成绩、三项统计、科目分析、四道逐题解析及错题本/返回均已迁移；原型与 Android 首尾截图、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 商品详情 `ProductDetail.tsx` | 已完成 | 6 商品共享数据、真实图片、老师/大纲/交付/营销长页/评价、展开态、购买 Bottom Sheet 和支付跳转均已迁移；原型三态、Android 四态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 购买成功 `PurchaseSuccess.tsx` | 已完成 | 自动开通/预约开课双状态、商品-课程关联、课程/订单/首页入口均已迁移；原型两态、Android 两态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
-| 其余 17 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做课程详情 `CourseDetail.tsx` |
-| 三端 1:1 视觉验收 | 进行中 | Android 前 11 个页面已逐页验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
+| 课程详情 `CourseDetail.tsx` | 已完成 | c1 已购/c2 未购、完整章节、完成/当前/未学三态、章节开合和视频/商品导航均已迁移；原型三态、Android 三态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
+| 其余 16 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做视频播放 `VideoPlayer.tsx` |
+| 三端 1:1 视觉验收 | 进行中 | Android 前 12 个页面已逐页验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
 
 ## P0
 
@@ -45,7 +46,7 @@
 | 主观题答题 | 已完成 | `SubjectiveAnswer` 路由、输入和提交状态已实现 | 真实保存、上传和批改接口未接入 |
 | 客观题答题 | 已完成 | `ObjectiveAnswer` 支持练习/考试参数与答题状态 | 真实组卷、计时同步和防作弊未接入 |
 | 客观题报告 | 已完成 | `ObjectiveReport` 接收正确数和总数并展示结果 | 真实报告生成与云端记录未接入 |
-| 课程详情 | 已完成 | `CourseDetail` 路由按 `courseId` 打开 | 课程详情来自 Mock |
+| 课程详情 | 已完成 | `CourseDetail` 按 `courseId` 展示 c1/c2 完整原型数据，支持章节开合及携带 `lessonId` 的视频导航 | 课程授权状态仍为原型静态 Mock |
 | 视频页面 | 已完成 | `VideoPlayer` UI 和媒体准备状态已实现 | 没有解码、DRM、倍速或真实播放 |
 | 音频页面 | 已完成 | `AudioPlayer` UI 和媒体状态已实现 | 没有后台播放、锁屏控制或真实播放 |
 | 直播页面 | 已完成 | `LiveCourse` UI 和直播状态已实现 | 没有信令、流媒体、聊天室或真实直播 |
@@ -74,7 +75,7 @@
 
 | 项目 | 状态 | 验证结果 | 唯一明确的下一步 |
 |---|---|---|---|
-| TypeScript、Lint、单元测试 | 已完成 | `pnpm check` 已通过：13 suites / 16 tests；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
+| TypeScript、Lint、单元测试 | 已完成 | `pnpm check` 已通过：14 suites / 18 tests；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
 | Android production JS bundle | 已完成 | Metro production bundle 已生成成功 | 原生依赖变化后重新 bundle |
 | Android 原生构建与安装 | 已完成 | Debug APK 构建成功，并在 `Debao_API_36`（API 36 / x86_64）完成安装、冷启动、首页截图和五 Tab 烟雾测试；进程保持前台且无运行期崩溃 | 继续完成返回、键盘、旋转、小屏及真机矩阵 |
 | iOS production JS bundle | 已完成 | Windows 上 production JS bundle 已生成成功 | 原生依赖变化后在 macOS 再次 bundle |

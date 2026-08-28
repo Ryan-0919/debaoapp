@@ -17,7 +17,7 @@ export type RootStackParamList = {
   ProductDetail: {productId: string};
   PurchaseSuccess: {productName: string; productId: string; orderId: string};
   CourseDetail: {courseId: string};
-  VideoPlayer: {courseId: string};
+  VideoPlayer: {courseId: string; lessonId?: string};
   LiveCourse: {courseId: string};
   AudioPlayer: {courseId: string};
   LearningReport: undefined;

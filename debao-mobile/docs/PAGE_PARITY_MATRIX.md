@@ -26,7 +26,7 @@
 | 9 | `src/pages/ObjectiveReport.tsx` | `src/screens/questions/ObjectiveReportScreen.tsx` | 成绩概览、题目结果、错题本跳转、返回路径 | 已完成 |
 | 10 | `src/pages/ProductDetail.tsx` | `src/screens/commerce/ProductDetailScreen.tsx` | 各商品内容、课程大纲展开/收起、底部购买栏、确认购买 Bottom Sheet、购买跳转 | 已完成 |
 | 11 | `src/pages/PurchaseSuccess.tsx` | `src/screens/commerce/PurchaseSuccessScreen.tsx` | 成功信息、课程/订单/首页入口和不同商品参数 | 已完成 |
-| 12 | `src/pages/CourseDetail.tsx` | `src/screens/courses/CourseDetailScreen.tsx` | 已购/未购、章节展开、课时状态、视频和商品跳转 | 未开始 |
+| 12 | `src/pages/CourseDetail.tsx` | `src/screens/courses/CourseDetailScreen.tsx` | 已购/未购、章节展开、课时状态、视频和商品跳转 | 已完成 |
 | 13 | `src/pages/VideoPlayer.tsx` | `src/screens/courses/MediaScreens.tsx` (`VideoPlayerScreen`) | 播放控件显隐、播放/暂停、进度、倍速层、目录/讲义/笔记、章节展开、切课 | 未开始 |
 | 14 | `src/pages/LiveCourse.tsx` | `src/screens/courses/MediaScreens.tsx` (`LiveCourseScreen`) | 倒计时、聊天/课件、发言、点赞和人数信息 | 未开始 |
 | 15 | `src/pages/AudioPlayer.tsx` | `src/screens/courses/MediaScreens.tsx` (`AudioPlayerScreen`) | 播放/暂停、进度、倍速层、循环、文稿/目录/笔记、新增笔记、切课 | 未开始 |
@@ -154,3 +154,12 @@
 - 关键状态：p1 自动开通态显示“进入课程”，p4 预约开课态显示“查看我的课程”；UIAutomator 已验证两态全部文案和 p1 关联课程、p4 课程 Tab 导航。
 - 导航：p1/p2 使用原型商品-课程映射进入 `CourseDetail`；其他商品进入课程 Tab；“查看订单”连接 `OrderList`；“返回首页”明确替换到首页 Tab。Jest 覆盖全部目标。
 - 已知差异：仅真实 Android 状态栏、底部手势区、Safe Area 和字体栅格化差异；无已知产品内容或交互差异。
+
+### 12. 课程详情
+
+- 原型源码：`得宝APP (1)/src/pages/CourseDetail.tsx`、`src/data.ts`、公共 TopBar、Tag 和 ProgressBar 已核对。
+- 原型截图：`docs/screenshots/figma-course-detail-owned.png`、`figma-course-detail-current.png`、`figma-course-detail-locked.png`，均为 390x844。
+- Android 截图：`docs/screenshots/android-course-detail-owned.png`、`android-course-detail-current.png`、`android-course-detail-locked.png`。
+- 关键交互：UIAutomator 已验证 c1 已购态、默认首章、第二章展开、当前课高亮、c2 未购态及“去购买”；Jest 覆盖继续学习、章节互斥开合、具体 `lessonId` 视频参数、未购按钮和未购课时商品参数。
+- 数据与导航：`src/data/courses.ts` 完整迁移 c1/c2 章节和课时；已购课时连接 `VideoPlayer`，未购课时及按钮连接对应 `ProductDetail`。两张课程图片均为原型同源的受控本地 PNG。
+- 已知差异：原型把 `c1` 静态标记为已购、`c2` 静态标记为未购，即使由 p1 购买成功进入 c2 也不会改变授权状态；React Native 为保持页面运行态 1:1 暂时保留该矛盾，正式接入时必须由订单/授权服务统一状态。除此之外仅有平台必然差异。

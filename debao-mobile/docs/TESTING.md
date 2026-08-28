@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 13 suites / 16 tests |
+| Jest | 通过 | 14 suites / 18 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -123,6 +123,14 @@ Android 首屏、展开、购买和底部：![Android 商品详情](screenshots/
 原型两态：![Figma 购买成功](screenshots/figma-purchase-success.png) ![Figma 预约开课成功](screenshots/figma-purchase-success-scheduled.png)
 
 Android 两态：![Android 购买成功](screenshots/android-purchase-success.png) ![Android 预约开课成功](screenshots/android-purchase-success-scheduled.png)
+
+课程详情页 1:1 回归已完成：c1 已购态和 c2 未购态、完整章节、完成/当前/未学课时、互斥章节展开、继续学习、具体课时与购买导航均已迁移。Android 首轮对比发现 c2 本地图片不是原型同图，现已替换为原型 Unsplash 图源的受控本地 PNG 并重新构建验证。
+
+原型三态：![Figma 已购课程](screenshots/figma-course-detail-owned.png) ![Figma 当前章节](screenshots/figma-course-detail-current.png) ![Figma 未购课程](screenshots/figma-course-detail-locked.png)
+
+Android 三态：![Android 已购课程](screenshots/android-course-detail-owned.png) ![Android 当前章节](screenshots/android-course-detail-current.png) ![Android 未购课程](screenshots/android-course-detail-locked.png)
+
+UIAutomator 已确认 `course-detail-screen`、`course-owned-state`、`course-locked-state`、`course-lesson-l8`、`course-lesson-l22` 和 `course-buy` 均存在且可点击；点击 c2“去购买”后匹配到 p1 的“2024法考全程班（主客一体·视频精讲）”。
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 
