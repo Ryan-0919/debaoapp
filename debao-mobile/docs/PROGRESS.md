@@ -29,8 +29,9 @@
 | 音频播放 `AudioPlayer.tsx` | 已完成 | 波形进度、播放/跳转/循环、六档倍速、字幕/笔记/目录、记笔记和切课均已迁移；原型六态、Android 五态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 学习报告 `LearningReport.tsx` | 已完成 | 4.2 小时周柱图、薄弱科目提示、六科正确率、做题统计和专项练习跳转均已迁移；原型两态、Android 截图、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 学习计划 `LearningPlan.tsx` | 已完成 | 1/4 周进度、3.5/0.9 小时、两周 6 项计划和唯一完成态均已迁移；原型、Android 截图、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
-| 其余 11 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做错题本 `MistakeBook.tsx` |
-| 三端 1:1 视觉验收 | 进行中 | Android 前 17 个页面已逐页验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
+| 错题本 `MistakeBook.tsx` | 已完成 | 6 个科目筛选、3 道错题、错误次数、答案对照和错题复习导航均已迁移；原型、Android 两态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
+| 其余 10 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做收藏夹 `Favorites.tsx` |
+| 三端 1:1 视觉验收 | 进行中 | Android 前 18 个页面已逐页验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
 
 ## P0
 
@@ -80,7 +81,7 @@
 
 | 项目 | 状态 | 验证结果 | 唯一明确的下一步 |
 |---|---|---|---|
-| TypeScript、Lint、单元测试 | 已完成 | `pnpm check` 已通过：19 suites / 25 tests；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
+| TypeScript、Lint、单元测试 | 已完成 | `pnpm check` 已通过：20 suites / 26 tests；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
 | Android production JS bundle | 已完成 | Metro production bundle 已生成成功 | 原生依赖变化后重新 bundle |
 | Android 原生构建与安装 | 已完成 | Debug APK 构建成功，并在 `Debao_API_36`（API 36 / x86_64）完成安装、冷启动、首页截图和五 Tab 烟雾测试；进程保持前台且无运行期崩溃 | 继续完成返回、键盘、旋转、小屏及真机矩阵 |
 | iOS production JS bundle | 已完成 | Windows 上 production JS bundle 已生成成功 | 原生依赖变化后在 macOS 再次 bundle |

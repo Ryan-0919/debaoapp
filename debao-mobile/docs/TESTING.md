@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 19 suites / 25 tests |
+| Jest | 通过 | 20 suites / 26 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -171,6 +171,14 @@ UIAutomator 已确认六个科目节点和专项练习按钮；点击后 `object
 Android 全页：![Android 学习计划](screenshots/android-learning-plan.png)
 
 UIAutomator 已从“我的”实际进入页面并确认标题、进度、两个周标题和 6 个任务文本；Jest 固定验证 25% 进度、全部关键文案、任务只读状态和返回操作。
+
+错题本页 1:1 回归已完成：顶部 6 个科目筛选、3 道错题卡、答错次数、我的/正确答案对照和“错题复习”导航均与原型一致；“一键重做”按原型保留为无事件展示。
+
+原型默认态与筛选态：![Figma 错题本](screenshots/figma-mistake-book.png) ![Figma 错题本民法筛选](screenshots/figma-mistake-book-filter.png)
+
+Android 默认态与筛选态：![Android 错题本](screenshots/android-mistake-book.png) ![Android 错题本民法筛选](screenshots/android-mistake-book-filter.png)
+
+UIAutomator 已从“我的”实际进入页面并命中全部筛选项、3 道题卡和答错次数；点击“民法”后仍保留 3 道题，点击首题后进入“错题复习”且显示 `1 / 4`。Jest 固定验证筛选状态、只读重做入口和章节复习路由参数。
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 

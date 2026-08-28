@@ -32,7 +32,7 @@
 | 15 | `src/pages/AudioPlayer.tsx` | `src/screens/courses/AudioPlayerScreen.tsx` | 播放/暂停、波形进度、15 秒跳转、倍速层、循环、字幕/目录/笔记、新增笔记、切课 | 已完成 |
 | 16 | `src/pages/LearningReport.tsx` | `src/screens/tools/LearningReportScreen.tsx` | 学习数据、周柱图、六科进度、薄弱项、做题统计和专项练习跳转 | 已完成 |
 | 17 | `src/pages/LearningPlan.tsx` | `src/screens/tools/LearningPlanScreen.tsx` | 周进度、两周计划、任务时长和完成态 | 已完成 |
-| 18 | `src/pages/MistakeBook.tsx` | `src/screens/tools/ToolScreens.tsx` (`MistakeBookScreen`) | 科目筛选、错题列表、复习跳转 | 未开始 |
+| 18 | `src/pages/MistakeBook.tsx` | `src/screens/tools/MistakeBookScreen.tsx` | 科目筛选、错题列表、复习跳转 | 已完成 |
 | 19 | `src/pages/Favorites.tsx` | `src/screens/tools/ToolScreens.tsx` (`FavoritesScreen`) | 收藏分类/列表、题目练习跳转 | 未开始 |
 | 20 | `src/pages/LawSearch.tsx` | `src/screens/tools/ToolScreens.tsx` (`LawSearchScreen`) | 法条/论坛/公告 Tab、搜索前后、科目筛选、列表展开、收藏、法条全文 Bottom Sheet、关联练习 | 未开始 |
 | 21 | `src/pages/AIChat.tsx` | `src/screens/ai/AIChatScreen.tsx` | 初始消息、输入、发送、加载、连续对话、键盘和滚动 | 未开始 |
@@ -208,3 +208,12 @@
 - 关键交互：UIAutomator 已确认 `learning-plan-screen`、`1 / 4`、3.5/0.9 小时、两个周标题和 6 个任务文本全部存在；Jest 固定验证 25% 进度、原型文案、6 个唯一任务节点均无 `onPress`，并验证返回操作。
 - 数据与导航：从“我的 → 学习计划”实际进入独立 `LearningPlanScreen`；本周 4 项中仅“观看刑法第8讲”为已完成，下周 2 项均为未完成。
 - 已知差异：当前计划和进度仍是原型 Mock，尚未接入云端日程、提醒或跨设备同步。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+
+### 18. 错题本
+
+- 原型源码：`得宝APP (1)/src/pages/MistakeBook.tsx`、`src/data.ts`、公共 `TopBar`、`Tag` 和个人页/首页错题本入口已核对。
+- 原型截图：`docs/screenshots/figma-mistake-book.png`、`figma-mistake-book-filter.png`，均为 390x844。
+- Android 截图：`docs/screenshots/android-mistake-book.png`、`android-mistake-book-filter.png`。
+- 关键交互：UIAutomator 已确认 6 个科目筛选项、`共 3 道错题待复习`、`一键重做`、3 张题卡和答错次数；点击“民法”只改变选中态，点击首张题卡进入“错题复习”。Jest 固定验证 3 个唯一题卡、筛选状态、只读一键重做和 `{mode: chapter, title: 错题复习}` 路由参数。
+- 数据与导航：错题数据复用 `src/data/objectiveQuestions.ts` 前三题，保留原型中的用户答案 `B/C/B`、正确答案 `D/A/A` 和 `2/1/3` 次答错标记。
+- 已知差异：筛选和错题列表仍使用原型 Mock，尚未接入真实错题归档、筛选服务和同步；原型“一键重做”无事件，RN 严格保留只读状态。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。

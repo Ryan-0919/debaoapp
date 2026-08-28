@@ -1,11 +1,11 @@
 import {useState} from 'react';
 import {StyleSheet, Text, TextInput, View} from 'react-native';
-import {BookMarked, CheckCircle2, FileSearch, Search, Upload, XCircle} from 'lucide-react-native';
+import {BookMarked, CheckCircle2, FileSearch, Search, Upload} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
 import {PageHeader} from '@/components/PageHeader';
-import {AppButton, Card, EmptyState, ListRow, MockNotice, Pill, SectionTitle} from '@/components/ui';
+import {AppButton, Card, EmptyState, ListRow, MockNotice, Pill} from '@/components/ui';
 import {colors, radius, spacing} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
 
@@ -13,20 +13,8 @@ type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
 export {default as LearningReportScreen} from './LearningReportScreen';
 export {default as LearningPlanScreen} from './LearningPlanScreen';
+export {default as MistakeBookScreen} from './MistakeBookScreen';
 
-export function MistakeBookScreen() {
-  const navigation = useNavigation<Navigation>();
-  return (
-    <AppScreen>
-      <PageHeader title="错题本" />
-      <View style={styles.content}>
-        <View style={styles.metricRow}>{[['42', '待复习'], ['18', '本周新增'], ['67%', '已掌握']].map(item => <View key={item[1]} style={styles.metric}><Text style={styles.metricValue}>{item[0]}</Text><Text style={styles.metricLabel}>{item[1]}</Text></View>)}</View>
-        <SectionTitle title="薄弱科目" />
-        <Card style={styles.listCard}><ListRow title="民法" subtitle="合同效力 · 12 道" leading={<XCircle size={20} color={colors.error} />} onPress={() => navigation.navigate('ObjectiveAnswer', {title: '民法错题'})} /><ListRow title="刑法" subtitle="共同犯罪 · 9 道" leading={<XCircle size={20} color={colors.error} />} onPress={() => navigation.navigate('ObjectiveAnswer', {title: '刑法错题'})} /></Card>
-      </View>
-    </AppScreen>
-  );
-}
 
 export function FavoritesScreen() {
   const navigation = useNavigation<Navigation>();
