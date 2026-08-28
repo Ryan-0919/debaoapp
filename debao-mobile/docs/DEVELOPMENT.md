@@ -91,4 +91,4 @@ Android Java/Gradle 在当前中文路径下无法读取 wrapper 路径。首选
 
 该脚本的可执行字符串保持 ASCII，以兼容 Windows 自带的 PowerShell 5.1；中文说明保留在本文档中。使用 PowerShell 7 时也可以执行同一脚本。
 
-`-EmbeddedBundle` 会设置 `debaoEmbeddedBundle`，关闭 Debug Dev Support，并把预先生成到 `android/app/src/debug/assets/index.android.bundle` 的 bundle 打进 APK。该模式用于无 Metro 演示和冷启动验证；生成的 debug bundle/resources 已被 `.gitignore` 排除，不提交仓库。
+`-EmbeddedBundle` 会先在真实工程路径调用 React Native CLI，覆盖生成 `android/app/src/debug/assets/index.android.bundle` 及图片资源；随后设置 `debaoEmbeddedBundle`、关闭 Debug Dev Support，并通过临时 ASCII 盘符执行 Gradle。Bundle 不能放到盘符映射后再生成，否则 Metro 无法稳定解析 pnpm 的依赖链接。该模式用于无 Metro 演示和冷启动验证；生成的 debug bundle/resources 已被 `.gitignore` 排除，不提交仓库。

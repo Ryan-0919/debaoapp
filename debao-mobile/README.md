@@ -83,11 +83,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\android-build.ps1
 需要生成不依赖 Metro 的可演示 Debug APK 时：
 
 ```powershell
-New-Item -ItemType Directory -Force android\app\src\debug\assets | Out-Null
-New-Item -ItemType Directory -Force android\app\src\debug\res | Out-Null
-pnpm exec react-native bundle --platform android --dev false --minify true --entry-file index.js --bundle-output android\app\src\debug\assets\index.android.bundle --assets-dest android\app\src\debug\res
 powershell -ExecutionPolicy Bypass -File .\scripts\android-build.ps1 -DriveLetter T: -EmbeddedBundle
 ```
+
+`-EmbeddedBundle` 会先在真实工程路径重新生成 production JS Bundle，再通过临时 ASCII 盘符执行 Gradle，避免中文路径和 pnpm 链接导致的解析问题，也避免 APK 复用旧 Bundle。
 
 2026-08-28 已在本机完成 `assembleDebug`、APK 安装和 Android API 36 模拟器冷启动。APK 位于 `android/app/build/outputs/apk/debug/app-debug.apk`，运行截图见 [Android 首页](docs/screenshots/android-home-api36.png)。详见 [平台文档](docs/PLATFORMS.md)。
 

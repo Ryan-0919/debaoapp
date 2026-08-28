@@ -20,6 +20,28 @@ if ($existingMapping) {
 }
 
 try {
+  if ($EmbeddedBundle) {
+    $node = (Get-Command node -ErrorAction Stop).Source
+    $embeddedAssets = Join-Path $projectRoot 'android\app\src\debug\assets'
+    $bundleOutput = Join-Path $embeddedAssets 'index.android.bundle'
+    New-Item -ItemType Directory -Force $embeddedAssets | Out-Null
+    Push-Location $projectRoot
+    try {
+      & $node 'node_modules\react-native\cli.js' bundle `
+        --platform android `
+        --dev false `
+        --minify true `
+        --entry-file index.js `
+        --bundle-output $bundleOutput `
+        --assets-dest $embeddedAssets
+      if ($LASTEXITCODE -ne 0) {
+        throw "React Native bundle failed with exit code $LASTEXITCODE."
+      }
+    } finally {
+      Pop-Location
+    }
+  }
+
   # Preserve the project path relative to the Git workspace for RN autolinking.
   subst $DriveLetter $workspaceRoot
   $createdMapping = $true

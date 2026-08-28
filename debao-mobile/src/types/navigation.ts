@@ -12,7 +12,7 @@ export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   SubjectiveSelect: {subject?: string} | undefined;
   SubjectiveAnswer: {subjectName: string};
-  ObjectiveAnswer: {mode?: 'practice' | 'exam'; title?: string} | undefined;
+  ObjectiveAnswer: {mode?: 'practice' | 'exam' | 'chapter'; title?: string} | undefined;
   ObjectiveReport: {correct: number; total: number};
   ProductDetail: {productId: string};
   PurchaseSuccess: {productName: string; orderId: string};

@@ -15,9 +15,9 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 2 suites / 3 tests |
+| Jest | 通过 | 3 suites / 4 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
-| Component | 通过 | AppButton 文案和按压行为 |
+| Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
 Harmony `hvigorfile.ts` 不由应用 `tsc` 检查，其类型来自 DevEco/ohpm；ArkTS 与 Hvigor 必须由 Harmony 原生构建验证。
 
@@ -57,6 +57,14 @@ pnpm harmony:bundle
 主观题状态：![Android 首页主观题状态](screenshots/android-home-subjective.png)
 
 右上角分段控件通过 UIAutomator 验证：默认“客观题”的 `selected` 为 true；点击“主观题”后选中态切换，并显示“主观题、法条检索、批改服务、AI 助手”四个对应入口。切换后应用进程保持存活且无崩溃日志。
+
+题库页 1:1 原型回归已完成：默认客观题态显示“历年真题、章节练习、民法总则”，主观题态显示“分科真题、历年整卷、2023年主观题”，年份弹层显示“选择年份、2023年、2018年”。三态均在 API 36 模拟器截图确认。
+
+客观题态：![Android 题库客观题](screenshots/android-question-bank-objective.png)
+
+主观题态：![Android 题库主观题](screenshots/android-question-bank-subjective.png)
+
+年份弹层：![Android 题库年份弹层](screenshots/android-question-bank-year-sheet.png)
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 
