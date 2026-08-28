@@ -39,8 +39,8 @@
 | 设置 `Settings.tsx` | 已完成 | 通知/隐私/关于三组 8 项、版本信息、退出按钮和确认 Dialog 均已迁移；原型两态、Android 两态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 消息通知 `Notifications.tsx` | 已完成 | 4 条通知、三类图标、两条未读底色/圆点、时间与正文均已迁移；原型、Android、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 批改服务 `GradingService.tsx` | 已完成 | 次数/20% 进度、虚线提交入口、两条批改记录和民法主观题跳转均已迁移；原型、Android、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
-| 其余 1 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做答题记录 `QuestionRecords.tsx` |
-| 三端 1:1 视觉验收 | 进行中 | Android 前 27 个页面已逐页验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
+| 做题记录 `QuestionRecords.tsx` | 已完成 | 两项统计、4 条练习记录、正确率颜色和统一客观题报告跳转均已迁移；原型、Android、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
+| 三端 1:1 视觉验收 | 进行中 | Android 全部 28 个页面已逐页验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 在 macOS/DevEco 环境补平台差异验证 |
 
 ## P0
 
@@ -84,20 +84,20 @@
 | 收藏 | 已完成 | `Favorites` 已按原型实现 4 条收藏、题目/法条标签和统一收藏题目导航 | 当前仍为原型 Mock；账号级同步未接入 |
 | 法条检索 | 已完成 | `LawSearch` 已按原型实现三 Tab、10 条法条、搜索/筛选/空态、全文与收藏、关联练习、6 篇论坛帖子和 6 条公告 | 当前仍为原型 Mock；权威法规数据源、版本和全文索引未接入 |
 | 批改服务 | 已完成 | `Grading` 已按原型实现次数/进度、提交入口、已批改/待批改记录和民法主观题参数 | 当前为原型静态数据；文件上传、人工派单、进度和结果接口未接入 |
-| 答题记录 | 已完成 | `QuestionRecords` 路由和 Mock 记录已实现 | 真实分页、筛选和服务端记录未接入 |
+| 做题记录 | 已完成 | `QuestionRecords` 已按原型实现 `2,847`/`68%` 统计、4 条记录和统一 `{correct: 3, total: 4}` 报告参数 | 当前仍为原型 Mock；真实分页、筛选和服务端记录未接入 |
 
 ## 工程与平台
 
 | 项目 | 状态 | 验证结果 | 唯一明确的下一步 |
 |---|---|---|---|
-| TypeScript、Lint、单元测试 | 已完成 | `pnpm check` 已通过：29 suites / 43 tests；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
+| TypeScript、Lint、单元测试 | 已完成 | `pnpm check` 已通过：30 suites / 45 tests；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
 | Android production JS bundle | 已完成 | Metro production bundle 已生成成功 | 原生依赖变化后重新 bundle |
-| Android 原生构建与安装 | 已完成 | Debug APK 构建成功，并在 `Debao_API_36`（API 36 / x86_64）完成安装、冷启动、首页截图和五 Tab 烟雾测试；进程保持前台且无运行期崩溃 | 继续完成返回、键盘、旋转、小屏及真机矩阵 |
+| Android 原生构建与安装 | 已完成 | EmbeddedBundle Debug APK 构建成功，并在 `Debao_API_36`（API 36 / x86_64）完成安装、冷启动、全部 28 页截图/交互验证和五 Tab 烟雾测试；进程保持前台且无运行期崩溃 | 继续完成旋转、小屏及至少一台物理真机矩阵 |
 | iOS production JS bundle | 已完成 | Windows 上 production JS bundle 已生成成功 | 原生依赖变化后在 macOS 再次 bundle |
 | iOS 原生构建与安装 | 受阻 | Swift 入口、Xcode 工程和 Podfile 已生成；Windows 无 Xcode/CocoaPods/模拟器 | 在 macOS 安装 Pods，执行 `pnpm ios`，完成签名和真机启动验证 |
 | Harmony autolink 与 Hermes bundle | 已完成 | 四个 RNOH 端口已链接，production `hermes_bundle.hbc` 已生成 | 端口升级后重新执行 `pnpm harmony:link` 和 `pnpm harmony:bundle` |
 | Harmony HAP 构建与安装 | 受阻 | ArkTS/C++/Hvigor 工程已生成；PATH 未检测到 `hvigor`、`ohpm`、`hdc` 或可调用 DevEco SDK | 安装 DevEco 工具链、配置签名、ohpm sync，构建 HAP 并用 hdc 真机启动 |
-| 三端真机视觉、返回、键盘和小屏验收 | 进行中 | Android API 36 模拟器首页视觉已通过；共享代码已使用 Safe Area、native-stack 和 KeyboardAvoidingView | 补 Android 完整设备矩阵，并在 macOS/DevEco 环境完成 iOS 与 HarmonyOS 验收 |
+| 三端真机视觉、返回、键盘和小屏验收 | 进行中 | Android API 36 模拟器全部 28 页视觉与关键导航已通过；共享代码已使用 Safe Area、native-stack 和 KeyboardAvoidingView | 补 Android 物理真机/尺寸矩阵，并在 macOS/DevEco 环境完成 iOS 与 HarmonyOS 验收 |
 
 ## 下一阶段入口条件
 

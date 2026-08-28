@@ -42,7 +42,7 @@
 | 25 | `src/pages/Settings.tsx` | `src/screens/account/SettingsScreen.tsx` | 设置分组、静态入口、退出登录 Dialog | 已完成 |
 | 26 | `src/pages/Notifications.tsx` | `src/screens/account/NotificationsScreen.tsx` | 通知列表、已读/未读视觉和滚动内容 | 已完成 |
 | 27 | `src/pages/GradingService.tsx` | `src/screens/tools/GradingServiceScreen.tsx` | 次数/进度、提交入口、批改记录和主观题跳转 | 已完成 |
-| 28 | `src/pages/QuestionRecords.tsx` | `src/screens/tools/ToolScreens.tsx` (`QuestionRecordsScreen`) | 记录列表、成绩/时间/状态、报告跳转 | 未开始 |
+| 28 | `src/pages/QuestionRecords.tsx` | `src/screens/tools/QuestionRecordsScreen.tsx` | 两项统计、4 条记录、成绩/时间/状态、报告跳转 | 已完成 |
 
 ## 单页完成证据
 
@@ -298,3 +298,12 @@
 - 关键交互：UIAutomator 已从“我的 → 批改服务”进入，确认剩余/已用次数、20% 进度、提交入口和两条记录；两条记录均不可点击。点击提交入口进入 `subjective-answer-screen`，显示“民法 · 分科真题”和 `1 / 5`。Jest 固定验证全文、静态记录和 `{questionIndex: 0, subjectName: '民法'}` 参数。
 - 数据与状态：展示剩余 8 次、已使用 2/共 10 次；记录为 2023 民法股权转让案例 `38/50` 已批改及 2022 合同解除与违约责任待批改，只有首条包含反馈。
 - 已知差异：当前为原型静态次数与批改记录，未接入真实权益、答案上传、人工派单、进度和反馈服务；除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+
+### 28. 做题记录
+
+- 原型源码：`得宝APP (1)/src/pages/QuestionRecords.tsx`、公共 `TopBar`/`Tag` 和个人页入口已核对。
+- 原型截图：`docs/screenshots/figma-question-records.png`，390x844。
+- Android 截图：`docs/screenshots/android-question-records.png`，1080x2400。
+- 关键交互：UIAutomator 已从“我的 → 做题记录”进入并确认页面标题、`2,847`/`68%` 两项统计、4 条记录及 4 个可点击 `question-record-r*` 节点；点击首条后进入 `objective-report-screen`，显示 75 分、答对 3、答错 1、总题数 4。Jest 固定验证全部原型文案、四条唯一记录和四次 `{correct: 3, total: 4}` 导航参数。
+- 数据与状态：记录依次为今天 21:05 民法物权法 75%、昨天 20:30 2023 年卷一 72%、8 月 24 日刑法总论 80%、8 月 23 日民法合同法 68%；前三条正确率为绿色，最后一条为错误色。
+- 已知差异：当前为原型静态统计与记录，未接入真实历史、分页、筛选或服务端报告；除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
