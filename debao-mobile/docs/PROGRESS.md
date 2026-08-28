@@ -14,8 +14,8 @@
 |---|---|---|---|
 | 首页 `Home.tsx` | 已完成 | 品牌头、右上角切换、双 Banner、主客观入口、促销、倒计时、热门课程、公告和社区均已迁移；原型两态与 Android 四组截图、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 题库 `QuestionBank.tsx` | 已完成 | 顶部居中切换、历年真题、年份 Bottom Sheet、卷别、可展开章节、分科真题和历年整卷已按原型迁移；Android API 36 三态截图通过 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
-| 其余 25 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做商城 `Mall.tsx` |
-| 三端 1:1 视觉验收 | 进行中 | Android 首页和题库已验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
+| 其余 24 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做课程 `Courses.tsx` |
+| 三端 1:1 视觉验收 | 进行中 | Android 首页、题库和商城已验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
 
 ## P0
 

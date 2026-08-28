@@ -4,7 +4,7 @@
 
 ## 结论
 
-Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript 工程骨架。28 个原型页面均有对应的 React Native 页面和类型化路由，但“存在对应页面”不等于“视觉和交互 1:1 完成”。截至 2026-08-28，首页和题库已按原型源码及实际渲染完成逐项重做、关键交互和 Android 截图验证；其余 25 页仍需逐页 1:1 核验。Android/iOS production JS bundle 与 HarmonyOS production Hermes bundle 已验证通过。
+Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript 工程骨架。28 个原型页面均有对应的 React Native 页面和类型化路由，但“存在对应页面”不等于“视觉和交互 1:1 完成”。截至 2026-08-28，首页、题库和商城已按原型源码及实际渲染完成逐项重做、关键交互和 Android 截图验证；其余 24 页仍需逐页 1:1 核验。Android/iOS production JS bundle 与 HarmonyOS production Hermes bundle 已验证通过。
 
 “页面迁移完成”只代表共享源码和 bundle 层完成。Android Debug APK 已在 API 36 模拟器完成构建、安装、冷启动和首页视觉验证；当前 Windows 主机仍缺少 DevEco 工具链，且不能运行 Xcode，因此本报告不声称 iOS App 或 Harmony HAP 已完成原生构建、安装或真机验证。
 
@@ -31,7 +31,7 @@ Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript �
 |---|---|---|---|---|
 | P0 | `Home.tsx` | `HomeScreen` / `Home` Tab | 已完成 | 1:1 源码/渲染对照；主客观题、双 Banner、入口、促销、倒计时、课程、公告、社区、路由、Android 多态截图 |
 | P0 | `QuestionBank.tsx` | `QuestionBankScreen` / `Questions` Tab | 已完成 | 1:1 源码/渲染对照；切换、年份弹层、章节展开、路由、组件测试、Android 三态截图 |
-| P0 | `Mall.tsx` | `MallScreen` / `Mall` Tab | 已完成 | 路由、类型检查、三端 bundle |
+| P0 | `Mall.tsx` | `MallScreen` / `Mall` Tab | 已完成 | 1:1 源码/渲染对照；两层筛选、6 个商品、本地图片、空态、详情参数、Android 截图 |
 | P0 | `Courses.tsx` | `CoursesScreen` / `Courses` Tab | 已完成 | 路由、类型检查、三端 bundle |
 | P0 | `Profile.tsx` | `ProfileScreen` / `Profile` Tab | 已完成 | 路由、类型检查、三端 bundle |
 | P1 | `SubjectiveSelect.tsx` | `SubjectiveSelectScreen` / `SubjectiveSelect` | 已完成 | 路由参数与 bundle |

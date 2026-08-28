@@ -68,6 +68,12 @@ pnpm harmony:bundle
 
 年份弹层：![Android 题库年份弹层](screenshots/android-question-bank-year-sheet.png)
 
+商城页 1:1 回归已完成：标题、搜索框、分类 Tab、课程类型筛选和 6 个商品行与原型结构一致；UIAutomator 验证筛选组合和空态，Jest 验证商品详情参数。
+
+默认态：![Android 商城](screenshots/android-mall.png)
+
+空态：![Android 商城空态](screenshots/android-mall-empty.png)
+
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 
 APK：`android/app/build/outputs/apk/debug/app-debug.apk`。

@@ -17,7 +17,7 @@
 |---:|---|---|---|---|
 | 1 | `src/pages/Home.tsx` | `src/screens/tabs/HomeScreen.tsx` | 客观题首页、主观题首页、两张 Banner、公告切换/关闭、横向入口和课程滚动、全部入口跳转 | 已完成 |
 | 2 | `src/pages/QuestionBank.tsx` | `src/screens/tabs/QuestionBankScreen.tsx` | 客观题、主观题、年份 Bottom Sheet、卷别切换、章节展开、全部入口跳转 | 已完成 |
-| 3 | `src/pages/Mall.tsx` | `src/screens/tabs/MallScreen.tsx` | 分类筛选、类型筛选、商品列表、商品跳转 | 未开始 |
+| 3 | `src/pages/Mall.tsx` | `src/screens/tabs/MallScreen.tsx` | 分类筛选、类型筛选、商品列表、商品跳转 | 已完成 |
 | 4 | `src/pages/Courses.tsx` | `src/screens/tabs/CoursesScreen.tsx` | 日历/全部课程、周/月切换、快捷筛选、补课日期、加入安排三个 Bottom Sheet、课程/直播/音频跳转 | 未开始 |
 | 5 | `src/pages/Profile.tsx` | `src/screens/tabs/ProfileScreen.tsx` | 用户信息、学习数据、功能分组、全部入口跳转 | 未开始 |
 | 6 | `src/pages/SubjectiveSelect.tsx` | `src/screens/questions/SubjectiveSelectScreen.tsx` | 默认列表、科目参数、年份/难度筛选 Bottom Sheet、筛选结果、答题跳转 | 未开始 |
@@ -73,3 +73,12 @@
 - Android 截图：`docs/screenshots/android-question-bank-objective.png`、`android-question-bank-subjective.png`、`android-question-bank-year-sheet.png`。
 - 关键交互：UIAutomator 与 Jest 已验证主客观题切换、年份 Bottom Sheet、卷别、章节展开和对应答题路由。
 - 已知差异：仅平台必然差异；无已知产品内容或交互差异。
+
+### 3. 商城
+
+- 原型源码：`得宝APP (1)/src/pages/Mall.tsx`、`src/components/TopBar.tsx`、`src/components/ui.tsx` 和 `src/data.ts` 已核对。
+- 原型截图：`docs/screenshots/figma-mall.png`，390x844。
+- Android 截图：`docs/screenshots/android-mall.png`、`android-mall-empty.png`。
+- 关键交互：UIAutomator 已验证分类、类型筛选和“主观题 + 直播课程”空态；Jest 已验证商品过滤、空态和 `p4` 商品详情参数。
+- 导航：6 个商品均连接到类型化 `ProductDetail` 路由并携带原型 `productId`。
+- 已知差异：原型基准截图抓取时远程图片未加载；React Native 使用同一 Unsplash 图源的受控本地 PNG。除此之外仅有平台必然差异。
