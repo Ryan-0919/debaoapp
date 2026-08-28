@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 7 suites / 8 tests |
+| Jest | 通过 | 8 suites / 9 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -87,6 +87,12 @@ Android 弹层态：![Android 月份选择](screenshots/android-courses-month-sh
 原型基准：![Figma 我的](screenshots/figma-profile.png)
 
 Android 首屏与滚动态：![Android 我的](screenshots/android-profile.png) ![Android 我的服务区](screenshots/android-profile-services.png)
+
+主观题选择页 1:1 回归已完成：民法 5 道演示真题、年份/难度组合筛选、清除筛选、筛选空态、其他科目空态和答题参数均与原型行为一致。
+
+原型基准：![Figma 主观题选择](screenshots/figma-subjective-select.png)
+
+Android 默认态与筛选态：![Android 主观题选择](screenshots/android-subjective-select.png) ![Android 主观题筛选](screenshots/android-subjective-select-filter.png)
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 

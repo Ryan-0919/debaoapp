@@ -11,7 +11,7 @@ export type MainTabParamList = {
 export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   SubjectiveSelect: {subject?: string} | undefined;
-  SubjectiveAnswer: {subjectName: string};
+  SubjectiveAnswer: {subjectName: string; questionIndex?: number};
   ObjectiveAnswer: {mode?: 'practice' | 'exam' | 'chapter'; title?: string} | undefined;
   ObjectiveReport: {correct: number; total: number};
   ProductDetail: {productId: string};
