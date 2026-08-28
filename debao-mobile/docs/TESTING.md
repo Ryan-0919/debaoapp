@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 18 suites / 24 tests |
+| Jest | 通过 | 19 suites / 25 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -163,6 +163,14 @@ UIAutomator 已确认 `audio-player-screen`、c1 第18讲标题、`0:38` 初始�
 Android 全页：![Android 学习报告](screenshots/android-learning-report.png)
 
 UIAutomator 已确认六个科目节点和专项练习按钮；点击后 `objective-answer-screen` 标题为“民事诉讼法专项”。Jest 同步固定原型全部统计值与 `{mode: chapter, title: 民事诉讼法专项}` 路由参数。
+
+学习计划页 1:1 回归已完成：`1 / 4` 周进度、预计 3.5 小时/已完成 0.9 小时、本周 4 项和下周 2 项计划、任务时长及唯一完成态均与原型一致；没有保留旧 RN 骨架自行增加的任务勾选交互。
+
+原型全页：![Figma 学习计划](screenshots/figma-learning-plan.png)
+
+Android 全页：![Android 学习计划](screenshots/android-learning-plan.png)
+
+UIAutomator 已从“我的”实际进入页面并确认标题、进度、两个周标题和 6 个任务文本；Jest 固定验证 25% 进度、全部关键文案、任务只读状态和返回操作。
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 

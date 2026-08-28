@@ -31,7 +31,7 @@
 | 14 | `src/pages/LiveCourse.tsx` | `src/screens/courses/LiveCourseScreen.tsx` | 倒计时、课程/教师/人数信息、今日直播安排、预约提醒双态 | 已完成 |
 | 15 | `src/pages/AudioPlayer.tsx` | `src/screens/courses/AudioPlayerScreen.tsx` | 播放/暂停、波形进度、15 秒跳转、倍速层、循环、字幕/目录/笔记、新增笔记、切课 | 已完成 |
 | 16 | `src/pages/LearningReport.tsx` | `src/screens/tools/LearningReportScreen.tsx` | 学习数据、周柱图、六科进度、薄弱项、做题统计和专项练习跳转 | 已完成 |
-| 17 | `src/pages/LearningPlan.tsx` | `src/screens/tools/ToolScreens.tsx` (`LearningPlanScreen`) | 计划概览、每日任务、状态和操作按钮 | 未开始 |
+| 17 | `src/pages/LearningPlan.tsx` | `src/screens/tools/LearningPlanScreen.tsx` | 周进度、两周计划、任务时长和完成态 | 已完成 |
 | 18 | `src/pages/MistakeBook.tsx` | `src/screens/tools/ToolScreens.tsx` (`MistakeBookScreen`) | 科目筛选、错题列表、复习跳转 | 未开始 |
 | 19 | `src/pages/Favorites.tsx` | `src/screens/tools/ToolScreens.tsx` (`FavoritesScreen`) | 收藏分类/列表、题目练习跳转 | 未开始 |
 | 20 | `src/pages/LawSearch.tsx` | `src/screens/tools/ToolScreens.tsx` (`LawSearchScreen`) | 法条/论坛/公告 Tab、搜索前后、科目筛选、列表展开、收藏、法条全文 Bottom Sheet、关联练习 | 未开始 |
@@ -199,3 +199,12 @@
 - 关键交互：UIAutomator 已确认 `learning-report-screen`、`4.2 小时`、六个 `learning-subject-*` 节点和专项练习按钮；点击后实际进入 `ObjectiveAnswer`，标题为“民事诉讼法专项”。Jest 固定验证周柱图、民诉 53%、`2,847 / 68% / 28` 三项统计和完整路由参数。
 - 数据与导航：六科正确率均按原型 `correct / total` 四舍五入计算；不同阈值使用原型绿/紫/橙色和等级标签，专项练习携带 `{mode: chapter, title: 民事诉讼法专项}`。
 - 已知差异：当前学习时长、正确率、排名和做题统计仍是原型 Mock，尚未接入服务端统计口径。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+
+### 17. 学习计划
+
+- 原型源码：`得宝APP (1)/src/pages/LearningPlan.tsx`、公共 `TopBar` 和个人页学习计划入口已核对；原型任务状态是静态展示，不存在点击勾选交互。
+- 原型截图：`docs/screenshots/figma-learning-plan.png`、`figma-learning-plan-bottom.png`，均为 390x844。
+- Android 截图：`docs/screenshots/android-learning-plan.png`；API 36 设备可在一屏展示完整两周计划。
+- 关键交互：UIAutomator 已确认 `learning-plan-screen`、`1 / 4`、3.5/0.9 小时、两个周标题和 6 个任务文本全部存在；Jest 固定验证 25% 进度、原型文案、6 个唯一任务节点均无 `onPress`，并验证返回操作。
+- 数据与导航：从“我的 → 学习计划”实际进入独立 `LearningPlanScreen`；本周 4 项中仅“观看刑法第8讲”为已完成，下周 2 项均为未完成。
+- 已知差异：当前计划和进度仍是原型 Mock，尚未接入云端日程、提醒或跨设备同步。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。

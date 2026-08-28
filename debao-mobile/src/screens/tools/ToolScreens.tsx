@@ -1,32 +1,18 @@
 import {useState} from 'react';
-import {Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
-import {BookMarked, CalendarCheck, CheckCircle2, FileSearch, Search, Upload, XCircle} from 'lucide-react-native';
+import {StyleSheet, Text, TextInput, View} from 'react-native';
+import {BookMarked, CheckCircle2, FileSearch, Search, Upload, XCircle} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
 import {PageHeader} from '@/components/PageHeader';
-import {AppButton, Card, EmptyState, ListRow, MockNotice, Pill, ProgressBar, SectionTitle} from '@/components/ui';
+import {AppButton, Card, EmptyState, ListRow, MockNotice, Pill, SectionTitle} from '@/components/ui';
 import {colors, radius, spacing} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
 export {default as LearningReportScreen} from './LearningReportScreen';
-
-export function LearningPlanScreen() {
-  const [completed, setCompleted] = useState<string[]>(['plan-1']);
-  const plans = [{id: 'plan-1', title: '客观题每日练习', meta: '20 道 · 25 分钟'}, {id: 'plan-2', title: '民法体系精讲', meta: '第 18 讲 · 48 分钟'}, {id: 'plan-3', title: '错题集中复习', meta: '12 道 · 20 分钟'}];
-  return (
-    <AppScreen>
-      <PageHeader title="学习计划" subtitle="今日" />
-      <View style={styles.content}>
-        <Card style={styles.planSummary}><CalendarCheck size={26} color={colors.brand} /><View style={styles.planSummaryCopy}><Text style={styles.itemTitle}>今日完成 {completed.length}/{plans.length}</Text><ProgressBar value={(completed.length / plans.length) * 100} /></View></Card>
-        <SectionTitle title="任务清单" />
-        <Card style={styles.listCard}>{plans.map(plan => <Pressable key={plan.id} onPress={() => setCompleted(items => items.includes(plan.id) ? items.filter(id => id !== plan.id) : [...items, plan.id])} style={styles.planItem}>{completed.includes(plan.id) ? <CheckCircle2 size={22} color={colors.success} /> : <View style={styles.unchecked} />}<View style={styles.planCopy}><Text style={[styles.itemTitle, completed.includes(plan.id) && styles.completed]}>{plan.title}</Text><Text style={styles.itemMeta}>{plan.meta}</Text></View></Pressable>)}</Card>
-      </View>
-    </AppScreen>
-  );
-}
+export {default as LearningPlanScreen} from './LearningPlanScreen';
 
 export function MistakeBookScreen() {
   const navigation = useNavigation<Navigation>();
@@ -108,13 +94,7 @@ const styles = StyleSheet.create({
   metricLabel: {fontSize: 10, color: colors.muted, marginTop: 4},
   itemTitle: {fontSize: 14, fontWeight: '700', color: colors.ink},
   itemMeta: {fontSize: 11, lineHeight: 17, color: colors.muted, marginTop: 4},
-  planSummary: {flexDirection: 'row', alignItems: 'center'},
-  planSummaryCopy: {flex: 1, marginLeft: spacing.md, gap: spacing.sm},
   listCard: {paddingVertical: 0},
-  planItem: {minHeight: 70, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line},
-  unchecked: {width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.line},
-  planCopy: {flex: 1, marginLeft: spacing.md},
-  completed: {textDecorationLine: 'line-through', color: colors.muted},
   searchBox: {height: 52, margin: spacing.lg, marginBottom: 0, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center'},
   searchInput: {flex: 1, marginLeft: spacing.sm, fontSize: 14, color: colors.ink},
   lawCard: {marginBottom: spacing.md},
