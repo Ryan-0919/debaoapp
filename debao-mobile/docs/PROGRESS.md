@@ -20,8 +20,9 @@
 | 主观题选择 `SubjectiveSelect.tsx` | 已完成 | 民法 5 题、科目参数、年份/难度组合筛选、清除、空态和题目索引导航均已迁移；原型、Android 两态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 主观题作答 `SubjectiveAnswer.tsx` | 已完成 | 五道题、独立小问答案、保存/字数、题目导航、法条入口和提交 Dialog 均已迁移；原型、Android 三态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 客观题作答 `ObjectiveAnswer.tsx` | 已完成 | 四道题、单选、上下题、进度、答题卡和交卷 Dialog 均已迁移；原型四态、Android 三态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
-| 其余 20 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做客观题报告 `ObjectiveReport.tsx` |
-| 三端 1:1 视觉验收 | 进行中 | Android 前 8 个页面已逐页验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
+| 客观题报告 `ObjectiveReport.tsx` | 已完成 | 动态成绩、三项统计、科目分析、四道逐题解析及错题本/返回均已迁移；原型与 Android 首尾截图、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
+| 其余 19 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做商品详情 `ProductDetail.tsx` |
+| 三端 1:1 视觉验收 | 进行中 | Android 前 9 个页面已逐页验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
 
 ## P0
 
@@ -71,7 +72,7 @@
 
 | 项目 | 状态 | 验证结果 | 唯一明确的下一步 |
 |---|---|---|---|
-| TypeScript、Lint、单元测试 | 已完成 | `pnpm check` 已通过：10 suites / 11 tests；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
+| TypeScript、Lint、单元测试 | 已完成 | `pnpm check` 已通过：11 suites / 12 tests；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
 | Android production JS bundle | 已完成 | Metro production bundle 已生成成功 | 原生依赖变化后重新 bundle |
 | Android 原生构建与安装 | 已完成 | Debug APK 构建成功，并在 `Debao_API_36`（API 36 / x86_64）完成安装、冷启动、首页截图和五 Tab 烟雾测试；进程保持前台且无运行期崩溃 | 继续完成返回、键盘、旋转、小屏及真机矩阵 |
 | iOS production JS bundle | 已完成 | Windows 上 production JS bundle 已生成成功 | 原生依赖变化后在 macOS 再次 bundle |

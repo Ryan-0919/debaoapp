@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 10 suites / 11 tests |
+| Jest | 通过 | 11 suites / 12 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -105,6 +105,12 @@ Android 默认态、保存态与提交确认态：![Android 主观题作答](scr
 原型基准：![Figma 客观题作答](screenshots/figma-objective-answer.png) ![Figma 客观题选中](screenshots/figma-objective-answer-selected.png) ![Figma 客观题答题卡](screenshots/figma-objective-answer-card.png) ![Figma 客观题交卷](screenshots/figma-objective-answer-dialog.png)
 
 Android 默认态、答题卡与确认态：![Android 客观题作答](screenshots/android-objective-answer.png) ![Android 客观题答题卡](screenshots/android-objective-answer-card.png) ![Android 客观题交卷](screenshots/android-objective-answer-dialog.png)
+
+客观题报告页 1:1 回归已完成：动态成绩圆环、答对/答错/总题数、两科进度、四道逐题解析和错题本/返回操作均已迁移。组件测试验证原型 75 分基线；Android 流程截图显示本次实际 1/4 对应 25 分，确认路由参数生效。
+
+原型基准：![Figma 客观题报告](screenshots/figma-objective-report.png)
+
+Android 首屏与列表底部：![Android 客观题报告](screenshots/android-objective-report.png) ![Android 客观题报告底部](screenshots/android-objective-report-bottom.png)
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 
