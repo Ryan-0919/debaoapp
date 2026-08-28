@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 26 suites / 36 tests |
+| Jest | 通过 | 27 suites / 39 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -227,6 +227,14 @@ UIAutomator 已确认 `o1` 的“已完成”、`DB2024031200001` 与“进入�
 Android 关键态：![Android 用户资料](screenshots/android-user-profile.png) ![Android 文本编辑](screenshots/android-user-profile-edit.png) ![Android 浮动键盘](screenshots/android-user-profile-keyboard.png) ![Android 阶段选择](screenshots/android-user-profile-stage.png) ![Android 头像颜色](screenshots/android-user-profile-avatar.png) ![Android 保存反馈](screenshots/android-user-profile-saved.png)
 
 UIAutomator 已从“我的 → 编辑资料”进入，命中五项资料、手机号“不可修改”、账号安全三行、昵称输入/字数/取消/保存、5 个备考阶段、6 个头像色板和“已保存修改”；选择“主观题冲刺阶段”后列表即时更新，提示 2 秒后消失。Jest 固定验证全部原型内容、不可编辑/无事件约束、文本空值回退、阶段和头像选择。
+
+设置页 1:1 回归已完成：通知/隐私/关于三组 8 项、说明、版本号、退出按钮和居中确认 Dialog 均与原型一致；旧 RN 的 Mock 提示、通知开关、功能图标、工程版版本号、清空 session 和跳转首页逻辑已移除。
+
+原型两态：![Figma 设置](screenshots/figma-settings.png) ![Figma 退出确认](screenshots/figma-settings-logout.png)
+
+Android 两态：![Android 设置](screenshots/android-settings.png) ![Android 退出确认](screenshots/android-settings-logout.png)
+
+UIAutomator 已从“我的 → 设置与隐私”进入并确认全部内容；8 个 `settings-row-*` 节点均不可点击。取消退出后 Dialog 消失且仍在设置页；再次打开并确认后返回 `profile-screen`。Jest 固定验证三组内容、无事件约束和确认/取消分支。
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 

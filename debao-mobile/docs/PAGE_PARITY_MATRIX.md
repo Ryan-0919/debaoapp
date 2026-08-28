@@ -39,7 +39,7 @@
 | 22 | `src/pages/OrderList.tsx` | `src/screens/commerce/OrderListScreen.tsx` | 订单列表、状态/金额/商品信息、详情跳转 | 已完成 |
 | 23 | `src/pages/OrderDetail.tsx` | `src/screens/commerce/OrderDetailScreen.tsx` | 订单信息、商品跳转、课程跳转和不同订单参数 | 已完成 |
 | 24 | `src/pages/UserProfile.tsx` | `src/screens/account/UserProfileScreen.tsx` | 资料展示、字段编辑 Bottom Sheet、头像颜色 Bottom Sheet、保存反馈 | 已完成 |
-| 25 | `src/pages/Settings.tsx` | `src/screens/account/AccountScreens.tsx` (`SettingsScreen`) | 设置分组、开关/入口、退出登录 Dialog | 未开始 |
+| 25 | `src/pages/Settings.tsx` | `src/screens/account/SettingsScreen.tsx` | 设置分组、静态入口、退出登录 Dialog | 已完成 |
 | 26 | `src/pages/Notifications.tsx` | `src/screens/account/AccountScreens.tsx` (`NotificationsScreen`) | 通知分组、已读/未读视觉和滚动内容 | 未开始 |
 | 27 | `src/pages/GradingService.tsx` | `src/screens/tools/ToolScreens.tsx` (`GradingServiceScreen`) | 服务说明、提交入口和主观题跳转 | 未开始 |
 | 28 | `src/pages/QuestionRecords.tsx` | `src/screens/tools/ToolScreens.tsx` (`QuestionRecordsScreen`) | 记录列表、成绩/时间/状态、报告跳转 | 未开始 |
@@ -271,3 +271,12 @@
 - 关键交互：UIAutomator 已从“我的 → 编辑资料”进入，确认五项资料、手机号禁用、账号安全三行、文本编辑和计数、5 个备考阶段、6 个头像色板及 2 秒保存提示；昵称输入获得焦点后浮动键盘不遮挡取消/保存。Jest 固定验证默认内容、只读/无事件行、空值回退、阶段选择、六色头像和提示自动消失。
 - 数据与状态：初始昵称、手机号、备考目标、阶段和学校与原型一致；文本字段最大 30 字，空白保存保留旧值；头像颜色仅在原型给定的 `#4C4BEA/#C0385A/#3A7A46/#A87000/#1A5FA8/#1A8B8B` 中选择。
 - 已知差异：原型资料修改只保存在页面状态，当前同样未接入账号持久化、头像照片上传、密码/微信/注销业务；账号安全三行按原型保留为无事件展示。除此之外仅有平台状态栏、Safe Area、设备纵向空间、系统键盘和字体栅格化差异。
+
+### 25. 设置
+
+- 原型源码：`得宝APP (1)/src/pages/Settings.tsx`、公共 `TopBar`/`Dialog` 和个人页“设置与隐私”入口已核对。
+- 原型截图：`docs/screenshots/figma-settings.png`、`figma-settings-logout.png`，均为 390x844。
+- Android 截图：`docs/screenshots/android-settings.png`、`android-settings-logout.png`。
+- 关键交互：UIAutomator 已从“我的 → 设置与隐私”进入，确认通知/隐私/关于三组 8 项和 `v2.4.1`；8 个设置行均无可点击节点。点击退出登录打开居中 Dialog，取消后仍在设置页，确认后返回 `profile-screen`。Jest 固定验证完整文案、静态行、取消和确认返回。
+- 数据与状态：学习提醒只显示“每日学习计划提醒”说明，不保留旧 RN 的通知开关；退出确认只关闭 Dialog 并 `goBack()`，严格对应原型，不调用登出服务或清空本地学习数据。
+- 已知差异：所有设置项按原型保持无业务事件，真实账号安全、协议、客服、通知权限和退出登录服务尚未接入；除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
