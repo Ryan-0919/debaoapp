@@ -55,7 +55,7 @@ test('courses implements calendar states, sheets and all-course navigation', asy
   await press('courses-media-audio-继续收听');
   expect(mockNavigate).toHaveBeenCalledWith('AudioPlayer', {courseId: 'c2'});
   await press('courses-media-live-进入直播间');
-  expect(mockNavigate).toHaveBeenCalledWith('LiveCourse', {courseId: 'c3'});
+  expect(mockNavigate).toHaveBeenCalledWith('LiveCourse', {courseId: 'c3', title: '民法精讲第18讲：物权变动'});
 
   await act(() => renderer!.unmount());
 });

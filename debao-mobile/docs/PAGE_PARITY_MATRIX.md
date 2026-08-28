@@ -28,7 +28,7 @@
 | 11 | `src/pages/PurchaseSuccess.tsx` | `src/screens/commerce/PurchaseSuccessScreen.tsx` | 成功信息、课程/订单/首页入口和不同商品参数 | 已完成 |
 | 12 | `src/pages/CourseDetail.tsx` | `src/screens/courses/CourseDetailScreen.tsx` | 已购/未购、章节展开、课时状态、视频和商品跳转 | 已完成 |
 | 13 | `src/pages/VideoPlayer.tsx` | `src/screens/courses/VideoPlayerScreen.tsx` | 播放控件显隐、播放/暂停、进度、倍速层、目录/讲义/笔记、章节展开、切课 | 已完成 |
-| 14 | `src/pages/LiveCourse.tsx` | `src/screens/courses/MediaScreens.tsx` (`LiveCourseScreen`) | 倒计时、聊天/课件、发言、点赞和人数信息 | 未开始 |
+| 14 | `src/pages/LiveCourse.tsx` | `src/screens/courses/LiveCourseScreen.tsx` | 倒计时、课程/教师/人数信息、今日直播安排、预约提醒双态 | 已完成 |
 | 15 | `src/pages/AudioPlayer.tsx` | `src/screens/courses/MediaScreens.tsx` (`AudioPlayerScreen`) | 播放/暂停、进度、倍速层、循环、文稿/目录/笔记、新增笔记、切课 | 未开始 |
 | 16 | `src/pages/LearningReport.tsx` | `src/screens/tools/ToolScreens.tsx` (`LearningReportScreen`) | 学习数据、图表/进度、薄弱项和专项练习跳转 | 未开始 |
 | 17 | `src/pages/LearningPlan.tsx` | `src/screens/tools/ToolScreens.tsx` (`LearningPlanScreen`) | 计划概览、每日任务、状态和操作按钮 | 未开始 |
@@ -172,3 +172,12 @@
 - 关键交互：UIAutomator 已验证中央/底部播放、模拟计时、前后 10 秒、控件显隐、完整六档倍速、三个 Tab、讲义和笔记输入节点；Jest 覆盖计时、快进、倍速选择、控件显隐、讲义、笔记保存、章节开合和携带 `lessonId` 的切课替换。
 - 数据与导航：视频页复用 `src/data/courses.ts`，无 `lessonId` 时定位原型当前课，有参数时定位指定课时；目录切课使用 `replace` 防止连续切课堆积返回栈。
 - 已知差异：原型本身使用图片和计时器模拟视频；React Native 同样实现可交互模拟状态，但尚未接入真实媒体源、解码、DRM、离线下载和系统全屏能力。原型底部使用 CSS 渐变遮罩，三端共享实现使用分层半透明遮罩。除此之外仅有平台必然差异。
+
+### 14. 直播课堂
+
+- 原型源码：`得宝APP (1)/src/pages/LiveCourse.tsx`、`src/data.ts` 和课程页直播入口已核对；原型 `liveState` 固定为 `countdown`，因此聊天室与课件 JSX 在实际运行中不可达。
+- 原型截图：`docs/screenshots/figma-live-course-countdown.png`、`figma-live-course-subscribed.png`，均为 390x844。
+- Android 截图：`docs/screenshots/android-live-course-countdown.png`、`android-live-course-subscribed.png`。
+- 关键交互：Android 已验证预约前后按钮、人数和视觉状态；Jest 固定验证初始 `04:28:17` 倒计时、路由直播标题、张明远老师、`6,284` 人预约、三条今日安排及预约后 `6,285` 人和“已预约开播提醒”。
+- 数据与导航：学习日历和全部课程中的两个直播入口均携带对应标题；直播页保留 `courseId` 并使用原型同源受控本地 PNG。
+- 已知差异：原型源码包含聊天、课件、发言和点赞代码，但固定 `countdown` 状态使这些分支不可观察，不能作为运行态验收内容；React Native 严格复刻当前可达的倒计时与预约两态。Android UIAutomator 因每秒倒计时无法进入 idle，交互证据改用预约前后截图与 Jest 固定。尚未接入真实直播流、信令、聊天室和开播提醒服务。除此之外仅有平台必然差异。

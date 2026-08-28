@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 15 suites / 20 tests |
+| Jest | 通过 | 16 suites / 21 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -139,6 +139,14 @@ UIAutomator 已确认 `course-detail-screen`、`course-owned-state`、`course-lo
 Android 关键态：![Android 视频目录](screenshots/android-video-player-catalog.png) ![Android 控件隐藏](screenshots/android-video-player-controls-hidden.png) ![Android 倍速](screenshots/android-video-player-speed.png) ![Android 讲义](screenshots/android-video-player-handout.png) ![Android 笔记](screenshots/android-video-player-notes.png)
 
 UIAutomator 确认倍速层六项 `0.75x/正常/1.25x/1.5x/1.75x/2x` 均完整可点击；实机模拟播放时间从 `5:38` 推进到 `5:58` 后暂停。笔记保存和目录切课由 Jest 固定验证，避免 Android 中文输入法状态影响自动化稳定性。
+
+直播课堂页 1:1 回归已完成：原型当前可观察的“即将直播”状态、动态倒计时、课程图片和标题、老师与预约人数、三条今日安排及底部预约提醒均已迁移。预约后人数从 `6,284` 变为 `6,285`，按钮切换为橙色“已预约开播提醒”。
+
+原型两态：![Figma 直播课堂倒计时](screenshots/figma-live-course-countdown.png) ![Figma 直播课堂已预约](screenshots/figma-live-course-subscribed.png)
+
+Android 两态：![Android 直播课堂倒计时](screenshots/android-live-course-countdown.png) ![Android 直播课堂已预约](screenshots/android-live-course-subscribed.png)
+
+原型 `LiveCourse.tsx` 的 `liveState` 固定为 `countdown`，聊天室、课件、发言和点赞代码在运行时不可达，因此不计入当前页面运行态完成范围。Android UIAutomator 因页面每秒更新倒计时无法进入 idle；预约交互改由前后截图确认，文本、人数和状态切换由 Jest 固定验证。
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 

@@ -178,7 +178,7 @@ function ActionButton({session, navigation}: {session: Session; navigation: Navi
     return <SmallButton label="立即补课" onPress={openCourse} tone="danger" />;
   }
   if (session.status === 'live-soon') {
-    return <SmallButton label="进入直播" onPress={() => navigation.navigate('LiveCourse', {courseId: 'c3'})} tone="live" />;
+    return <SmallButton label="进入直播" onPress={() => navigation.navigate('LiveCourse', {courseId: 'c3', title: session.title})} tone="live" />;
   }
   return <SmallButton label={session.type === 'practice' || session.type === 'review' ? '去完成' : '开始学习'} onPress={openCourse} tone="brand" />;
 }
@@ -472,8 +472,8 @@ function AllCoursesView({navigation, onAdd, added}: {navigation: Navigation; onA
 
       <SectionLabel>直播课程</SectionLabel>
       <View style={styles.courseGroup}>
-        <MediaCourse icon="live" name="民法精讲第18讲：物权变动" detail="张明远主讲 · 今日 19:00" button="进入直播间" onPress={() => navigation.navigate('LiveCourse', {courseId: 'c3'})} />
-        <View style={styles.groupDivider}><MediaCourse icon="live" name="法考直播冲刺班（考前30天）" detail="多位名师主讲 · 09月01日 开课" button="预约提醒" onPress={() => navigation.navigate('LiveCourse', {courseId: 'c3'})} /></View>
+        <MediaCourse icon="live" name="民法精讲第18讲：物权变动" detail="张明远主讲 · 今日 19:00" button="进入直播间" onPress={() => navigation.navigate('LiveCourse', {courseId: 'c3', title: '民法精讲第18讲：物权变动'})} />
+        <View style={styles.groupDivider}><MediaCourse icon="live" name="法考直播冲刺班（考前30天）" detail="多位名师主讲 · 09月01日 开课" button="预约提醒" onPress={() => navigation.navigate('LiveCourse', {courseId: 'c3', title: '法考直播冲刺班（考前30天）'})} /></View>
       </View>
 
       <SectionLabel>已完成</SectionLabel>
