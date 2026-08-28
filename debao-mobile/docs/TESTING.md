@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 22 suites / 28 tests |
+| Jest | 通过 | 23 suites / 30 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -196,11 +196,19 @@ Android 关键态：![Android 法条检索](screenshots/android-law-search.png) 
 
 UIAutomator 已从首页主观题模式的“法条检索”入口进入，验证 `311` 唯一搜索结果、第311条全文、收藏与“第311条相关练习”导航、论坛“答疑求助”筛选和公告展开。Jest 另以原型关键词“善意取得”固定中文检索、全文收藏、6/2 篇论坛计数及 6 条公告；发布帖子、论坛点赞/回复和公告收藏按原型保持无业务事件。
 
+AI 对话页 1:1 回归已完成：欢迎消息、右上角重置、4 个快捷问题、输入发送、0.8-1.3 秒三点思考态、4 类定制回答、通用回答、连续对话和自动滚动均与原型一致；旧 RN 页中的“Mock 模式”副标题、提示条和非原型快捷问题已删除。
+
+原型三态：![Figma AI 对话](screenshots/figma-ai-chat.png) ![Figma AI 思考中](screenshots/figma-ai-chat-loading.png) ![Figma AI 回答](screenshots/figma-ai-chat-answer.png)
+
+Android 四态：![Android AI 对话](screenshots/android-ai-chat.png) ![Android AI 思考中](screenshots/android-ai-chat-loading.png) ![Android AI 回答](screenshots/android-ai-chat-answer.png) ![Android AI 键盘](screenshots/android-ai-chat-keyboard.png)
+
+UIAutomator 已从首页 AI 答疑入口进入，命中欢迎语、4 个快捷问题、思考态与完整第311条回答；右上角重置后恢复初始态。Android 标准键盘下输入区保持可见，输入 `test` 后发送按钮启用，回车后得到“第一步：定性 / 第二步：找构成要件 / 第三步：结合案情得结论”。Jest 固定验证定制/通用回答、延迟态、重置和返回。
+
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 
 APK：`android/app/build/outputs/apk/debug/app-debug.apk`。
 
-尚需验证：系统返回、键盘遮挡、AI 流式状态、旋转和小屏设备。当前结果是模拟器验证，不等同于 Android 真机兼容性验收。
+尚需验证：系统返回、真实 AI 服务的流式/错误状态、旋转和小屏设备。当前结果是模拟器验证，不等同于 Android 真机兼容性验收。
 
 ### iOS
 

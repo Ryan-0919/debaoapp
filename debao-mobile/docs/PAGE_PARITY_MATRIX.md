@@ -35,7 +35,7 @@
 | 18 | `src/pages/MistakeBook.tsx` | `src/screens/tools/MistakeBookScreen.tsx` | 科目筛选、错题列表、复习跳转 | 已完成 |
 | 19 | `src/pages/Favorites.tsx` | `src/screens/tools/FavoritesScreen.tsx` | 收藏列表、题目/法条标签、收藏题目跳转 | 已完成 |
 | 20 | `src/pages/LawSearch.tsx` | `src/screens/tools/LawSearchScreen.tsx` | 法条/论坛/公告 Tab、搜索前后、科目筛选、列表展开、收藏、法条全文 Bottom Sheet、关联练习 | 已完成 |
-| 21 | `src/pages/AIChat.tsx` | `src/screens/ai/AIChatScreen.tsx` | 初始消息、输入、发送、加载、连续对话、键盘和滚动 | 未开始 |
+| 21 | `src/pages/AIChat.tsx` | `src/screens/ai/AIChatScreen.tsx` | 初始消息、输入、发送、加载、连续对话、键盘和滚动 | 已完成 |
 | 22 | `src/pages/OrderList.tsx` | `src/screens/commerce/OrderScreens.tsx` (`OrderListScreen`) | 订单列表、状态/金额/商品信息、详情跳转 | 未开始 |
 | 23 | `src/pages/OrderDetail.tsx` | `src/screens/commerce/OrderScreens.tsx` (`OrderDetailScreen`) | 订单信息、商品跳转、课程跳转和不同订单参数 | 未开始 |
 | 24 | `src/pages/UserProfile.tsx` | `src/screens/account/AccountScreens.tsx` (`UserProfileScreen`) | 资料展示、字段编辑 Bottom Sheet、头像颜色 Bottom Sheet、保存反馈 | 未开始 |
@@ -235,3 +235,12 @@
 - 关键交互：UIAutomator 已验证搜索 `311` 返回唯一结果、打开第311条全文、跳转“第311条相关练习”、论坛“答疑求助”筛选和首条公告展开；Jest 使用原型关键词“善意取得”固定搜索结果，并覆盖全文收藏、关联练习路由、6 篇论坛帖子/2 篇筛选结果和 6 条公告。
 - 数据与导航：完整迁移 10 条法条、4 条高频法条、8 个科目筛选、5 个有数据的科目分组、6 篇论坛帖子和 6 条公告；关联练习携带 `{mode: chapter, title: 第311条相关练习}` 进入客观题作答。
 - 已知差异：当前内容仍为原型 Mock，尚未接入权威法规数据源、版本更新、全文索引、论坛服务和公告后台；原型中发布帖子、论坛点赞/回复及公告收藏没有业务事件，RN 不自行增加交互。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+
+### 21. AI 对话
+
+- 原型源码：`得宝APP (1)/src/pages/AIChat.tsx`、公共 `TopBar` 和首页主客观题模式的 AI 答疑入口已核对。
+- 原型截图：`docs/screenshots/figma-ai-chat.png`、`figma-ai-chat-loading.png`、`figma-ai-chat-answer.png`，均为 390x844。
+- Android 截图：`docs/screenshots/android-ai-chat.png`、`android-ai-chat-loading.png`、`android-ai-chat-answer.png`、`android-ai-chat-keyboard.png`。
+- 关键交互：UIAutomator 已验证初始欢迎消息、4 个快捷问题、快捷提问“三点思考”态、完整第311条回答、右上角重置、输入框和发送按钮；标准键盘下输入区保持可见，输入 `test` 并回车后生成通用三步分析。Jest 固定验证快捷问题、思考延迟、定制回答、通用回答、重置和返回。
+- 数据与状态：完整迁移善意取得、诉讼时效、合同无效和共同犯罪 4 组定制答案；其他输入使用原型通用“定性→构成要件→结合案情”回答。发送期间隐藏快捷问题并阻止重复提交，0.8-1.3 秒后一次性追加回答，保持原型行为而非旧 RN 的逐字流式输出。
+- 已知差异：当前回答仍为原型本地固定逻辑，不构成真实 AI 服务或法律意见；外部模型、鉴权、配额、内容审查、网络错误和中断协议尚未接入。Android 模拟器 Gboard 使用浮动键盘，输入区仍保持可见；除此之外仅有平台状态栏、Safe Area、设备纵向空间、系统键盘和字体栅格化差异。
