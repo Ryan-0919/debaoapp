@@ -34,7 +34,7 @@
 | 17 | `src/pages/LearningPlan.tsx` | `src/screens/tools/LearningPlanScreen.tsx` | 周进度、两周计划、任务时长和完成态 | 已完成 |
 | 18 | `src/pages/MistakeBook.tsx` | `src/screens/tools/MistakeBookScreen.tsx` | 科目筛选、错题列表、复习跳转 | 已完成 |
 | 19 | `src/pages/Favorites.tsx` | `src/screens/tools/FavoritesScreen.tsx` | 收藏列表、题目/法条标签、收藏题目跳转 | 已完成 |
-| 20 | `src/pages/LawSearch.tsx` | `src/screens/tools/ToolScreens.tsx` (`LawSearchScreen`) | 法条/论坛/公告 Tab、搜索前后、科目筛选、列表展开、收藏、法条全文 Bottom Sheet、关联练习 | 未开始 |
+| 20 | `src/pages/LawSearch.tsx` | `src/screens/tools/LawSearchScreen.tsx` | 法条/论坛/公告 Tab、搜索前后、科目筛选、列表展开、收藏、法条全文 Bottom Sheet、关联练习 | 已完成 |
 | 21 | `src/pages/AIChat.tsx` | `src/screens/ai/AIChatScreen.tsx` | 初始消息、输入、发送、加载、连续对话、键盘和滚动 | 未开始 |
 | 22 | `src/pages/OrderList.tsx` | `src/screens/commerce/OrderScreens.tsx` (`OrderListScreen`) | 订单列表、状态/金额/商品信息、详情跳转 | 未开始 |
 | 23 | `src/pages/OrderDetail.tsx` | `src/screens/commerce/OrderScreens.tsx` (`OrderDetailScreen`) | 订单信息、商品跳转、课程跳转和不同订单参数 | 未开始 |
@@ -226,3 +226,12 @@
 - 关键交互：UIAutomator 已确认 `favorites-screen`、`共 4 条收藏`、4 张收藏行和全部标题；点击首项后进入“收藏题目”并显示 `1 / 4`。Jest 固定验证 4 个唯一收藏节点、全部文案及 `{mode: chapter, title: 收藏题目}` 路由参数。
 - 数据与导航：保留原型三道题目和一条《民法典》第311条法条收藏；法条项仅显示“民法典”标签，不增加年份。
 - 已知差异：当前收藏数据仍为原型 Mock，尚未接入账号级收藏增删和同步；原型所有收藏项统一进入客观题页，RN 按其可达行为复刻。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+
+### 20. 法条检索
+
+- 原型源码：`得宝APP (1)/src/pages/LawSearch.tsx`、公共 `TopBar`、`Tag`、首页主观题快捷入口和客观题作答页法条入口已核对。
+- 原型截图：`docs/screenshots/figma-law-search.png`、`figma-law-article-sheet.png`、`figma-law-forum.png`、`figma-law-notices.png`，均为 390x844。
+- Android 截图：`docs/screenshots/android-law-search.png`、`android-law-search-result.png`、`android-law-article-sheet.png`、`android-law-forum.png`、`android-law-notices.png`、`android-law-notice-expanded.png`。
+- 关键交互：UIAutomator 已验证搜索 `311` 返回唯一结果、打开第311条全文、跳转“第311条相关练习”、论坛“答疑求助”筛选和首条公告展开；Jest 使用原型关键词“善意取得”固定搜索结果，并覆盖全文收藏、关联练习路由、6 篇论坛帖子/2 篇筛选结果和 6 条公告。
+- 数据与导航：完整迁移 10 条法条、4 条高频法条、8 个科目筛选、5 个有数据的科目分组、6 篇论坛帖子和 6 条公告；关联练习携带 `{mode: chapter, title: 第311条相关练习}` 进入客观题作答。
+- 已知差异：当前内容仍为原型 Mock，尚未接入权威法规数据源、版本更新、全文索引、论坛服务和公告后台；原型中发布帖子、论坛点赞/回复及公告收藏没有业务事件，RN 不自行增加交互。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。

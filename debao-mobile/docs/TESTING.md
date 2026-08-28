@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 21 suites / 27 tests |
+| Jest | 通过 | 22 suites / 28 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -187,6 +187,14 @@ UIAutomator 已从“我的”实际进入页面并命中全部筛选项、3 道
 Android 全页：![Android 收藏夹](screenshots/android-favorites.png)
 
 UIAutomator 已从“我的”实际进入页面并确认 4 条收藏完整显示；点击首项后进入“收藏题目”且显示 `1 / 4`。Jest 同步固定全部收藏文案和章节练习路由参数。
+
+法条检索页 1:1 回归已完成：法条检索、学习论坛和官方公告三 Tab，10 条法条、4 条高频法条、搜索/清空/空态、科目筛选与浏览、全文弹层、收藏、关联练习、论坛筛选和公告展开均与原型一致。
+
+原型关键态：![Figma 法条检索](screenshots/figma-law-search.png) ![Figma 法条全文](screenshots/figma-law-article-sheet.png) ![Figma 学习论坛](screenshots/figma-law-forum.png) ![Figma 官方公告](screenshots/figma-law-notices.png)
+
+Android 关键态：![Android 法条检索](screenshots/android-law-search.png) ![Android 搜索结果](screenshots/android-law-search-result.png) ![Android 法条全文](screenshots/android-law-article-sheet.png) ![Android 学习论坛](screenshots/android-law-forum.png) ![Android 官方公告](screenshots/android-law-notices.png) ![Android 公告展开](screenshots/android-law-notice-expanded.png)
+
+UIAutomator 已从首页主观题模式的“法条检索”入口进入，验证 `311` 唯一搜索结果、第311条全文、收藏与“第311条相关练习”导航、论坛“答疑求助”筛选和公告展开。Jest 另以原型关键词“善意取得”固定中文检索、全文收藏、6/2 篇论坛计数及 6 条公告；发布帖子、论坛点赞/回复和公告收藏按原型保持无业务事件。
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 
