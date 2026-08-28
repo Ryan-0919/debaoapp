@@ -1,11 +1,11 @@
 import {useEffect, useState} from 'react';
 import {Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
-import {Download, Headphones, MessageCircle, Pause, Play, Radio, RotateCcw, RotateCw, Send} from 'lucide-react-native';
+import {Headphones, MessageCircle, Pause, Play, Radio, RotateCcw, RotateCw, Send} from 'lucide-react-native';
 import {useRoute} from '@react-navigation/native';
 import type {RouteProp} from '@react-navigation/native';
 import {AppScreen} from '@/components/AppScreen';
 import {PageHeader} from '@/components/PageHeader';
-import {Card, ListRow, MockNotice, Pill, ProgressBar, SectionTitle} from '@/components/ui';
+import {Card, MockNotice, Pill, ProgressBar, SectionTitle} from '@/components/ui';
 import {mediaService} from '@/services';
 import {colors, radius, spacing} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
@@ -35,24 +35,7 @@ function Player({kind, courseId}: {kind: MediaKind; courseId: string}) {
   );
 }
 
-type VideoRoute = RouteProp<RootStackParamList, 'VideoPlayer'>;
-export function VideoPlayerScreen() {
-  const route = useRoute<VideoRoute>();
-  return (
-    <AppScreen>
-      <PageHeader title="视频课程" subtitle="第 18 讲" />
-      <Player kind="video" courseId={route.params.courseId} />
-      <View style={styles.content}>
-        <Text style={styles.title}>合同履行中的抗辩权</Text>
-        <Text style={styles.subtitle}>民法体系精讲 · 张明远</Text>
-        <SectionTitle title="本讲资料" />
-        <Card style={styles.listCard}><ListRow title="第 18 讲课程讲义" subtitle="PDF 下载能力待接入" leading={<Download size={20} color={colors.brand} />} /></Card>
-        <SectionTitle title="知识点" />
-        <Card><Text style={styles.body}>同时履行抗辩权、先履行抗辩权与不安抗辩权的适用条件和法律效果。</Text></Card>
-      </View>
-    </AppScreen>
-  );
-}
+export {default as VideoPlayerScreen} from './VideoPlayerScreen';
 
 type AudioRoute = RouteProp<RootStackParamList, 'AudioPlayer'>;
 export function AudioPlayerScreen() {
@@ -114,7 +97,6 @@ const styles = StyleSheet.create({
   content: {padding: spacing.lg},
   title: {fontSize: 20, fontWeight: '800', color: colors.ink},
   subtitle: {fontSize: 12, color: colors.muted, marginTop: 5},
-  listCard: {paddingVertical: 0},
   body: {fontSize: 14, lineHeight: 23, color: colors.body},
   message: {fontSize: 13, lineHeight: 20, color: colors.body, marginBottom: spacing.sm},
   chatRow: {height: 48, borderRadius: radius.md, backgroundColor: colors.page, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', marginTop: spacing.md},

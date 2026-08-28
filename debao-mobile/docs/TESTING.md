@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 14 suites / 18 tests |
+| Jest | 通过 | 15 suites / 20 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -131,6 +131,14 @@ Android 两态：![Android 购买成功](screenshots/android-purchase-success.pn
 Android 三态：![Android 已购课程](screenshots/android-course-detail-owned.png) ![Android 当前章节](screenshots/android-course-detail-current.png) ![Android 未购课程](screenshots/android-course-detail-locked.png)
 
 UIAutomator 已确认 `course-detail-screen`、`course-owned-state`、`course-locked-state`、`course-lesson-l8`、`course-lesson-l22` 和 `course-buy` 均存在且可点击；点击 c2“去购买”后匹配到 p1 的“2024法考全程班（主客一体·视频精讲）”。
+
+视频播放页 1:1 回归已完成：视频封面、顶部工具、中央/底部播放、进度、前后 10 秒、模拟计时、六档倍速、控件显隐、课程信息、目录、讲义、笔记和切课均与原型状态机对应。Android 首轮发现进度双线、倍速文字换行和菜单被原生容器裁剪，均已在同一视觉修正批次处理并完成最终确认。
+
+原型关键态：![Figma 视频目录](screenshots/figma-video-player-catalog.png) ![Figma 控件隐藏](screenshots/figma-video-player-controls-hidden.png) ![Figma 倍速](screenshots/figma-video-player-speed.png) ![Figma 讲义](screenshots/figma-video-player-handout.png) ![Figma 笔记](screenshots/figma-video-player-notes.png)
+
+Android 关键态：![Android 视频目录](screenshots/android-video-player-catalog.png) ![Android 控件隐藏](screenshots/android-video-player-controls-hidden.png) ![Android 倍速](screenshots/android-video-player-speed.png) ![Android 讲义](screenshots/android-video-player-handout.png) ![Android 笔记](screenshots/android-video-player-notes.png)
+
+UIAutomator 确认倍速层六项 `0.75x/正常/1.25x/1.5x/1.75x/2x` 均完整可点击；实机模拟播放时间从 `5:38` 推进到 `5:58` 后暂停。笔记保存和目录切课由 Jest 固定验证，避免 Android 中文输入法状态影响自动化稳定性。
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 

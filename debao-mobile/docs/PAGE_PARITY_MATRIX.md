@@ -27,7 +27,7 @@
 | 10 | `src/pages/ProductDetail.tsx` | `src/screens/commerce/ProductDetailScreen.tsx` | 各商品内容、课程大纲展开/收起、底部购买栏、确认购买 Bottom Sheet、购买跳转 | 已完成 |
 | 11 | `src/pages/PurchaseSuccess.tsx` | `src/screens/commerce/PurchaseSuccessScreen.tsx` | 成功信息、课程/订单/首页入口和不同商品参数 | 已完成 |
 | 12 | `src/pages/CourseDetail.tsx` | `src/screens/courses/CourseDetailScreen.tsx` | 已购/未购、章节展开、课时状态、视频和商品跳转 | 已完成 |
-| 13 | `src/pages/VideoPlayer.tsx` | `src/screens/courses/MediaScreens.tsx` (`VideoPlayerScreen`) | 播放控件显隐、播放/暂停、进度、倍速层、目录/讲义/笔记、章节展开、切课 | 未开始 |
+| 13 | `src/pages/VideoPlayer.tsx` | `src/screens/courses/VideoPlayerScreen.tsx` | 播放控件显隐、播放/暂停、进度、倍速层、目录/讲义/笔记、章节展开、切课 | 已完成 |
 | 14 | `src/pages/LiveCourse.tsx` | `src/screens/courses/MediaScreens.tsx` (`LiveCourseScreen`) | 倒计时、聊天/课件、发言、点赞和人数信息 | 未开始 |
 | 15 | `src/pages/AudioPlayer.tsx` | `src/screens/courses/MediaScreens.tsx` (`AudioPlayerScreen`) | 播放/暂停、进度、倍速层、循环、文稿/目录/笔记、新增笔记、切课 | 未开始 |
 | 16 | `src/pages/LearningReport.tsx` | `src/screens/tools/ToolScreens.tsx` (`LearningReportScreen`) | 学习数据、图表/进度、薄弱项和专项练习跳转 | 未开始 |
@@ -163,3 +163,12 @@
 - 关键交互：UIAutomator 已验证 c1 已购态、默认首章、第二章展开、当前课高亮、c2 未购态及“去购买”；Jest 覆盖继续学习、章节互斥开合、具体 `lessonId` 视频参数、未购按钮和未购课时商品参数。
 - 数据与导航：`src/data/courses.ts` 完整迁移 c1/c2 章节和课时；已购课时连接 `VideoPlayer`，未购课时及按钮连接对应 `ProductDetail`。两张课程图片均为原型同源的受控本地 PNG。
 - 已知差异：原型把 `c1` 静态标记为已购、`c2` 静态标记为未购，即使由 p1 购买成功进入 c2 也不会改变授权状态；React Native 为保持页面运行态 1:1 暂时保留该矛盾，正式接入时必须由订单/授权服务统一状态。除此之外仅有平台必然差异。
+
+### 13. 视频播放
+
+- 原型源码：`得宝APP (1)/src/pages/VideoPlayer.tsx`、`src/data.ts` 和课程目录数据已核对。
+- 原型截图：`docs/screenshots/figma-video-player-catalog.png`、`figma-video-player-controls-hidden.png`、`figma-video-player-speed.png`、`figma-video-player-handout.png`、`figma-video-player-notes.png`、`figma-video-player-note-saved.png`，均为 390x844。
+- Android 截图：`docs/screenshots/android-video-player-catalog.png`、`android-video-player-controls-hidden.png`、`android-video-player-speed.png`、`android-video-player-handout.png`、`android-video-player-notes.png`。
+- 关键交互：UIAutomator 已验证中央/底部播放、模拟计时、前后 10 秒、控件显隐、完整六档倍速、三个 Tab、讲义和笔记输入节点；Jest 覆盖计时、快进、倍速选择、控件显隐、讲义、笔记保存、章节开合和携带 `lessonId` 的切课替换。
+- 数据与导航：视频页复用 `src/data/courses.ts`，无 `lessonId` 时定位原型当前课，有参数时定位指定课时；目录切课使用 `replace` 防止连续切课堆积返回栈。
+- 已知差异：原型本身使用图片和计时器模拟视频；React Native 同样实现可交互模拟状态，但尚未接入真实媒体源、解码、DRM、离线下载和系统全屏能力。原型底部使用 CSS 渐变遮罩，三端共享实现使用分层半透明遮罩。除此之外仅有平台必然差异。
