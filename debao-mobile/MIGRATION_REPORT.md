@@ -4,7 +4,7 @@
 
 ## 结论
 
-Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript 工程骨架。28 个原型页面均有对应的 React Native 页面和类型化路由，但“存在对应页面”不等于“视觉和交互 1:1 完成”。截至 2026-08-28，五个主 Tab、主观题选择和主观题作答共 7 页已按原型源码及实际渲染完成逐项重做、关键交互和 Android 截图验证；其余 21 页仍需逐页 1:1 核验。Android/iOS production JS bundle 与 HarmonyOS production Hermes bundle 已验证通过。
+Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript 工程骨架。28 个原型页面均有对应的 React Native 页面和类型化路由，但“存在对应页面”不等于“视觉和交互 1:1 完成”。截至 2026-08-28，前 8 页已按原型源码及实际渲染完成逐项重做、关键交互和 Android 截图验证；其余 20 页仍需逐页 1:1 核验。Android/iOS production JS bundle 与 HarmonyOS production Hermes bundle 已验证通过。
 
 “页面迁移完成”只代表共享源码和 bundle 层完成。Android Debug APK 已在 API 36 模拟器完成构建、安装、冷启动和首页视觉验证；当前 Windows 主机仍缺少 DevEco 工具链，且不能运行 Xcode，因此本报告不声称 iOS App 或 Harmony HAP 已完成原生构建、安装或真机验证。
 
@@ -36,7 +36,7 @@ Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript �
 | P0 | `Profile.tsx` | `ProfileScreen` / `Profile` Tab | 已完成 | 1:1 源码/渲染对照；账号、继续学习、资产、重点、三组 10 个入口、全部导航、Android 首屏/滚动态截图 |
 | P1 | `SubjectiveSelect.tsx` | `SubjectiveSelectScreen` / `SubjectiveSelect` | 已完成 | 1:1 源码/渲染对照；5 题、科目参数、组合筛选、清除、两类空态、题目索引导航、Android 两态截图 |
 | P1 | `SubjectiveAnswer.tsx` | `SubjectiveAnswerScreen` / `SubjectiveAnswer` | 已完成 | 1:1 源码/渲染对照；五题/小问切换、独立答案、保存/字数、法条导航、提交 Dialog、Android 三态截图 |
-| P1 | `ObjectiveAnswer.tsx` | `ObjectiveAnswerScreen` / `ObjectiveAnswer` | 已完成 | 练习/考试参数与 bundle |
+| P1 | `ObjectiveAnswer.tsx` | `ObjectiveAnswerScreen` / `ObjectiveAnswer` | 已完成 | 1:1 源码/渲染对照；四题单选、上下题、进度、答题卡、交卷 Dialog、报告参数、Android 三态截图 |
 | P1 | `ObjectiveReport.tsx` | `ObjectiveReportScreen` / `ObjectiveReport` | 已完成 | 报告参数与 bundle |
 | P1 | `CourseDetail.tsx` | `CourseDetailScreen` / `CourseDetail` | 已完成 | `courseId` 参数与 bundle |
 | P1 | `VideoPlayer.tsx` | `VideoPlayerScreen` / `VideoPlayer` | 已完成 | 仅播放器 UI/状态机 |
@@ -107,7 +107,7 @@ Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript �
 |---|---|---|
 | TypeScript strict | 通过 | Harmony Hvigor 脚本由 DevEco/ohpm 类型系统负责，不混入 RN `tsc` |
 | ESLint | 通过 | 无 warning |
-| Jest | 通过 | 9 个套件、10 个测试；覆盖关键页面交互、导航和公共按钮行为 |
+| Jest | 通过 | 10 个套件、11 个测试；覆盖关键页面交互、导航和公共按钮行为 |
 | Android production JS bundle | 通过 | 只证明共享 JS 可打包 |
 | iOS production JS bundle | 通过 | 只证明共享 JS 可打包 |
 | Harmony production Hermes bundle | 通过 | 生成 `hermes_bundle.hbc`，并确认四个 RNOH 包重定向 |

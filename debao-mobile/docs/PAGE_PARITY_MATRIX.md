@@ -22,7 +22,7 @@
 | 5 | `src/pages/Profile.tsx` | `src/screens/tabs/ProfileScreen.tsx` | 用户信息、学习数据、功能分组、全部入口跳转 | 已完成 |
 | 6 | `src/pages/SubjectiveSelect.tsx` | `src/screens/questions/SubjectiveSelectScreen.tsx` | 默认列表、科目参数、年份/难度筛选 Bottom Sheet、筛选结果、答题跳转 | 已完成 |
 | 7 | `src/pages/SubjectiveAnswer.tsx` | `src/screens/questions/SubjectiveAnswerScreen.tsx` | 题目/小题切换、答题输入、保存时间、法条检索跳转、提交 Dialog | 已完成 |
-| 8 | `src/pages/ObjectiveAnswer.tsx` | `src/screens/questions/ObjectiveAnswerScreen.tsx` | 章节/考试模式、单选作答、解析态、上下题、答题卡 Bottom Sheet、交卷 Dialog | 未开始 |
+| 8 | `src/pages/ObjectiveAnswer.tsx` | `src/screens/questions/ObjectiveAnswerScreen.tsx` | 章节/考试模式、单选作答、上下题、答题卡 Bottom Sheet、交卷 Dialog | 已完成 |
 | 9 | `src/pages/ObjectiveReport.tsx` | `src/screens/questions/ObjectiveReportScreen.tsx` | 成绩概览、题目结果、错题本跳转、返回路径 | 未开始 |
 | 10 | `src/pages/ProductDetail.tsx` | `src/screens/commerce/ProductDetailScreen.tsx` | 各商品内容、课程大纲展开/收起、底部购买栏、确认购买 Bottom Sheet、购买跳转 | 未开始 |
 | 11 | `src/pages/PurchaseSuccess.tsx` | `src/screens/commerce/PurchaseSuccessScreen.tsx` | 成功信息、课程/订单/首页入口和不同商品参数 | 未开始 |
@@ -118,3 +118,12 @@
 - 关键交互：UIAutomator 已验证从首页/题库进入真实答题页、五道题导航、四个小问、文本输入、12 字计数、24 小时制保存时间、最终提交 Dialog 和法条检索；Jest 覆盖指定题目索引、独立小问答案、保存、上一问、题目切换、取消/确认提交和导航。
 - 导航：法条按钮连接 `LawSearch`；最终确认提交后返回上一页；题目、小问及上一题/下一问/下一题均保持原型状态机。
 - 已知差异：仅真实 Android 状态栏、底部手势区、Safe Area 和字体栅格化差异；无已知产品内容或交互差异。
+
+### 8. 客观题作答
+
+- 原型源码：`得宝APP (1)/src/pages/ObjectiveAnswer.tsx`、`src/data.ts`、`src/components/BottomSheet.tsx` 和 `src/components/Dialog.tsx` 已核对。
+- 原型截图：`docs/screenshots/figma-objective-answer.png`、`figma-objective-answer-selected.png`、`figma-objective-answer-card.png`、`figma-objective-answer-dialog.png`，均为 390x844。
+- Android 截图：`docs/screenshots/android-objective-answer.png`、`android-objective-answer-card.png`、`android-objective-answer-dialog.png`。
+- 关键交互：UIAutomator 已验证题库章节入口、四道原型题、进度、选项 D、答题卡统计、交卷确认和带正确数/总数的报告导航；Jest 覆盖未答切题、上下题、两题答案、答题卡题号跳转、取消交卷和确认交卷。
+- 导航：章节/考试标题参数均显示在顶部；确认交卷连接类型化 `ObjectiveReport` 并携带实际 `correct`、`total`。
+- 已知差异：原型源码定义了解析态，但确认交卷时立即导航到报告，运行态不可停留在解析态；React Native 保持同样行为。除此之外仅有平台必然差异。
