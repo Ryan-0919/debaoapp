@@ -33,7 +33,7 @@
 | 16 | `src/pages/LearningReport.tsx` | `src/screens/tools/LearningReportScreen.tsx` | 学习数据、周柱图、六科进度、薄弱项、做题统计和专项练习跳转 | 已完成 |
 | 17 | `src/pages/LearningPlan.tsx` | `src/screens/tools/LearningPlanScreen.tsx` | 周进度、两周计划、任务时长和完成态 | 已完成 |
 | 18 | `src/pages/MistakeBook.tsx` | `src/screens/tools/MistakeBookScreen.tsx` | 科目筛选、错题列表、复习跳转 | 已完成 |
-| 19 | `src/pages/Favorites.tsx` | `src/screens/tools/ToolScreens.tsx` (`FavoritesScreen`) | 收藏分类/列表、题目练习跳转 | 未开始 |
+| 19 | `src/pages/Favorites.tsx` | `src/screens/tools/FavoritesScreen.tsx` | 收藏列表、题目/法条标签、收藏题目跳转 | 已完成 |
 | 20 | `src/pages/LawSearch.tsx` | `src/screens/tools/ToolScreens.tsx` (`LawSearchScreen`) | 法条/论坛/公告 Tab、搜索前后、科目筛选、列表展开、收藏、法条全文 Bottom Sheet、关联练习 | 未开始 |
 | 21 | `src/pages/AIChat.tsx` | `src/screens/ai/AIChatScreen.tsx` | 初始消息、输入、发送、加载、连续对话、键盘和滚动 | 未开始 |
 | 22 | `src/pages/OrderList.tsx` | `src/screens/commerce/OrderScreens.tsx` (`OrderListScreen`) | 订单列表、状态/金额/商品信息、详情跳转 | 未开始 |
@@ -217,3 +217,12 @@
 - 关键交互：UIAutomator 已确认 6 个科目筛选项、`共 3 道错题待复习`、`一键重做`、3 张题卡和答错次数；点击“民法”只改变选中态，点击首张题卡进入“错题复习”。Jest 固定验证 3 个唯一题卡、筛选状态、只读一键重做和 `{mode: chapter, title: 错题复习}` 路由参数。
 - 数据与导航：错题数据复用 `src/data/objectiveQuestions.ts` 前三题，保留原型中的用户答案 `B/C/B`、正确答案 `D/A/A` 和 `2/1/3` 次答错标记。
 - 已知差异：筛选和错题列表仍使用原型 Mock，尚未接入真实错题归档、筛选服务和同步；原型“一键重做”无事件，RN 严格保留只读状态。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+
+### 19. 收藏夹
+
+- 原型源码：`得宝APP (1)/src/pages/Favorites.tsx`、公共 `TopBar`、`Tag` 和个人页/首页收藏入口已核对。
+- 原型截图：`docs/screenshots/figma-favorites.png`，390x844。
+- Android 截图：`docs/screenshots/android-favorites.png`。
+- 关键交互：UIAutomator 已确认 `favorites-screen`、`共 4 条收藏`、4 张收藏行和全部标题；点击首项后进入“收藏题目”并显示 `1 / 4`。Jest 固定验证 4 个唯一收藏节点、全部文案及 `{mode: chapter, title: 收藏题目}` 路由参数。
+- 数据与导航：保留原型三道题目和一条《民法典》第311条法条收藏；法条项仅显示“民法典”标签，不增加年份。
+- 已知差异：当前收藏数据仍为原型 Mock，尚未接入账号级收藏增删和同步；原型所有收藏项统一进入客观题页，RN 按其可达行为复刻。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。

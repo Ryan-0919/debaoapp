@@ -1,32 +1,15 @@
 import {useState} from 'react';
 import {StyleSheet, Text, TextInput, View} from 'react-native';
-import {BookMarked, CheckCircle2, FileSearch, Search, Upload} from 'lucide-react-native';
-import {useNavigation} from '@react-navigation/native';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {CheckCircle2, FileSearch, Search, Upload} from 'lucide-react-native';
 import {AppScreen} from '@/components/AppScreen';
 import {PageHeader} from '@/components/PageHeader';
 import {AppButton, Card, EmptyState, ListRow, MockNotice, Pill} from '@/components/ui';
 import {colors, radius, spacing} from '@/theme';
-import type {RootStackParamList} from '@/types/navigation';
-
-type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
 export {default as LearningReportScreen} from './LearningReportScreen';
 export {default as LearningPlanScreen} from './LearningPlanScreen';
 export {default as MistakeBookScreen} from './MistakeBookScreen';
-
-
-export function FavoritesScreen() {
-  const navigation = useNavigation<Navigation>();
-  return (
-    <AppScreen>
-      <PageHeader title="我的收藏" />
-      <View style={styles.content}>
-        <Card style={styles.listCard}><ListRow title="民事法律行为的效力" subtitle="客观题 · 民法" leading={<BookMarked size={20} color={colors.brand} />} onPress={() => navigation.navigate('ObjectiveAnswer', {title: '收藏练习'})} /><ListRow title="合同解除与违约责任" subtitle="主观题 · 民法" leading={<BookMarked size={20} color={colors.brand} />} onPress={() => navigation.navigate('SubjectiveAnswer', {subjectName: '民法'})} /></Card>
-      </View>
-    </AppScreen>
-  );
-}
+export {default as FavoritesScreen} from './FavoritesScreen';
 
 const laws = [
   {title: '民法典 第五百九十五条', body: '买卖合同是出卖人转移标的物的所有权于买受人，买受人支付价款的合同。'},
