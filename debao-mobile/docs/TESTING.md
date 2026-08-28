@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 27 suites / 39 tests |
+| Jest | 通过 | 28 suites / 41 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -235,6 +235,14 @@ UIAutomator 已从“我的 → 编辑资料”进入，命中五项资料、手
 Android 两态：![Android 设置](screenshots/android-settings.png) ![Android 退出确认](screenshots/android-settings-logout.png)
 
 UIAutomator 已从“我的 → 设置与隐私”进入并确认全部内容；8 个 `settings-row-*` 节点均不可点击。取消退出后 Dialog 消失且仍在设置页；再次打开并确认后返回 `profile-screen`。Jest 固定验证三组内容、无事件约束和确认/取消分支。
+
+消息通知页 1:1 回归已完成：4 条通知的图标、标题、时间、正文和已读/未读视觉均与原型一致；旧 RN 的异步加载、Mock 提示、独立通知卡片和“未读”文字胶囊已移除。
+
+原型全页：![Figma 消息通知](screenshots/figma-notifications.png)
+
+Android 全页：![Android 消息通知](screenshots/android-notifications.png)
+
+UIAutomator 已从“我的 → 消息通知”进入并确认全文，统计 `ROWS=4 / CLICKABLE=0 / UNREAD=2`；Jest 固定验证 4 条原型数据顺序、三类图标、两条未读圆点和静态无事件约束。
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 

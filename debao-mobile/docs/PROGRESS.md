@@ -37,8 +37,9 @@
 | 订单详情 `OrderDetail.tsx` | 已完成 | `o1/o2` 完成/待开课两态、商品信息、订单信息和商品/课程跳转均已迁移；原型两态、Android 两态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 用户资料 `UserProfile.tsx` | 已完成 | 五项资料、手机号只读、文本/阶段编辑、六色头像、保存反馈和账号安全展示均已迁移；原型五态、Android 六态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 设置 `Settings.tsx` | 已完成 | 通知/隐私/关于三组 8 项、版本信息、退出按钮和确认 Dialog 均已迁移；原型两态、Android 两态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
-| 其余 3 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做消息通知 `Notifications.tsx` |
-| 三端 1:1 视觉验收 | 进行中 | Android 前 25 个页面已逐页验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
+| 消息通知 `Notifications.tsx` | 已完成 | 4 条通知、三类图标、两条未读底色/圆点、时间与正文均已迁移；原型、Android、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
+| 其余 2 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做批改服务 `GradingService.tsx` |
+| 三端 1:1 视觉验收 | 进行中 | Android 前 26 个页面已逐页验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
 
 ## P0
 
@@ -70,7 +71,7 @@
 | AI 对话 | 已完成 | `AIChat` 已按原型实现 4 个快捷问题、0.8-1.3 秒思考态、4 类定制答案、通用答案、连续对话和重置 | 回答仍为原型本地固定逻辑；外部模型、鉴权、配额、审查和中断协议未接入 |
 | 用户资料 | 已完成 | `UserProfile` 已按原型实现五项资料、文本/阶段 Bottom Sheet、六色头像和 2 秒保存反馈 | 当前为页面内原型状态；登录身份、照片上传和服务端同步未接入 |
 | 设置 | 已完成 | `Settings` 已按原型实现三组静态设置项、版本信息和退出确认/返回 | 设置项按原型无业务事件；真实退出、协议、客服和账号安全能力未接入 |
-| 通知 | 已完成 | `Notifications` 展示 Mock 通知 | APNs、Android 厂商/FCM、Harmony Push 均未接入 |
+| 通知 | 已完成 | `Notifications` 已按原型实现 4 条固定通知、三类图标和两条未读视觉 | 当前为原型静态数据；APNs、Android 厂商/FCM、Harmony Push 均未接入 |
 
 ## P2
 
@@ -88,7 +89,7 @@
 
 | 项目 | 状态 | 验证结果 | 唯一明确的下一步 |
 |---|---|---|---|
-| TypeScript、Lint、单元测试 | 已完成 | `pnpm check` 已通过：27 suites / 39 tests；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
+| TypeScript、Lint、单元测试 | 已完成 | `pnpm check` 已通过：28 suites / 41 tests；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
 | Android production JS bundle | 已完成 | Metro production bundle 已生成成功 | 原生依赖变化后重新 bundle |
 | Android 原生构建与安装 | 已完成 | Debug APK 构建成功，并在 `Debao_API_36`（API 36 / x86_64）完成安装、冷启动、首页截图和五 Tab 烟雾测试；进程保持前台且无运行期崩溃 | 继续完成返回、键盘、旋转、小屏及真机矩阵 |
 | iOS production JS bundle | 已完成 | Windows 上 production JS bundle 已生成成功 | 原生依赖变化后在 macOS 再次 bundle |
