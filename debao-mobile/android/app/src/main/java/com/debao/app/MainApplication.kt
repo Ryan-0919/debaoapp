@@ -14,6 +14,7 @@ class MainApplication : Application(), ReactApplication {
       packageList = PackageList(this).packages.apply {
         // Add packages that cannot be autolinked here.
       },
+      useDevSupport = BuildConfig.DEBUG && BuildConfig.USE_DEV_SUPPORT,
     )
   }
 

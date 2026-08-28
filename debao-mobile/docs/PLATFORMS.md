@@ -39,12 +39,17 @@
 
 本机验证记录：
 
-1. Gradle 9 wrapper 下载成功。
-2. RN Gradle settings/root 插件与 Kotlin 编译成功。
-3. 构建在 Android Gradle Plugin 读取 SDK 时停止：`SDK location not found`。
-4. 本机未检测到 `ANDROID_HOME`、`ANDROID_SDK_ROOT`、`adb` 或 SDK 默认目录。
+1. Android SDK 安装于 `E:\Android\Sdk`：Platform 36、Build Tools 35/36、NDK `27.1.12297006`、CMake `3.22.1`、platform-tools 和 Emulator `37.1.11`。
+2. Gradle 9、RN/Kotlin 插件、四个 ABI 原生依赖与 `assembleDebug` 均构建成功。
+3. Debug APK：`android/app/build/outputs/apk/debug/app-debug.apk`，包名 `com.debao.app`，应用名“得宝”。
+4. APK 已安装到 AVD `Debao_API_36`（Pixel 6、Android API 36、Google APIs x86_64、WHPX）。
+5. 冷启动后 `com.debao.app/.MainActivity` 保持前台，日志输出 `Running "DebaoMobile"`，未出现 JavaScript 或 Android Runtime 崩溃。
+6. 首页截图完成视觉检查：中文、图标、进度、内容卡片和底部导航正常，无空白或明显重叠。
+7. 五个主 Tab 依次点击通过，题库、商城、课程、我的和首页的唯一页面文案均匹配，切换后进程保持存活且无崩溃日志。
 
-因此 Android JS bundle 已验证，APK 安装启动未验证。唯一下一步是安装上述 SDK/NDK 并重新执行构建脚本。
+截图证据：![Android API 36 首页](screenshots/android-home-api36.png)
+
+Android 基础构建、安装、首页冷启动和五 Tab 烟雾测试已验证。系统返回、键盘遮挡、旋转、小屏、支付 Mock 和 AI 流式状态仍需按设备矩阵继续验收。
 
 ### RN 0.82 Gradle 补丁
 

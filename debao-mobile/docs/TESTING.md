@@ -9,7 +9,7 @@ pnpm test
 pnpm check
 ```
 
-当前结果（2026-08-27）：
+当前结果（2026-08-28）：
 
 | 检查 | 结果 | 范围 |
 |---|---|---|
@@ -50,7 +50,13 @@ pnpm harmony:bundle
 
 ### Android
 
-Gradle 已完成 RN/Kotlin 插件编译，随后因本机没有 SDK 停止。安装 SDK 后需验证：debug APK、冷启动、五 Tab、系统返回、键盘遮挡、支付 Mock、AI 流式状态、旋转和小屏设备。
+已在 `Debao_API_36`（Pixel 6、Android API 36、Google APIs x86_64）完成 Debug APK 构建、安装和冷启动。应用进程保持前台，logcat 无 JavaScript/Android Runtime 崩溃，首页视觉检查通过。截图：![Android 首页验证](screenshots/android-home-api36.png)
+
+五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
+
+APK：`android/app/build/outputs/apk/debug/app-debug.apk`。
+
+尚需验证：系统返回、键盘遮挡、支付 Mock、AI 流式状态、旋转和小屏设备。当前结果是模拟器验证，不等同于 Android 真机兼容性验收。
 
 ### iOS
 

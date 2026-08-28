@@ -7,7 +7,7 @@
     "ios": "react-native run-ios",
     "harmony:init": "react-native init-harmony --bundle-name com.debao.app --app-name DebaoMobile",
     "harmony:link": "react-native link-harmony --include-npm-packages @react-native-oh-tpl/async-storage @react-native-oh-tpl/react-native-safe-area-context @react-native-oh-tpl/react-native-screens @react-native-oh-tpl/react-native-svg && node scripts/postlink-harmony.mjs",
-    "harmony:bundle": "react-native bundle-harmony --dev false --minify true --js-engine hermes",
+    "harmony:bundle": "react-native bundle-harmony --config metro.harmony.config.js --dev false --minify true --js-engine hermes",
     "harmony:run": "react-native run-harmony",
     "lint": "eslint .",
     "start": "react-native start",
@@ -29,9 +29,9 @@
     "lucide-react-native": "1.34.0",
     "react": "19.1.1",
     "react-native": "0.82.1",
-    "react-native-safe-area-context": "4.7.4",
-    "react-native-screens": "3.34.0",
-    "react-native-svg": "15.0.0",
+    "react-native-safe-area-context": "5.9.1",
+    "react-native-screens": "4.25.2",
+    "react-native-svg": "15.15.5",
     "zustand": "5.0.15"
   },
   "devDependencies": {
@@ -43,6 +43,7 @@
     "@react-native-community/cli-platform-ios": "20.0.0",
     "@react-native-oh/react-native-harmony-cli": "0.82.30",
     "@react-native/babel-preset": "0.82.1",
+    "@react-native/codegen": "0.82.1",
     "@react-native/eslint-config": "0.82.1",
     "@react-native/gradle-plugin": "0.82.1",
     "@react-native/metro-config": "0.82.1",
@@ -66,6 +67,7 @@
       "@react-native/gradle-plugin@0.82.1": "patches/@react-native__gradle-plugin@0.82.1.patch",
       "@react-native-oh-tpl/async-storage@1.21.0-0.2.2": "patches/@react-native-oh-tpl__async-storage@1.21.0-0.2.2.patch",
       "@react-native-oh-tpl/react-native-safe-area-context@4.7.4-0.2.1": "patches/@react-native-oh-tpl__react-native-safe-area-context@4.7.4-0.2.1.patch",
+      "@react-native-oh-tpl/react-native-screens@3.34.0-0.0.1": "patches/@react-native-oh-tpl__react-native-screens@3.34.0-0.0.1.patch",
       "@react-native-oh-tpl/react-native-svg@15.0.1-8": "patches/@react-native-oh-tpl__react-native-svg@15.0.1-8.patch"
     }
   }

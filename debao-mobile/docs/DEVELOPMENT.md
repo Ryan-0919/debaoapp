@@ -60,6 +60,8 @@ pnpm doctor
 
 四个共享原生依赖同时安装标准 RN 包和 RNOH 端口包。Metro 在 Harmony bundle 时按 `harmony.alias` 重定向 JS import。
 
+`metro.config.js` 只用于 Android/iOS，`metro.harmony.config.js` 只用于 HarmonyOS。`pnpm harmony:bundle` 会通过 `--config metro.harmony.config.js` 显式加载 Harmony resolver。不要重新合并这两个配置；Harmony serializer 会覆盖标准 React Native 初始化模块，误用于 Android 离线 bundle 时会导致运行期核心 API 未初始化。
+
 旧端口包缺少 RNOH 0.82 的 `autolinking` 元数据，`patches/` 为其补齐包名、CMake target 和 Package class。安装后执行：
 
 ```powershell
@@ -86,3 +88,7 @@ pnpm harmony:bundle
 ## 路径要求
 
 Android Java/Gradle 在当前中文路径下无法读取 wrapper 路径。首选将仓库放到纯 ASCII 路径；必须保留当前目录时使用 `scripts/android-build.ps1` 创建临时盘符映射。
+
+该脚本的可执行字符串保持 ASCII，以兼容 Windows 自带的 PowerShell 5.1；中文说明保留在本文档中。使用 PowerShell 7 时也可以执行同一脚本。
+
+`-EmbeddedBundle` 会设置 `debaoEmbeddedBundle`，关闭 Debug Dev Support，并把预先生成到 `android/app/src/debug/assets/index.android.bundle` 的 bundle 打进 APK。该模式用于无 Metro 演示和冷启动验证；生成的 debug bundle/resources 已被 `.gitignore` 排除，不提交仓库。

@@ -1,6 +1,6 @@
 # 迁移进度
 
-更新时间：2026-08-27
+更新时间：2026-08-28
 
 状态只使用“未开始、进行中、已完成、受阻”。“页面已完成”表示 React Native 源码、类型化路由和 production bundle 已覆盖该页面，不代表三个平台的原生安装包均已构建或完成真机视觉验收。
 
@@ -54,16 +54,16 @@
 |---|---|---|---|
 | TypeScript、Lint、单元测试 | 已完成 | `pnpm typecheck`、`pnpm lint`、`pnpm test` 已通过；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
 | Android production JS bundle | 已完成 | Metro production bundle 已生成成功 | 原生依赖变化后重新 bundle |
-| Android 原生构建与安装 | 受阻 | Gradle/RN/Kotlin 插件已编译到 SDK 检查；本机没有 `ANDROID_HOME`、SDK 36 和 NDK `27.1.12297006` | 安装指定 SDK/NDK，设置 `ANDROID_HOME`，执行 `scripts/android-build.ps1` 并在设备上安装启动 |
+| Android 原生构建与安装 | 已完成 | Debug APK 构建成功，并在 `Debao_API_36`（API 36 / x86_64）完成安装、冷启动、首页截图和五 Tab 烟雾测试；进程保持前台且无运行期崩溃 | 继续完成返回、键盘、旋转、小屏及真机矩阵 |
 | iOS production JS bundle | 已完成 | Windows 上 production JS bundle 已生成成功 | 原生依赖变化后在 macOS 再次 bundle |
 | iOS 原生构建与安装 | 受阻 | Swift 入口、Xcode 工程和 Podfile 已生成；Windows 无 Xcode/CocoaPods/模拟器 | 在 macOS 安装 Pods，执行 `pnpm ios`，完成签名和真机启动验证 |
 | Harmony autolink 与 Hermes bundle | 已完成 | 四个 RNOH 端口已链接，production `hermes_bundle.hbc` 已生成 | 端口升级后重新执行 `pnpm harmony:link` 和 `pnpm harmony:bundle` |
 | Harmony HAP 构建与安装 | 受阻 | ArkTS/C++/Hvigor 工程已生成；PATH 未检测到 `hvigor`、`ohpm`、`hdc` 或可调用 DevEco SDK | 安装 DevEco 工具链、配置签名、ohpm sync，构建 HAP 并用 hdc 真机启动 |
-| 三端真机视觉、返回、键盘和小屏验收 | 受阻 | 共享代码已使用 Safe Area、native-stack 和 KeyboardAvoidingView；当前没有可运行的三端设备构建 | 在上述原生构建完成后按 `docs/TESTING.md` 的设备矩阵逐项记录截图和结果 |
+| 三端真机视觉、返回、键盘和小屏验收 | 进行中 | Android API 36 模拟器首页视觉已通过；共享代码已使用 Safe Area、native-stack 和 KeyboardAvoidingView | 补 Android 完整设备矩阵，并在 macOS/DevEco 环境完成 iOS 与 HarmonyOS 验收 |
 
 ## 下一阶段入口条件
 
-1. Android：Android Studio 中安装 Platform/Build Tools 36 与 NDK `27.1.12297006`，设置 SDK 环境变量后执行构建脚本。
+1. Android：基础构建、API 36 模拟器首页和五 Tab 已通过；继续执行返回、键盘、旋转、小屏和至少一台真机验收。
 2. iOS：准备 macOS、Xcode、CocoaPods 和开发签名，执行 Pod 安装、模拟器及真机构建。
 3. HarmonyOS：准备 DevEco Studio、SDK 12/20、ohpm、hvigor、hdc 和开发签名，完成 HAP 构建。
 4. 业务接入：后端先按 `docs/API.md` 固化 OpenAPI/错误码和测试环境，再逐个替换 `src/services/mockServices.ts` 中的实现。

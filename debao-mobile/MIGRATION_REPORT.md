@@ -1,12 +1,12 @@
 # 得宝 App 第一阶段迁移报告
 
-报告日期：2026-08-27
+报告日期：2026-08-28
 
 ## 结论
 
 Figma Make 输出的 React Web 原型已迁移为 React Native Bare + TypeScript 工程。28 个原型页面均有对应的 React Native 页面和类型化路由；Android/iOS production JS bundle 与 HarmonyOS production Hermes bundle 已验证通过。后端、登录、支付、AI、真实媒体、直播、下载和推送尚未接入，均通过明确的 Service Contract 和 Mock 实现隔离。
 
-“页面迁移完成”只代表共享源码和 bundle 层完成。当前 Windows 主机缺少 Android SDK 和 DevEco 工具链，且不能运行 Xcode，因此本报告不声称 APK、iOS App 或 HAP 已构建、安装或真机验证。
+“页面迁移完成”只代表共享源码和 bundle 层完成。Android Debug APK 已在 API 36 模拟器完成构建、安装、冷启动和首页视觉验证；当前 Windows 主机仍缺少 DevEco 工具链，且不能运行 Xcode，因此本报告不声称 iOS App 或 Harmony HAP 已完成原生构建、安装或真机验证。
 
 ## 原型审计
 
@@ -89,11 +89,11 @@ Figma Make 输出的 React Web 原型已迁移为 React Native Bare + TypeScript
 
 | 平台 | 已完成 | 已验证 | 未验证及可验证原因 |
 |---|---|---|---|
-| Android | RN 官方 Kotlin 工程、包名、Gradle/RN 插件、共享代码 | production JS bundle；Gradle 插件编译到 SDK 检查 | 本机没有 SDK 36、NDK `27.1.12297006` 和 `ANDROID_HOME`，因此没有 APK 或安装启动结果 |
+| Android | RN 官方 Kotlin 工程、包名、Gradle/RN 插件、共享代码 | production JS bundle；Debug APK；API 36 x86_64 模拟器安装、冷启动、首页视觉检查和五 Tab 烟雾测试 | 返回、键盘、旋转、小屏与 Android 真机矩阵 |
 | iOS | RN 官方 Swift 入口、Xcode 工程、Podfile、共享代码 | production JS bundle | 当前为 Windows，不能运行 Xcode/CocoaPods/模拟器，因此没有原生构建或签名结果 |
 | HarmonyOS | RNOH ArkTS/C++/Hvigor 工程、四个 HAR autolink、Metro redirect | production Hermes HBC；四个端口重定向 | PATH 没有 hvigor、ohpm、hdc 和 DevEco SDK，因此没有 HAP、签名或真机启动结果 |
 
-共享层已经处理 Safe Area、键盘规避和 native-stack 返回语义；由于没有三端可安装构建，横竖屏、小屏、系统返回和辅助功能仍需要按真实设备矩阵验证。
+共享层已经处理 Safe Area、键盘规避和 native-stack 返回语义；Android 已有可安装构建和首页截图。横竖屏、小屏、系统返回和辅助功能仍需要按真实设备矩阵验证，iOS/HarmonyOS 仍需各自原生环境。
 
 ## 第一阶段验证结果
 
@@ -105,7 +105,7 @@ Figma Make 输出的 React Web 原型已迁移为 React Native Bare + TypeScript
 | Android production JS bundle | 通过 | 只证明共享 JS 可打包 |
 | iOS production JS bundle | 通过 | 只证明共享 JS 可打包 |
 | Harmony production Hermes bundle | 通过 | 生成 `hermes_bundle.hbc`，并确认四个 RNOH 包重定向 |
-| Android APK/安装 | 未通过验收 | 环境缺 Android SDK/NDK |
+| Android APK/安装 | 通过基础验收 | `assembleDebug` 成功；安装并冷启动于 `Debao_API_36`，首页无崩溃或明显布局问题，五个主 Tab 均可切换 |
 | iOS 原生构建/安装 | 未通过验收 | Windows 无 Xcode 工具链 |
 | Harmony HAP/安装 | 未通过验收 | 环境缺 DevEco CLI/SDK |
 
@@ -113,7 +113,7 @@ Figma Make 输出的 React Web 原型已迁移为 React Native Bare + TypeScript
 
 ## 风险与下一阶段任务
 
-1. 先完成三端原生构建基线：Android 安装 SDK 36/指定 NDK；iOS 在 macOS 安装 Pods 并配置签名；HarmonyOS 安装 DevEco SDK/CLI、同步 ohpm 并配置签名。每端至少记录一次冷启动、返回、键盘、Safe Area 和小屏截图。
+1. Android 原生构建基线已经完成；继续补齐返回、键盘、Safe Area、小屏和真机矩阵。iOS 在 macOS 安装 Pods 并配置签名；HarmonyOS 安装 DevEco SDK/CLI、同步 ohpm 并配置签名。每端至少记录一次冷启动和关键交互截图。
 2. 发布前确认正式 applicationId/bundle identifier/bundleName、应用中文名、商标和签名主体，再一次性修改三端配置并做升级安装测试。
 3. 后端团队按 `docs/API.md` 输出可执行 OpenAPI、鉴权流程和错误码；客户端从登录、题库、课程、订单顺序替换 Mock，并为每个 Service 增加契约测试。
 4. 支付必须先确定商品属性和三端合规路径，再实现服务端订单、验签、回调幂等及 Android/iOS/Harmony 沙箱 adapter；未完成前保留 Mock 标识。

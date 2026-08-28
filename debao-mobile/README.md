@@ -4,6 +4,8 @@
 
 当前版本为 `0.1.0` 第一阶段工程版，已迁移 Figma Make 原型的 28 个页面。登录、支付、AI、媒体、直播、下载、推送和远端数据仍是明确标识的 Mock，不是正式线上能力。
 
+需要通过 Codex Goal 模式继续推进时，使用 [Goal 模式开发提示词](docs/GOAL_PROMPT.md)。该提示词包含技术栈、三端边界、文档要求和验收标准。
+
 ## 固定版本
 
 - Node.js `22.22.0`
@@ -78,7 +80,16 @@ pnpm android
 powershell -ExecutionPolicy Bypass -File .\scripts\android-build.ps1
 ```
 
-本环境已经编译到 RN/Kotlin Gradle 插件阶段，随后因没有 Android SDK 停止。没有生成或安装 APK，详见 [平台文档](docs/PLATFORMS.md)。
+需要生成不依赖 Metro 的可演示 Debug APK 时：
+
+```powershell
+New-Item -ItemType Directory -Force android\app\src\debug\assets | Out-Null
+New-Item -ItemType Directory -Force android\app\src\debug\res | Out-Null
+pnpm exec react-native bundle --platform android --dev false --minify true --entry-file index.js --bundle-output android\app\src\debug\assets\index.android.bundle --assets-dest android\app\src\debug\res
+powershell -ExecutionPolicy Bypass -File .\scripts\android-build.ps1 -DriveLetter T: -EmbeddedBundle
+```
+
+2026-08-28 已在本机完成 `assembleDebug`、APK 安装和 Android API 36 模拟器冷启动。APK 位于 `android/app/build/outputs/apk/debug/app-debug.apk`，运行截图见 [Android 首页](docs/screenshots/android-home-api36.png)。详见 [平台文档](docs/PLATFORMS.md)。
 
 ## iOS
 
@@ -114,7 +125,9 @@ pnpm harmony:run
 - Android production JS bundle：通过
 - iOS production JS bundle：通过
 - Harmony Hermes HBC bundle：通过，4 个 RNOH 端口正确重定向
-- Android APK：未完成，本机缺少 Android SDK
+- Android Debug APK：通过，已安装并启动于 `Debao_API_36`（Android API 36 / x86_64）
+- Android 首页视觉检查：通过，无空白、崩溃或明显布局重叠
+- Android 五个主 Tab 烟雾测试：通过，各页面唯一文案匹配且无崩溃日志
 - iOS 原生构建：未执行，当前不是 macOS
 - Harmony HAP：未执行，本机未检测到 DevEco CLI/SDK
 

@@ -74,10 +74,26 @@
 - 原因：三端 bundle 可离线生成，演示内容不会受第三方资源可用性影响。
 - 影响：正式品牌插画和课程封面需要由产品提供授权位图资源，并按多分辨率资源规范加入仓库或正式 CDN。
 
-## 2026-08-27：统一临时包名并严格区分验证层级
+## 2026-08-28：统一临时包名并严格区分验证层级
 
-- 背景：开发者账号和正式商标信息尚未提供，当前 Windows 主机也缺少 Android SDK、Xcode 和 DevEco CLI/SDK。
+- 背景：开发者账号和正式商标信息尚未提供。当前 Windows 主机已有 Android SDK，但没有 Xcode 和 DevEco CLI/SDK。
 - 候选方案：各平台使用模板包名；提前猜测正式包名；使用统一临时包名并记录构建证据。
 - 最终选择：三端暂用 `com.debao.app`，应用名为“得宝”；分别记录静态检查、JS/Hermes bundle、原生编译、安装启动四个验证层级。
 - 原因：统一标识减少联调歧义；分层证据避免把 bundle 成功误写为 APK、App 或 HAP 构建成功。
-- 影响：发布前需一次性确认并替换三端包名及签名配置；当前不得声称 Android APK、iOS 原生构建或 Harmony HAP 已通过。
+- 影响：发布前需一次性确认并替换三端包名及签名配置。Android Debug APK 和 API 36 模拟器首页已有验证证据；当前不得声称 iOS 原生构建、Harmony HAP 或 Android 真机矩阵已通过。
+
+## 2026-08-28：Android/iOS 与 HarmonyOS 使用独立 Metro 配置
+
+- 背景：Harmony Metro serializer 会替换 React Native 默认核心初始化模块；同一配置用于 Android 离线 bundle 时会导致 `performance.now` 等运行期 API 未初始化。
+- 候选方案：继续共享配置并按平台维护全局状态；运行命令前临时改文件；拆分标准与 Harmony Metro 配置。
+- 最终选择：`metro.config.js` 只服务 Android/iOS，`metro.harmony.config.js` 只服务 HarmonyOS，`harmony:bundle` 显式传入后者。
+- 原因：平台边界清晰、命令可复现，避免 serializer 的跨平台副作用。
+- 影响：修改 Metro transform 选项时需同步检查两份配置；Harmony resolver/serializer 只能存在于 Harmony 专用配置。
+
+## 2026-08-28：保留新版标准 Screens 并修补旧 RNOH 兼容导出
+
+- 背景：Android/RN 0.82 使用 `react-native-screens 4.25.2`，现有 RNOH 端口仍是 `3.34.0-0.0.1`，其顶层入口重新导出了新版已删除的旧路径 `native-stack/contexts/GHContext`。
+- 候选方案：把标准 Screens 降回不支持 RN 0.82 的旧版；维护完整端口 fork；删除未被项目或导航库使用的过时 re-export。
+- 最终选择：通过 pnpm patch 删除 RNOH 端口 `src/index.ts` 中的 `GHContext` 旧路径导出。
+- 原因：保留 Android/iOS 官方兼容版本，同时不改变 Harmony 原生组件、HAR 或应用实际使用的 API。
+- 影响：升级 RNOH Screens 端口后需检查上游是否已适配 Screens 4.x，并删除不再需要的补丁。

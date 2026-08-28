@@ -1,28 +1,36 @@
 param(
   [ValidatePattern('^[A-Z]:$')]
-  [string]$DriveLetter = 'R:'
+  [string]$DriveLetter = 'R:',
+  [switch]$EmbeddedBundle
 )
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$workspaceRoot = Split-Path $projectRoot -Parent
+$projectDirectoryName = Split-Path $projectRoot -Leaf
 $existingMapping = subst | Where-Object { $_ -like "$DriveLetter*" }
 $createdMapping = $false
 
 if (-not $env:ANDROID_HOME -and -not $env:ANDROID_SDK_ROOT) {
-  throw 'Android SDK 未配置。请设置 ANDROID_HOME 或 ANDROID_SDK_ROOT。'
+  throw 'Android SDK is not configured. Set ANDROID_HOME or ANDROID_SDK_ROOT.'
 }
 
 if ($existingMapping) {
-  throw "$DriveLetter 已被占用，请通过 -DriveLetter 选择其他盘符。"
+  throw "$DriveLetter is already in use. Choose another drive with -DriveLetter."
 }
 
 try {
-  subst $DriveLetter $projectRoot
+  # Preserve the project path relative to the Git workspace for RN autolinking.
+  subst $DriveLetter $workspaceRoot
   $createdMapping = $true
-  Push-Location "$DriveLetter\android"
-  .\gradlew.bat assembleDebug --no-daemon
+  Push-Location "$DriveLetter\$projectDirectoryName\android"
+  $gradleArguments = @('assembleDebug', '--no-daemon')
+  if ($EmbeddedBundle) {
+    $gradleArguments += '-PdebaoEmbeddedBundle'
+  }
+  .\gradlew.bat @gradleArguments
   if ($LASTEXITCODE -ne 0) {
-    throw "Gradle 构建失败，退出码：$LASTEXITCODE"
+    throw "Gradle build failed with exit code $LASTEXITCODE."
   }
 } finally {
   if ((Get-Location).Path -like "$DriveLetter*") {
