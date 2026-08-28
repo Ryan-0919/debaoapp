@@ -65,6 +65,7 @@ test('product detail expands the full syllabus and completes purchase', async ()
   expect(mockPay).toHaveBeenCalled();
   expect(mockReplace).toHaveBeenCalledWith('PurchaseSuccess', {
     productName: '2024法考全程班（主客一体·视频精讲）',
+    productId: 'p1',
     orderId: 'DB-TEST-001',
   });
   await act(() => renderer.unmount());

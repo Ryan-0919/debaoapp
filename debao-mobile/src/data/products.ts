@@ -96,3 +96,8 @@ export const catalogProducts: CatalogProduct[] = [
 
 export const findCatalogProduct = (id: string) =>
   catalogProducts.find(product => product.id === id) ?? catalogProducts[0];
+
+export const productCourseIds: Partial<Record<string, string>> = {
+  p1: 'c2',
+  p2: 'c1',
+};

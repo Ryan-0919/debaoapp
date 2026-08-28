@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 12 suites / 14 tests |
+| Jest | 通过 | 13 suites / 16 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -117,6 +117,12 @@ Android 首屏与列表底部：![Android 客观题报告](screenshots/android-o
 原型三态：![Figma 商品详情](screenshots/figma-product-detail.png) ![Figma 商品详情展开](screenshots/figma-product-detail-expanded.png) ![Figma 确认购买](screenshots/figma-product-detail-purchase.png)
 
 Android 首屏、展开、购买和底部：![Android 商品详情](screenshots/android-product-detail.png) ![Android 商品详情展开](screenshots/android-product-detail-expanded.png) ![Android 确认购买](screenshots/android-product-detail-purchase.png) ![Android 商品详情底部](screenshots/android-product-detail-bottom.png)
+
+购买成功页 1:1 回归已完成：自动开通商品显示绿色权益提示和“进入课程”，预约开课商品显示黄色激活提示和“查看我的课程”；查看订单、返回首页及原型商品-课程映射均已迁移。Android 原生验证额外发现并修正了嵌套 Tab 首次落到首页的问题，当前 p4 操作后“课程”Tab 明确为选中态。
+
+原型两态：![Figma 购买成功](screenshots/figma-purchase-success.png) ![Figma 预约开课成功](screenshots/figma-purchase-success-scheduled.png)
+
+Android 两态：![Android 购买成功](screenshots/android-purchase-success.png) ![Android 预约开课成功](screenshots/android-purchase-success-scheduled.png)
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 

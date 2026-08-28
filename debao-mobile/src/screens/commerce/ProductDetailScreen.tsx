@@ -102,7 +102,7 @@ export default function ProductDetailScreen() {
     await paymentService.pay(order);
     setPaying(false);
     setSheetVisible(false);
-    navigation.replace('PurchaseSuccess', {productName: product.name, orderId: order.id});
+    navigation.replace('PurchaseSuccess', {productName: product.name, productId: product.id, orderId: order.id});
   };
 
   return (

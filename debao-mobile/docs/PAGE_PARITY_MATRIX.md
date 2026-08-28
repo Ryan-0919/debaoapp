@@ -25,7 +25,7 @@
 | 8 | `src/pages/ObjectiveAnswer.tsx` | `src/screens/questions/ObjectiveAnswerScreen.tsx` | 章节/考试模式、单选作答、上下题、答题卡 Bottom Sheet、交卷 Dialog | 已完成 |
 | 9 | `src/pages/ObjectiveReport.tsx` | `src/screens/questions/ObjectiveReportScreen.tsx` | 成绩概览、题目结果、错题本跳转、返回路径 | 已完成 |
 | 10 | `src/pages/ProductDetail.tsx` | `src/screens/commerce/ProductDetailScreen.tsx` | 各商品内容、课程大纲展开/收起、底部购买栏、确认购买 Bottom Sheet、购买跳转 | 已完成 |
-| 11 | `src/pages/PurchaseSuccess.tsx` | `src/screens/commerce/PurchaseSuccessScreen.tsx` | 成功信息、课程/订单/首页入口和不同商品参数 | 未开始 |
+| 11 | `src/pages/PurchaseSuccess.tsx` | `src/screens/commerce/PurchaseSuccessScreen.tsx` | 成功信息、课程/订单/首页入口和不同商品参数 | 已完成 |
 | 12 | `src/pages/CourseDetail.tsx` | `src/screens/courses/CourseDetailScreen.tsx` | 已购/未购、章节展开、课时状态、视频和商品跳转 | 未开始 |
 | 13 | `src/pages/VideoPlayer.tsx` | `src/screens/courses/MediaScreens.tsx` (`VideoPlayerScreen`) | 播放控件显隐、播放/暂停、进度、倍速层、目录/讲义/笔记、章节展开、切课 | 未开始 |
 | 14 | `src/pages/LiveCourse.tsx` | `src/screens/courses/MediaScreens.tsx` (`LiveCourseScreen`) | 倒计时、聊天/课件、发言、点赞和人数信息 | 未开始 |
@@ -145,3 +145,12 @@
 - 关键交互：UIAutomator 已验证 p1 首屏、6 项大纲展开、确认购买金额、支付跳转、营销详情、服务承诺和 3 条评价；Jest 覆盖 p1 展开/取消/支付、p4 直播封面态和 p5 音频封面态。
 - 数据与导航：商城和详情共用 6 商品目录；确认支付调用现有 Mock 订单/支付服务，并携带商品名和订单号替换到 `PurchaseSuccess`。
 - 已知差异：原型营销面板使用 CSS 渐变，React Native 共享实现使用对应主色纯色背景，避免引入三端不一致的额外渐变依赖；除此之外仅有平台必然差异。
+
+### 11. 购买成功
+
+- 原型源码：`得宝APP (1)/src/pages/PurchaseSuccess.tsx`、`src/data.ts` 和商品/课程关联已核对。
+- 原型截图：`docs/screenshots/figma-purchase-success.png`、`figma-purchase-success-scheduled.png`，均为 390x844。
+- Android 截图：`docs/screenshots/android-purchase-success.png`、`android-purchase-success-scheduled.png`。
+- 关键状态：p1 自动开通态显示“进入课程”，p4 预约开课态显示“查看我的课程”；UIAutomator 已验证两态全部文案和 p1 关联课程、p4 课程 Tab 导航。
+- 导航：p1/p2 使用原型商品-课程映射进入 `CourseDetail`；其他商品进入课程 Tab；“查看订单”连接 `OrderList`；“返回首页”明确替换到首页 Tab。Jest 覆盖全部目标。
+- 已知差异：仅真实 Android 状态栏、底部手势区、Safe Area 和字体栅格化差异；无已知产品内容或交互差异。

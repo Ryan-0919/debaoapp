@@ -15,7 +15,7 @@ export type RootStackParamList = {
   ObjectiveAnswer: {mode?: 'practice' | 'exam' | 'chapter'; title?: string} | undefined;
   ObjectiveReport: {correct: number; total: number};
   ProductDetail: {productId: string};
-  PurchaseSuccess: {productName: string; orderId: string};
+  PurchaseSuccess: {productName: string; productId: string; orderId: string};
   CourseDetail: {courseId: string};
   VideoPlayer: {courseId: string};
   LiveCourse: {courseId: string};
