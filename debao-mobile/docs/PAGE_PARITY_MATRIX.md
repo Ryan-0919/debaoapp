@@ -19,7 +19,7 @@
 | 2 | `src/pages/QuestionBank.tsx` | `src/screens/tabs/QuestionBankScreen.tsx` | 客观题、主观题、年份 Bottom Sheet、卷别切换、章节展开、全部入口跳转 | 已完成 |
 | 3 | `src/pages/Mall.tsx` | `src/screens/tabs/MallScreen.tsx` | 分类筛选、类型筛选、商品列表、商品跳转 | 已完成 |
 | 4 | `src/pages/Courses.tsx` | `src/screens/tabs/CoursesScreen.tsx` | 日历/全部课程、周/月切换、快捷筛选、补课日期、加入安排三个 Bottom Sheet、课程/直播/音频跳转 | 已完成 |
-| 5 | `src/pages/Profile.tsx` | `src/screens/tabs/ProfileScreen.tsx` | 用户信息、学习数据、功能分组、全部入口跳转 | 未开始 |
+| 5 | `src/pages/Profile.tsx` | `src/screens/tabs/ProfileScreen.tsx` | 用户信息、学习数据、功能分组、全部入口跳转 | 已完成 |
 | 6 | `src/pages/SubjectiveSelect.tsx` | `src/screens/questions/SubjectiveSelectScreen.tsx` | 默认列表、科目参数、年份/难度筛选 Bottom Sheet、筛选结果、答题跳转 | 未开始 |
 | 7 | `src/pages/SubjectiveAnswer.tsx` | `src/screens/questions/SubjectiveAnswerScreen.tsx` | 题目/小题切换、答题输入、保存时间、法条检索跳转、提交 Dialog | 未开始 |
 | 8 | `src/pages/ObjectiveAnswer.tsx` | `src/screens/questions/ObjectiveAnswerScreen.tsx` | 章节/考试模式、单选作答、解析态、上下题、答题卡 Bottom Sheet、交卷 Dialog | 未开始 |
@@ -90,4 +90,13 @@
 - Android 截图：`docs/screenshots/android-courses-calendar-raw.png`、`android-courses-all-raw.png`、`android-courses-month-sheet-raw.png`、`android-courses-reschedule-sheet-raw.png`、`android-courses-add-sheet-raw.png`。
 - 关键交互：UIAutomator 已验证日历/全部课程切换、下一周真实变为 8月31日到 9月6日、月份弹层、待补课调整弹层和加入学习安排弹层；Jest 覆盖日期、空态、快捷筛选、月份选择、三个弹层及课程/音频/直播导航。
 - 导航：录播、专项课程连接 `CourseDetail`，音频连接 `AudioPlayer`，直播连接 `LiveCourse`，均携带类型化参数。
+- 已知差异：仅真实 Android 状态栏、底部手势区、Safe Area 和字体栅格化差异；无已知产品内容或交互差异。
+
+### 5. 我的
+
+- 原型源码：`得宝APP (1)/src/pages/Profile.tsx` 和公共底部导航已核对。
+- 原型截图：`docs/screenshots/figma-profile.png`，390x844。
+- Android 截图：`docs/screenshots/android-profile.png`、`android-profile-services.png`。
+- 关键交互：UIAutomator 已验证首屏账号、继续学习、学习资产、本周重点，以及滚动后的学习与内容、课程与服务、应用管理三组入口；Jest 覆盖头像、编辑、继续、报告和全部 10 个菜单路由。
+- 导航：页面入口连接 `UserProfile`、`CourseDetail`、`LearningPlan`、`LearningReport`、`QuestionRecords`、`MistakeBook`、`Favorites`、课程 Tab、`OrderList`、`Grading`、`Notifications` 和 `Settings`。
 - 已知差异：仅真实 Android 状态栏、底部手势区、Safe Area 和字体栅格化差异；无已知产品内容或交互差异。

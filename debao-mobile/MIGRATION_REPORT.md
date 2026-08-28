@@ -4,7 +4,7 @@
 
 ## 结论
 
-Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript 工程骨架。28 个原型页面均有对应的 React Native 页面和类型化路由，但“存在对应页面”不等于“视觉和交互 1:1 完成”。截至 2026-08-28，首页、题库、商城和课程已按原型源码及实际渲染完成逐项重做、关键交互和 Android 截图验证；其余 24 页仍需逐页 1:1 核验。Android/iOS production JS bundle 与 HarmonyOS production Hermes bundle 已验证通过。
+Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript 工程骨架。28 个原型页面均有对应的 React Native 页面和类型化路由，但“存在对应页面”不等于“视觉和交互 1:1 完成”。截至 2026-08-28，五个主 Tab（首页、题库、商城、课程、我的）已按原型源码及实际渲染完成逐项重做、关键交互和 Android 截图验证；其余 23 页仍需逐页 1:1 核验。Android/iOS production JS bundle 与 HarmonyOS production Hermes bundle 已验证通过。
 
 “页面迁移完成”只代表共享源码和 bundle 层完成。Android Debug APK 已在 API 36 模拟器完成构建、安装、冷启动和首页视觉验证；当前 Windows 主机仍缺少 DevEco 工具链，且不能运行 Xcode，因此本报告不声称 iOS App 或 Harmony HAP 已完成原生构建、安装或真机验证。
 
@@ -23,7 +23,7 @@ Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript �
 
 - `得宝APP (1)` 是视觉、文案、信息层级和交互的唯一基准；React Native 现有实现只作为原生技术骨架。
 - 1:1 验收基准为原型 390x844 渲染，并覆盖正常态、切换/展开/弹层等关键状态。允许的差异只限系统状态栏、Safe Area 和平台字体栅格化。
-- 首页、题库、商城和课程已有原型渲染对照、React Native 多态截图、UIAutomator 和 Jest 证据。其他页面不能沿用“路由存在”作为 1:1 完成证据。
+- 五个主 Tab 已有原型渲染对照、React Native 多态截图、UIAutomator 和 Jest 证据。其他页面不能沿用“路由存在”作为 1:1 完成证据。
 
 ## 页面映射
 
@@ -33,7 +33,7 @@ Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript �
 | P0 | `QuestionBank.tsx` | `QuestionBankScreen` / `Questions` Tab | 已完成 | 1:1 源码/渲染对照；切换、年份弹层、章节展开、路由、组件测试、Android 三态截图 |
 | P0 | `Mall.tsx` | `MallScreen` / `Mall` Tab | 已完成 | 1:1 源码/渲染对照；两层筛选、6 个商品、本地图片、空态、详情参数、Android 截图 |
 | P0 | `Courses.tsx` | `CoursesScreen` / `Courses` Tab | 已完成 | 1:1 源码/渲染对照；日历/全部课程、动态周切换、月历、快捷筛选、空态、补课、加入安排、三类导航、Android 五态截图 |
-| P0 | `Profile.tsx` | `ProfileScreen` / `Profile` Tab | 已完成 | 路由、类型检查、三端 bundle |
+| P0 | `Profile.tsx` | `ProfileScreen` / `Profile` Tab | 已完成 | 1:1 源码/渲染对照；账号、继续学习、资产、重点、三组 10 个入口、全部导航、Android 首屏/滚动态截图 |
 | P1 | `SubjectiveSelect.tsx` | `SubjectiveSelectScreen` / `SubjectiveSelect` | 已完成 | 路由参数与 bundle |
 | P1 | `SubjectiveAnswer.tsx` | `SubjectiveAnswerScreen` / `SubjectiveAnswer` | 已完成 | 输入、提交状态与 bundle |
 | P1 | `ObjectiveAnswer.tsx` | `ObjectiveAnswerScreen` / `ObjectiveAnswer` | 已完成 | 练习/考试参数与 bundle |
@@ -107,7 +107,7 @@ Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript �
 |---|---|---|
 | TypeScript strict | 通过 | Harmony Hvigor 脚本由 DevEco/ohpm 类型系统负责，不混入 RN `tsc` |
 | ESLint | 通过 | 无 warning |
-| Jest | 通过 | 6 个套件、7 个测试；覆盖关键页面交互、导航和公共按钮行为 |
+| Jest | 通过 | 7 个套件、8 个测试；覆盖关键页面交互、导航和公共按钮行为 |
 | Android production JS bundle | 通过 | 只证明共享 JS 可打包 |
 | iOS production JS bundle | 通过 | 只证明共享 JS 可打包 |
 | Harmony production Hermes bundle | 通过 | 生成 `hermes_bundle.hbc`，并确认四个 RNOH 包重定向 |
@@ -124,5 +124,5 @@ Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript �
 3. 后端团队按 `docs/API.md` 输出可执行 OpenAPI、鉴权流程和错误码；客户端从登录、题库、课程、订单顺序替换 Mock，并为每个 Service 增加契约测试。
 4. 支付必须先确定商品属性和三端合规路径，再实现服务端订单、验签、回调幂等及 Android/iOS/Harmony 沙箱 adapter；未完成前保留 Mock 标识。
 5. 媒体方案必须先验证 Android/iOS 播放器与 RNOH/Harmony 可用能力，再决定共享库或三端 adapter；验收包含后台、中断、弱网、直播延迟和授权内容保护。
-6. 当前已有首页、题库、商城和课程组件交互测试与 Android 截图证据，但尚无自动像素回归或完整端到端覆盖。继续补 React Native Testing Library、关键流程 E2E 和三端视觉基线。
+6. 当前五个主 Tab 已有组件交互测试与 Android 截图证据，但尚无自动像素回归或完整端到端覆盖。继续补 React Native Testing Library、关键流程 E2E 和三端视觉基线。
 7. pnpm 补丁依赖特定包版本。任何 RN、RNOH、Gradle 或端口包升级都必须重新验证安装、autolink、三端 bundle 和原生构建，不能只更新 lockfile。

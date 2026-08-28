@@ -16,8 +16,9 @@
 | 题库 `QuestionBank.tsx` | 已完成 | 顶部居中切换、历年真题、年份 Bottom Sheet、卷别、可展开章节、分科真题和历年整卷已按原型迁移；Android API 36 三态截图通过 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 商城 `Mall.tsx` | 已完成 | 搜索、两层筛选、6 个商品、空态和商品详情参数已按原型迁移；原型与 Android 截图、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 课程 `Courses.tsx` | 已完成 | 学习日历、全部课程、动态周切换、月历、快捷筛选、空态、待补课、三类 Bottom Sheet 和课程/音频/直播导航均已迁移；Android 五组截图及 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
-| 其余 24 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做我的 `Profile.tsx` |
-| 三端 1:1 视觉验收 | 进行中 | Android 首页、题库、商城和课程已验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
+| 我的 `Profile.tsx` | 已完成 | 账号、继续学习、三项学习资产、本周重点及三组 10 个入口均已迁移；原型、Android 首屏/滚动态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
+| 其余 23 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做主观题选择 `SubjectiveSelect.tsx` |
+| 三端 1:1 视觉验收 | 进行中 | Android 五个主 Tab 已逐页验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
 
 ## P0
 
@@ -67,7 +68,7 @@
 
 | 项目 | 状态 | 验证结果 | 唯一明确的下一步 |
 |---|---|---|---|
-| TypeScript、Lint、单元测试 | 已完成 | `pnpm check` 已通过：6 suites / 7 tests；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
+| TypeScript、Lint、单元测试 | 已完成 | `pnpm check` 已通过：7 suites / 8 tests；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
 | Android production JS bundle | 已完成 | Metro production bundle 已生成成功 | 原生依赖变化后重新 bundle |
 | Android 原生构建与安装 | 已完成 | Debug APK 构建成功，并在 `Debao_API_36`（API 36 / x86_64）完成安装、冷启动、首页截图和五 Tab 烟雾测试；进程保持前台且无运行期崩溃 | 继续完成返回、键盘、旋转、小屏及真机矩阵 |
 | iOS production JS bundle | 已完成 | Windows 上 production JS bundle 已生成成功 | 原生依赖变化后在 macOS 再次 bundle |
