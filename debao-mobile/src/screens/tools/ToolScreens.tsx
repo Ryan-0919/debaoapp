@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import {Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
-import {BarChart3, BookMarked, CalendarCheck, CheckCircle2, FileSearch, Search, Upload, XCircle} from 'lucide-react-native';
+import {BookMarked, CalendarCheck, CheckCircle2, FileSearch, Search, Upload, XCircle} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
@@ -11,19 +11,7 @@ import type {RootStackParamList} from '@/types/navigation';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
-export function LearningReportScreen() {
-  return (
-    <AppScreen>
-      <PageHeader title="学习报告" subtitle="近 7 天" />
-      <View style={styles.content}>
-        <View style={styles.reportHero}><BarChart3 size={28} color={colors.action} /><Text style={styles.reportValue}>6.8h</Text><Text style={styles.reportLabel}>本周学习时长</Text></View>
-        <View style={styles.metricRow}>{[['286', '完成题目'], ['82%', '正确率'], ['5', '学习天数']].map(item => <View key={item[1]} style={styles.metric}><Text style={styles.metricValue}>{item[0]}</Text><Text style={styles.metricLabel}>{item[1]}</Text></View>)}</View>
-        <SectionTitle title="科目表现" />
-        <Card>{[['民法', 86, colors.brand], ['刑法', 74, colors.error], ['行政法', 62, colors.success]].map(item => <View key={String(item[0])} style={styles.subjectProgress}><View style={styles.progressTop}><Text style={styles.itemTitle}>{item[0]}</Text><Text style={styles.itemMeta}>{item[1]}%</Text></View><ProgressBar value={Number(item[1])} color={String(item[2])} /></View>)}</Card>
-      </View>
-    </AppScreen>
-  );
-}
+export {default as LearningReportScreen} from './LearningReportScreen';
 
 export function LearningPlanScreen() {
   const [completed, setCompleted] = useState<string[]>(['plan-1']);
@@ -114,15 +102,10 @@ export function QuestionRecordsScreen() {
 
 const styles = StyleSheet.create({
   content: {padding: spacing.lg},
-  reportHero: {backgroundColor: colors.ink, borderRadius: radius.md, padding: spacing.xl, alignItems: 'center'},
-  reportValue: {fontSize: 40, fontWeight: '900', color: '#FFFFFF', marginTop: spacing.sm},
-  reportLabel: {fontSize: 11, color: '#B6B9C5'},
   metricRow: {flexDirection: 'row', justifyContent: 'space-around', backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.lg, marginTop: spacing.lg},
   metric: {alignItems: 'center'},
   metricValue: {fontSize: 18, fontWeight: '800', color: colors.ink},
   metricLabel: {fontSize: 10, color: colors.muted, marginTop: 4},
-  subjectProgress: {marginBottom: spacing.lg},
-  progressTop: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm},
   itemTitle: {fontSize: 14, fontWeight: '700', color: colors.ink},
   itemMeta: {fontSize: 11, lineHeight: 17, color: colors.muted, marginTop: 4},
   planSummary: {flexDirection: 'row', alignItems: 'center'},

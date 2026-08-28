@@ -30,7 +30,7 @@
 | 13 | `src/pages/VideoPlayer.tsx` | `src/screens/courses/VideoPlayerScreen.tsx` | 播放控件显隐、播放/暂停、进度、倍速层、目录/讲义/笔记、章节展开、切课 | 已完成 |
 | 14 | `src/pages/LiveCourse.tsx` | `src/screens/courses/LiveCourseScreen.tsx` | 倒计时、课程/教师/人数信息、今日直播安排、预约提醒双态 | 已完成 |
 | 15 | `src/pages/AudioPlayer.tsx` | `src/screens/courses/AudioPlayerScreen.tsx` | 播放/暂停、波形进度、15 秒跳转、倍速层、循环、字幕/目录/笔记、新增笔记、切课 | 已完成 |
-| 16 | `src/pages/LearningReport.tsx` | `src/screens/tools/ToolScreens.tsx` (`LearningReportScreen`) | 学习数据、图表/进度、薄弱项和专项练习跳转 | 未开始 |
+| 16 | `src/pages/LearningReport.tsx` | `src/screens/tools/LearningReportScreen.tsx` | 学习数据、周柱图、六科进度、薄弱项、做题统计和专项练习跳转 | 已完成 |
 | 17 | `src/pages/LearningPlan.tsx` | `src/screens/tools/ToolScreens.tsx` (`LearningPlanScreen`) | 计划概览、每日任务、状态和操作按钮 | 未开始 |
 | 18 | `src/pages/MistakeBook.tsx` | `src/screens/tools/ToolScreens.tsx` (`MistakeBookScreen`) | 科目筛选、错题列表、复习跳转 | 未开始 |
 | 19 | `src/pages/Favorites.tsx` | `src/screens/tools/ToolScreens.tsx` (`FavoritesScreen`) | 收藏分类/列表、题目练习跳转 | 未开始 |
@@ -190,3 +190,12 @@
 - 关键交互：Android 已验证课程页真实入口、模拟计时、播放视觉、完整六档倍速、字幕/笔记/目录三态、循环选中和目录切到第19讲；Jest 覆盖波形 50% 定位、前后 15 秒、循环、倍速关闭、字幕时间点、笔记保存和携带 `lessonId` 的 `replace`。
 - 数据与导航：音频页复用 `src/data/courses.ts` 的 c1 封面、老师和 13 个课时；课程列表两个音频入口均按原型传 `courseId: c1`，目录切课使用 `replace` 防止返回栈累积。
 - 已知差异：此前 RN 骨架错误传递 `c2`，现已按原型 `Courses.tsx` 修正为 `c1`。原型本身用计时器和波形模拟音频；React Native 同样实现可交互模拟状态，但尚未接入真实媒体源、后台播放、锁屏控制和离线下载。除此之外仅有平台状态栏、Safe Area 和字体栅格化差异。
+
+### 16. 学习报告
+
+- 原型源码：`得宝APP (1)/src/pages/LearningReport.tsx`、公共 `TopBar`、`ProgressBar` 和个人页报告入口已核对。
+- 原型截图：`docs/screenshots/figma-learning-report.png`、`figma-learning-report-bottom.png`，均为 390x844。
+- Android 截图：`docs/screenshots/android-learning-report.png`；API 36 设备纵向空间可在一屏显示原型两张截图覆盖的全部内容。
+- 关键交互：UIAutomator 已确认 `learning-report-screen`、`4.2 小时`、六个 `learning-subject-*` 节点和专项练习按钮；点击后实际进入 `ObjectiveAnswer`，标题为“民事诉讼法专项”。Jest 固定验证周柱图、民诉 53%、`2,847 / 68% / 28` 三项统计和完整路由参数。
+- 数据与导航：六科正确率均按原型 `correct / total` 四舍五入计算；不同阈值使用原型绿/紫/橙色和等级标签，专项练习携带 `{mode: chapter, title: 民事诉讼法专项}`。
+- 已知差异：当前学习时长、正确率、排名和做题统计仍是原型 Mock，尚未接入服务端统计口径。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。

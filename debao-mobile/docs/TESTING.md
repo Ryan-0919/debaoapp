@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 17 suites / 23 tests |
+| Jest | 通过 | 18 suites / 24 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -155,6 +155,14 @@ Android 两态：![Android 直播课堂倒计时](screenshots/android-live-cours
 Android 关键态：![Android 音频字幕](screenshots/android-audio-player-transcript.png) ![Android 音频播放](screenshots/android-audio-player-playing.png) ![Android 音频倍速](screenshots/android-audio-player-speed.png) ![Android 音频笔记](screenshots/android-audio-player-notes.png) ![Android 音频目录](screenshots/android-audio-player-catalog.png)
 
 UIAutomator 已确认 `audio-player-screen`、c1 第18讲标题、`0:38` 初始时间、三 Tab、循环选中态和 `audio-lesson-l9`；播放实测推进到 `1:28`，点击第19讲后标题变为“不动产登记”。新增笔记和波形精确定位由 Jest 固定验证，避免 Android 中文输入法和坐标取样影响自动化稳定性。
+
+学习报告页 1:1 回归已完成：`4.2 小时`周学习柱图、民事诉讼法 53% 薄弱提示、六科等级和进度、`2,847 / 68% / 28` 做题统计及专项练习入口均与原型一致。
+
+原型首屏与底部：![Figma 学习报告](screenshots/figma-learning-report.png) ![Figma 学习报告底部](screenshots/figma-learning-report-bottom.png)
+
+Android 全页：![Android 学习报告](screenshots/android-learning-report.png)
+
+UIAutomator 已确认六个科目节点和专项练习按钮；点击后 `objective-answer-screen` 标题为“民事诉讼法专项”。Jest 同步固定原型全部统计值与 `{mode: chapter, title: 民事诉讼法专项}` 路由参数。
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 
