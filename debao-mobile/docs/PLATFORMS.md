@@ -44,8 +44,9 @@
 3. Debug APK：`android/app/build/outputs/apk/debug/app-debug.apk`，包名 `com.debao.app`，应用名“得宝”。
 4. APK 已安装到 AVD `Debao_API_36`（Pixel 6、Android API 36、Google APIs x86_64、WHPX）。
 5. 冷启动后 `com.debao.app/.MainActivity` 保持前台，日志输出 `Running "DebaoMobile"`，未出现 JavaScript 或 Android Runtime 崩溃。
-6. 首页截图完成视觉检查：中文、图标、进度、内容卡片和底部导航正常，无空白或明显重叠。
-7. 五个主 Tab 依次点击通过，题库、商城、课程、我的和首页的唯一页面文案均匹配，切换后进程保持存活且无崩溃日志。
+6. 首页截图完成视觉检查：右上角主客观题切换、通知入口、中文、图标、进度、内容卡片和底部导航正常，无空白或明显重叠。
+7. 主客观题切换通过 UIAutomator 验证选中状态；主观题模式正确显示“主观题、法条检索、批改服务、AI 助手”四个入口。
+8. 五个主 Tab 依次点击通过，题库、商城、课程、我的和首页的唯一页面文案均匹配，切换后进程保持存活且无崩溃日志。
 
 截图证据：![Android API 36 首页](screenshots/android-home-api36.png)
 

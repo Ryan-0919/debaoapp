@@ -50,7 +50,13 @@ pnpm harmony:bundle
 
 ### Android
 
-已在 `Debao_API_36`（Pixel 6、Android API 36、Google APIs x86_64）完成 Debug APK 构建、安装和冷启动。应用进程保持前台，logcat 无 JavaScript/Android Runtime 崩溃，首页视觉检查通过。截图：![Android 首页验证](screenshots/android-home-api36.png)
+已在 `Debao_API_36`（Pixel 6、Android API 36、Google APIs x86_64）完成 Debug APK 构建、安装和冷启动。应用进程保持前台，logcat 无 JavaScript/Android Runtime 崩溃，首页视觉检查通过。
+
+客观题状态：![Android 首页客观题状态](screenshots/android-home-api36.png)
+
+主观题状态：![Android 首页主观题状态](screenshots/android-home-subjective.png)
+
+右上角分段控件通过 UIAutomator 验证：默认“客观题”的 `selected` 为 true；点击“主观题”后选中态切换，并显示“主观题、法条检索、批改服务、AI 助手”四个对应入口。切换后应用进程保持存活且无崩溃日志。
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 

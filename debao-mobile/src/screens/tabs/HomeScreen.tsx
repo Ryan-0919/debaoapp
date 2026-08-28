@@ -1,5 +1,7 @@
+import {useState} from 'react';
 import {Pressable, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 import {
+  AlertCircle,
   Bell,
   BookOpenCheck,
   Bot,
@@ -8,46 +10,78 @@ import {
   Clock3,
   FileSearch,
   Flame,
+  PenLine,
   Play,
+  Star,
   Target,
 } from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
 import {Card, ProgressBar, SectionTitle} from '@/components/ui';
-import {colors, radius, spacing} from '@/theme';
+import {colors, radius, shadows, spacing} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
 import {useAppStore} from '@/store/useAppStore';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
-const shortcuts = [
+const objectiveShortcuts = [
   {label: '每日练习', icon: Target, color: colors.brand, route: 'ObjectiveAnswer' as const},
-  {label: '主观题', icon: BookOpenCheck, color: colors.error, route: 'SubjectiveSelect' as const},
+  {label: '错题本', icon: AlertCircle, color: colors.error, route: 'MistakeBook' as const},
+  {label: '收藏夹', icon: Star, color: colors.warning, route: 'Favorites' as const},
+  {label: 'AI 助手', icon: Bot, color: colors.success, route: 'AIChat' as const},
+];
+
+const subjectiveShortcuts = [
+  {label: '主观题', icon: BookOpenCheck, color: colors.brand, route: 'SubjectiveSelect' as const},
   {label: '法条检索', icon: FileSearch, color: colors.success, route: 'LawSearch' as const},
+  {label: '批改服务', icon: PenLine, color: colors.error, route: 'Grading' as const},
   {label: 'AI 助手', icon: Bot, color: colors.warning, route: 'AIChat' as const},
 ];
 
 export default function HomeScreen() {
   const navigation = useNavigation<Navigation>();
+  const [channel, setChannel] = useState<'objective' | 'subjective'>('objective');
   const profile = useAppStore(state => state.profile);
   const {width} = useWindowDimensions();
   const compact = width < 360;
+  const shortcuts = channel === 'objective' ? objectiveShortcuts : subjectiveShortcuts;
 
   return (
     <AppScreen testID="home-screen">
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerCopy}>
           <Text style={styles.eyebrow}>晚上好</Text>
-          <Text style={styles.greeting}>{profile.name}</Text>
+          <Text numberOfLines={1} style={[styles.greeting, compact && styles.greetingCompact]}>{profile.name}</Text>
         </View>
-        <Pressable
-          accessibilityLabel="消息通知"
-          onPress={() => navigation.navigate('Notifications')}
-          style={styles.notificationButton}>
-          <Bell size={21} color={colors.ink} />
-          <View style={styles.dot} />
-        </Pressable>
+        <View style={styles.headerActions}>
+          <View accessibilityRole="tablist" style={styles.modeSwitch}>
+            <Pressable
+              accessibilityRole="tab"
+              accessibilityState={{selected: channel === 'objective'}}
+              onPress={() => setChannel('objective')}
+              style={[styles.modeButton, channel === 'objective' && styles.modeButtonActive]}
+              testID="home-mode-objective">
+              <Text style={[styles.modeLabel, channel === 'objective' && styles.modeLabelActive]}>客观题</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="tab"
+              accessibilityState={{selected: channel === 'subjective'}}
+              onPress={() => setChannel('subjective')}
+              style={[styles.modeButton, channel === 'subjective' && styles.modeButtonActive]}
+              testID="home-mode-subjective">
+              <Text style={[styles.modeLabel, channel === 'subjective' && styles.modeLabelActive]}>主观题</Text>
+            </Pressable>
+          </View>
+          <Pressable
+            accessibilityLabel="消息通知"
+            accessibilityRole="button"
+            onPress={() => navigation.navigate('Notifications')}
+            style={styles.notificationButton}>
+            <Bell size={21} color={colors.ink} />
+            <View style={styles.dot} />
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.content}>
@@ -132,11 +166,19 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {height: 72, paddingHorizontal: spacing.lg, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
+  header: {height: 72, paddingHorizontal: spacing.lg, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center'},
+  headerCopy: {flex: 1, minWidth: 0, paddingRight: spacing.sm},
+  headerActions: {flexDirection: 'row', alignItems: 'center', gap: spacing.xs},
   eyebrow: {fontSize: 12, color: colors.muted},
   greeting: {fontSize: 21, fontWeight: '800', color: colors.ink, marginTop: 2},
-  notificationButton: {width: 42, height: 42, borderRadius: 21, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center'},
-  dot: {position: 'absolute', width: 7, height: 7, borderRadius: 4, backgroundColor: colors.error, right: 9, top: 8, borderWidth: 1, borderColor: colors.surface},
+  greetingCompact: {fontSize: 18},
+  modeSwitch: {height: 48, borderRadius: radius.md, backgroundColor: colors.page, flexDirection: 'row', alignItems: 'center'},
+  modeButton: {width: 54, height: 48, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center'},
+  modeButtonActive: {backgroundColor: colors.surface, ...shadows.card},
+  modeLabel: {fontSize: 12, color: colors.muted, fontWeight: '600'},
+  modeLabelActive: {color: colors.brand, fontWeight: '800'},
+  notificationButton: {width: 48, height: 48, borderRadius: 24, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center'},
+  dot: {position: 'absolute', width: 7, height: 7, borderRadius: 4, backgroundColor: colors.error, right: 11, top: 9, borderWidth: 1, borderColor: colors.surface},
   content: {paddingHorizontal: spacing.lg},
   hero: {backgroundColor: colors.ink, borderRadius: radius.md, marginTop: spacing.lg, padding: spacing.xl, minHeight: 150, flexDirection: 'row', alignItems: 'center'},
   heroCopy: {flex: 1, paddingRight: spacing.md},

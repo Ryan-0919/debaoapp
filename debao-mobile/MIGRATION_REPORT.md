@@ -23,7 +23,7 @@ Figma Make 输出的 React Web 原型已迁移为 React Native Bare + TypeScript
 
 | 优先级 | Figma Make 页面 | React Native 页面/路由 | 状态 | 验证边界 |
 |---|---|---|---|---|
-| P0 | `Home.tsx` | `HomeScreen` / `Home` Tab | 已完成 | 路由、类型检查、三端 bundle |
+| P0 | `Home.tsx` | `HomeScreen` / `Home` Tab | 已完成 | 右上角主客观题切换、联动入口、路由、类型检查、三端 bundle |
 | P0 | `QuestionBank.tsx` | `QuestionBankScreen` / `Questions` Tab | 已完成 | 路由、类型检查、三端 bundle |
 | P0 | `Mall.tsx` | `MallScreen` / `Mall` Tab | 已完成 | 路由、类型检查、三端 bundle |
 | P0 | `Courses.tsx` | `CoursesScreen` / `Courses` Tab | 已完成 | 路由、类型检查、三端 bundle |

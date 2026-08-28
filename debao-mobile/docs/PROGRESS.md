@@ -8,7 +8,7 @@
 
 | 项目 | 状态 | 验证结果 | 剩余问题 |
 |---|---|---|---|
-| 首页 | 已完成 | `Home` Tab 已注册；Android/iOS JS bundle 与 Harmony Hermes bundle 通过 | 需要三端真机视觉回归 |
+| 首页 | 已完成 | `Home` Tab 已注册；右上角主客观题分段切换会联动快捷入口；Android/iOS JS bundle 与 Harmony Hermes bundle 通过 | 需要 iOS/Harmony 真机视觉回归 |
 | 题库 | 已完成 | `Questions` Tab 已注册；主客观题入口可导航 | 真实题库接口未接入，当前使用 Mock 数据 |
 | 商城 | 已完成 | `Mall` Tab 已注册；可进入商品与订单流程 | 商品、库存、优惠和支付均需正式后端 |
 | 课程 | 已完成 | `Courses` Tab 已注册；可进入课程详情和媒体 UI | 真实课程、播放地址和授权未接入 |
