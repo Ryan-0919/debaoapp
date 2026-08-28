@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 23 suites / 30 tests |
+| Jest | 通过 | 24 suites / 31 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -203,6 +203,14 @@ AI 对话页 1:1 回归已完成：欢迎消息、右上角重置、4 个快捷�
 Android 四态：![Android AI 对话](screenshots/android-ai-chat.png) ![Android AI 思考中](screenshots/android-ai-chat-loading.png) ![Android AI 回答](screenshots/android-ai-chat-answer.png) ![Android AI 键盘](screenshots/android-ai-chat-keyboard.png)
 
 UIAutomator 已从首页 AI 答疑入口进入，命中欢迎语、4 个快捷问题、思考态与完整第311条回答；右上角重置后恢复初始态。Android 标准键盘下输入区保持可见，输入 `test` 后发送按钮启用，回车后得到“第一步：定性 / 第二步：找构成要件 / 第三步：结合案情得结论”。Jest 固定验证定制/通用回答、延迟态、重置和返回。
+
+订单列表页 1:1 回归已完成：两条原型订单的完成/待开课状态、商品名、日期、金额和详情跳转均已迁移，旧 RN 的 2026 订单、状态胶囊、订单号副标题和卡片分组已移除。
+
+原型全页：![Figma 订单列表](screenshots/figma-order-list.png)
+
+Android 全页：![Android 订单列表](screenshots/android-order-list.png)
+
+UIAutomator 已从“我的 → 订单与已购”进入页面，确认两条订单完整显示；点击第二条进入“订单详情”。Jest 固定验证两条唯一订单行和 `{orderId: 'o2'}` 路由参数。订单详情内容属于第 23 页，未在本页提前计入完成。
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 

@@ -36,7 +36,7 @@
 | 19 | `src/pages/Favorites.tsx` | `src/screens/tools/FavoritesScreen.tsx` | 收藏列表、题目/法条标签、收藏题目跳转 | 已完成 |
 | 20 | `src/pages/LawSearch.tsx` | `src/screens/tools/LawSearchScreen.tsx` | 法条/论坛/公告 Tab、搜索前后、科目筛选、列表展开、收藏、法条全文 Bottom Sheet、关联练习 | 已完成 |
 | 21 | `src/pages/AIChat.tsx` | `src/screens/ai/AIChatScreen.tsx` | 初始消息、输入、发送、加载、连续对话、键盘和滚动 | 已完成 |
-| 22 | `src/pages/OrderList.tsx` | `src/screens/commerce/OrderScreens.tsx` (`OrderListScreen`) | 订单列表、状态/金额/商品信息、详情跳转 | 未开始 |
+| 22 | `src/pages/OrderList.tsx` | `src/screens/commerce/OrderListScreen.tsx` | 订单列表、状态/金额/商品信息、详情跳转 | 已完成 |
 | 23 | `src/pages/OrderDetail.tsx` | `src/screens/commerce/OrderScreens.tsx` (`OrderDetailScreen`) | 订单信息、商品跳转、课程跳转和不同订单参数 | 未开始 |
 | 24 | `src/pages/UserProfile.tsx` | `src/screens/account/AccountScreens.tsx` (`UserProfileScreen`) | 资料展示、字段编辑 Bottom Sheet、头像颜色 Bottom Sheet、保存反馈 | 未开始 |
 | 25 | `src/pages/Settings.tsx` | `src/screens/account/AccountScreens.tsx` (`SettingsScreen`) | 设置分组、开关/入口、退出登录 Dialog | 未开始 |
@@ -244,3 +244,12 @@
 - 关键交互：UIAutomator 已验证初始欢迎消息、4 个快捷问题、快捷提问“三点思考”态、完整第311条回答、右上角重置、输入框和发送按钮；标准键盘下输入区保持可见，输入 `test` 并回车后生成通用三步分析。Jest 固定验证快捷问题、思考延迟、定制回答、通用回答、重置和返回。
 - 数据与状态：完整迁移善意取得、诉讼时效、合同无效和共同犯罪 4 组定制答案；其他输入使用原型通用“定性→构成要件→结合案情”回答。发送期间隐藏快捷问题并阻止重复提交，0.8-1.3 秒后一次性追加回答，保持原型行为而非旧 RN 的逐字流式输出。
 - 已知差异：当前回答仍为原型本地固定逻辑，不构成真实 AI 服务或法律意见；外部模型、鉴权、配额、内容审查、网络错误和中断协议尚未接入。Android 模拟器 Gboard 使用浮动键盘，输入区仍保持可见；除此之外仅有平台状态栏、Safe Area、设备纵向空间、系统键盘和字体栅格化差异。
+
+### 22. 订单列表
+
+- 原型源码：`得宝APP (1)/src/pages/OrderList.tsx`、`src/data.ts`、公共 `TopBar` 和个人页“订单与已购”入口已核对。
+- 原型截图：`docs/screenshots/figma-order-list.png`，390x844。
+- Android 截图：`docs/screenshots/android-order-list.png`。
+- 关键交互：UIAutomator 已从“我的 → 订单与已购”进入页面，确认两条订单的状态、商品名、日期和金额；点击第二条进入“订单详情”。Jest 固定验证两条唯一订单行和 `navigation.navigate('OrderDetail', {orderId: 'o2'})`。
+- 数据与导航：新增 `src/data/orders.ts` 保存与原型同源的 `o1/o2` 订单、订单号、商品/课程关联；列表仅展示原型定义的状态、商品名、日期和金额，不保留旧 RN 的订单号副标题、状态胶囊和“实付”前缀。
+- 已知差异：订单仍为原型 Mock，尚未接入账号订单分页、刷新和服务端状态；第 23 页订单详情单独验收。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
