@@ -6,100 +6,19 @@ import {
   StyleSheet,
   Text,
   View,
-  type ImageSourcePropType,
 } from 'react-native';
 import {Search} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
+import {catalogProducts} from '@/data/products';
 import {colors} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
-interface MallProduct {
-  id: string;
-  name: string;
-  category: '主客一体' | '客观题' | '主观题';
-  type: '视频课程' | '直播课程' | '音频课程' | '书籍';
-  price: number;
-  originalPrice: number;
-  sold: number;
-  brief: string;
-  image: ImageSourcePropType;
-}
-
 const categories = ['全部', '主客一体', '客观题', '主观题'] as const;
 const types = ['全部', '视频课程', '直播课程', '音频课程', '书籍'] as const;
-
-const mallProducts: MallProduct[] = [
-  {
-    id: 'p1',
-    name: '2024法考全程班（主客一体·视频精讲）',
-    category: '主客一体',
-    type: '视频课程',
-    price: 3980,
-    originalPrice: 5200,
-    sold: 2847,
-    brief: '覆盖客观题全科+主观题冲刺，名师全程讲授，配套题库、模拟卷和主观题批改服务。',
-    image: require('@/assets/images/home-library.png'),
-  },
-  {
-    id: 'p2',
-    name: '2024客观题精英班（视频+直播）',
-    category: '客观题',
-    type: '视频课程',
-    price: 1980,
-    originalPrice: 2800,
-    sold: 5312,
-    brief: '系统精讲客观题全科知识点，覆盖卷一卷二，配套章节练习和历年真题解析。',
-    image: require('@/assets/images/home-office.png'),
-  },
-  {
-    id: 'p3',
-    name: '2024主观题冲刺班（精讲+批改）',
-    category: '主观题',
-    type: '视频课程',
-    price: 1280,
-    originalPrice: 1680,
-    sold: 1893,
-    brief: '主观题专项突破，以历年真题案例为核心，精讲答题逻辑与规范，配套批改服务。',
-    image: require('@/assets/images/course-subjective.png'),
-  },
-  {
-    id: 'p4',
-    name: '法考直播冲刺班（考前30天）',
-    category: '客观题',
-    type: '直播课程',
-    price: 680,
-    originalPrice: 880,
-    sold: 3102,
-    brief: '考前30天密集直播冲刺，押题预测、重点串讲，配合模拟考试查漏补缺。',
-    image: require('@/assets/images/product-live.png'),
-  },
-  {
-    id: 'p5',
-    name: '民法音频精讲（通勤随听版）',
-    category: '客观题',
-    type: '音频课程',
-    price: 398,
-    originalPrice: 598,
-    sold: 4217,
-    brief: '全程音频授课，利用碎片时间随时随地听课，配套逐字稿与知识点卡片，通勤路上高效备考。',
-    image: require('@/assets/images/product-audio-civil.png'),
-  },
-  {
-    id: 'p6',
-    name: '法考全科音频串讲班',
-    category: '主客一体',
-    type: '音频课程',
-    price: 880,
-    originalPrice: 1280,
-    sold: 2091,
-    brief: '名师精讲全科核心考点，音频形式高效输出，配合题库随时检验，适合已有基础的二战考生。',
-    image: require('@/assets/images/product-audio-all.png'),
-  },
-];
 
 export default function MallScreen() {
   const navigation = useNavigation<Navigation>();
@@ -107,7 +26,7 @@ export default function MallScreen() {
   const [type, setType] = useState<(typeof types)[number]>('全部');
 
   const filteredProducts = useMemo(
-    () => mallProducts.filter(product =>
+    () => catalogProducts.filter(product =>
       (category === '全部' || product.category === category) &&
       (type === '全部' || product.type === type)),
     [category, type],

@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 11 suites / 12 tests |
+| Jest | 通过 | 12 suites / 14 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -112,11 +112,17 @@ Android 默认态、答题卡与确认态：![Android 客观题作答](screensho
 
 Android 首屏与列表底部：![Android 客观题报告](screenshots/android-objective-report.png) ![Android 客观题报告底部](screenshots/android-objective-report-bottom.png)
 
+商品详情页 1:1 回归已完成：6 商品与商城共用同一目录数据；封面类型态、价格/优惠、课程包含、教师、大纲、交付、营销长页、服务承诺、评价和购买弹层均已迁移。UIAutomator 验证 p1 的 6 项展开、金额、长页末端和 Mock 支付导航；Jest 另覆盖 p4 直播态和 p5 音频态。
+
+原型三态：![Figma 商品详情](screenshots/figma-product-detail.png) ![Figma 商品详情展开](screenshots/figma-product-detail-expanded.png) ![Figma 确认购买](screenshots/figma-product-detail-purchase.png)
+
+Android 首屏、展开、购买和底部：![Android 商品详情](screenshots/android-product-detail.png) ![Android 商品详情展开](screenshots/android-product-detail-expanded.png) ![Android 确认购买](screenshots/android-product-detail-purchase.png) ![Android 商品详情底部](screenshots/android-product-detail-bottom.png)
+
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 
 APK：`android/app/build/outputs/apk/debug/app-debug.apk`。
 
-尚需验证：系统返回、键盘遮挡、支付 Mock、AI 流式状态、旋转和小屏设备。当前结果是模拟器验证，不等同于 Android 真机兼容性验收。
+尚需验证：系统返回、键盘遮挡、AI 流式状态、旋转和小屏设备。当前结果是模拟器验证，不等同于 Android 真机兼容性验收。
 
 ### iOS
 

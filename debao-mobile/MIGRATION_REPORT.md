@@ -4,7 +4,7 @@
 
 ## 结论
 
-Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript 工程骨架。28 个原型页面均有对应的 React Native 页面和类型化路由，但“存在对应页面”不等于“视觉和交互 1:1 完成”。截至 2026-08-28，前 9 页已按原型源码及实际渲染完成逐项重做、关键交互和 Android 截图验证；其余 19 页仍需逐页 1:1 核验。Android/iOS production JS bundle 与 HarmonyOS production Hermes bundle 已验证通过。
+Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript 工程骨架。28 个原型页面均有对应的 React Native 页面和类型化路由，但“存在对应页面”不等于“视觉和交互 1:1 完成”。截至 2026-08-28，前 10 页已按原型源码及实际渲染完成逐项重做、关键交互和 Android 截图验证；其余 18 页仍需逐页 1:1 核验。Android/iOS production JS bundle 与 HarmonyOS production Hermes bundle 已验证通过。
 
 “页面迁移完成”只代表共享源码和 bundle 层完成。Android Debug APK 已在 API 36 模拟器完成构建、安装、冷启动和首页视觉验证；当前 Windows 主机仍缺少 DevEco 工具链，且不能运行 Xcode，因此本报告不声称 iOS App 或 Harmony HAP 已完成原生构建、安装或真机验证。
 
@@ -42,7 +42,7 @@ Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript �
 | P1 | `VideoPlayer.tsx` | `VideoPlayerScreen` / `VideoPlayer` | 已完成 | 仅播放器 UI/状态机 |
 | P1 | `AudioPlayer.tsx` | `AudioPlayerScreen` / `AudioPlayer` | 已完成 | 仅播放器 UI/状态机 |
 | P1 | `LiveCourse.tsx` | `LiveCourseScreen` / `LiveCourse` | 已完成 | 仅直播 UI/状态机 |
-| P1 | `ProductDetail.tsx` | `ProductDetailScreen` / `ProductDetail` | 已完成 | `productId` 参数与 Mock 数据 |
+| P1 | `ProductDetail.tsx` | `ProductDetailScreen` / `ProductDetail` | 已完成 | 1:1 源码/渲染对照；6 商品、三类封面、教师/大纲/交付、营销长页、评价、展开、购买弹层、支付导航、Android 四态截图 |
 | P1 | `PurchaseSuccess.tsx` | `PurchaseSuccessScreen` / `PurchaseSuccess` | 已完成 | 仅 Mock 支付结果 |
 | P1 | `OrderList.tsx` | `OrderListScreen` / `OrderList` | 已完成 | Mock 订单列表 |
 | P1 | `OrderDetail.tsx` | `OrderDetailScreen` / `OrderDetail` | 已完成 | `orderId` 参数与 Mock 数据 |
