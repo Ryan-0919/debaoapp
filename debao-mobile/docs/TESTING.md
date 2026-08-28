@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 8 suites / 9 tests |
+| Jest | 通过 | 9 suites / 10 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -93,6 +93,12 @@ Android 首屏与滚动态：![Android 我的](screenshots/android-profile.png) 
 原型基准：![Figma 主观题选择](screenshots/figma-subjective-select.png)
 
 Android 默认态与筛选态：![Android 主观题选择](screenshots/android-subjective-select.png) ![Android 主观题筛选](screenshots/android-subjective-select-filter.png)
+
+主观题作答页 1:1 回归已完成：五道民法真题及全部小问来自原型同源数据；题目/小问导航、独立答案、保存时间、字数、上一题/下一问/下一题、法条检索和最终提交 Dialog 均已验证。Hermes 保存时间使用显式 `HH:mm`，避免不同平台区域设置产生 AM/PM 差异。
+
+原型基准：![Figma 主观题作答](screenshots/figma-subjective-answer.png)
+
+Android 默认态、保存态与提交确认态：![Android 主观题作答](screenshots/android-subjective-answer.png) ![Android 主观题保存](screenshots/android-subjective-answer-saved.png) ![Android 主观题提交确认](screenshots/android-subjective-answer-submit-dialog.png)
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 

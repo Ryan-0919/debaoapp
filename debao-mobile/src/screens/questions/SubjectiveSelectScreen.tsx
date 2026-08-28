@@ -6,6 +6,7 @@ import type {RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
 import {PageHeader} from '@/components/PageHeader';
+import {SUBJECTIVE_QUESTIONS} from '@/data/subjectiveQuestions';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
 
@@ -14,13 +15,7 @@ type ScreenRoute = RouteProp<RootStackParamList, 'SubjectiveSelect'>;
 type Difficulty = '易' | '中' | '难';
 type Status = 'none' | 'draft' | 'done';
 
-const QUESTIONS = [
-  {id: 'q1', year: '2023', difficulty: '难' as Difficulty, status: 'draft' as Status, title: '甲公司股权转让与债权人保护', summary: '甲公司为有限责任公司，股东乙拟将其持有的40%股权转让给公司外部的丙，其他股东丁、戊主张优先购买权并发生争议，同时甲公司对外负有债务……', subCount: 4, minutes: 45},
-  {id: 'q2', year: '2022', difficulty: '中' as Difficulty, status: 'done' as Status, title: '不当得利与无因管理综合案例', summary: '甲将一笔款项误转入乙的账户，乙在不知情的情况下将该款项用于购置一辆汽车，后甲发现并主张返还……', subCount: 3, minutes: 35},
-  {id: 'q3', year: '2023', difficulty: '中' as Difficulty, status: 'none' as Status, title: '合同解除与违约责任', summary: '甲与乙签订购房合同，后因市场变化甲主张解除合同并要求返还定金，双方就违约责任归属产生争议……', subCount: 3, minutes: 30},
-  {id: 'q4', year: '2022', difficulty: '易' as Difficulty, status: 'none' as Status, title: '物权变动与善意取得', summary: '甲将房屋登记在乙名下，后乙擅自将房屋出售给丙，引发所有权争议及第三人保护问题……', subCount: 2, minutes: 25},
-  {id: 'q5', year: '2021', difficulty: '难' as Difficulty, status: 'none' as Status, title: '婚姻家庭与继承综合案例', summary: '甲乙结婚后购置房产，离婚时就财产分割及子女抚养发生争议，同时涉及甲父的遗产继承问题……', subCount: 4, minutes: 50},
-];
+const QUESTIONS = SUBJECTIVE_QUESTIONS;
 
 const DIFFICULTY_COLORS: Record<Difficulty, {background: string; foreground: string}> = {
   易: {background: colors.mint, foreground: '#3A7A46'},
@@ -101,7 +96,7 @@ export default function SubjectiveSelectScreen() {
                   <Text numberOfLines={2} style={styles.questionSummary}>{item.summary}</Text>
                   <View style={styles.questionFooter}>
                     <Text style={styles.questionMeta}>{item.subCount}个小问</Text>
-                    <Text style={styles.questionMeta}>建议{item.minutes}分钟</Text>
+                    <Text style={styles.questionMeta}>建议{item.suggestMinutes}分钟</Text>
                     <ChevronRight size={14} color="#C0C5D0" style={styles.chevron} />
                   </View>
                 </Pressable>

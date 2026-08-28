@@ -21,7 +21,7 @@
 | 4 | `src/pages/Courses.tsx` | `src/screens/tabs/CoursesScreen.tsx` | 日历/全部课程、周/月切换、快捷筛选、补课日期、加入安排三个 Bottom Sheet、课程/直播/音频跳转 | 已完成 |
 | 5 | `src/pages/Profile.tsx` | `src/screens/tabs/ProfileScreen.tsx` | 用户信息、学习数据、功能分组、全部入口跳转 | 已完成 |
 | 6 | `src/pages/SubjectiveSelect.tsx` | `src/screens/questions/SubjectiveSelectScreen.tsx` | 默认列表、科目参数、年份/难度筛选 Bottom Sheet、筛选结果、答题跳转 | 已完成 |
-| 7 | `src/pages/SubjectiveAnswer.tsx` | `src/screens/questions/SubjectiveAnswerScreen.tsx` | 题目/小题切换、答题输入、保存时间、法条检索跳转、提交 Dialog | 未开始 |
+| 7 | `src/pages/SubjectiveAnswer.tsx` | `src/screens/questions/SubjectiveAnswerScreen.tsx` | 题目/小题切换、答题输入、保存时间、法条检索跳转、提交 Dialog | 已完成 |
 | 8 | `src/pages/ObjectiveAnswer.tsx` | `src/screens/questions/ObjectiveAnswerScreen.tsx` | 章节/考试模式、单选作答、解析态、上下题、答题卡 Bottom Sheet、交卷 Dialog | 未开始 |
 | 9 | `src/pages/ObjectiveReport.tsx` | `src/screens/questions/ObjectiveReportScreen.tsx` | 成绩概览、题目结果、错题本跳转、返回路径 | 未开始 |
 | 10 | `src/pages/ProductDetail.tsx` | `src/screens/commerce/ProductDetailScreen.tsx` | 各商品内容、课程大纲展开/收起、底部购买栏、确认购买 Bottom Sheet、购买跳转 | 未开始 |
@@ -108,4 +108,13 @@
 - Android 截图：`docs/screenshots/android-subjective-select.png`、`android-subjective-select-filter.png`。
 - 关键交互：UIAutomator 已验证民法 5 题、筛选弹层年份/难度选项；Jest 覆盖组合筛选、筛选空态、清除筛选、非民法空态和题目索引导航。
 - 导航：每道题连接 `SubjectiveAnswer`，携带原始 `questionIndex` 和 `subjectName`，筛选后索引不会错位。
+- 已知差异：仅真实 Android 状态栏、底部手势区、Safe Area 和字体栅格化差异；无已知产品内容或交互差异。
+
+### 7. 主观题作答
+
+- 原型源码：`得宝APP (1)/src/pages/SubjectiveAnswer.tsx`、`src/data.ts`、`src/components/Dialog.tsx` 和公共状态组件已核对。
+- 原型截图：`docs/screenshots/figma-subjective-answer.png`，390x844。
+- Android 截图：`docs/screenshots/android-subjective-answer.png`、`android-subjective-answer-saved.png`、`android-subjective-answer-submit-dialog.png`。
+- 关键交互：UIAutomator 已验证从首页/题库进入真实答题页、五道题导航、四个小问、文本输入、12 字计数、24 小时制保存时间、最终提交 Dialog 和法条检索；Jest 覆盖指定题目索引、独立小问答案、保存、上一问、题目切换、取消/确认提交和导航。
+- 导航：法条按钮连接 `LawSearch`；最终确认提交后返回上一页；题目、小问及上一题/下一问/下一题均保持原型状态机。
 - 已知差异：仅真实 Android 状态栏、底部手势区、Safe Area 和字体栅格化差异；无已知产品内容或交互差异。
