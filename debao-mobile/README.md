@@ -2,7 +2,7 @@
 
 得宝是一套面向法考学习者的三端移动 App 工程。共享界面和业务层使用 React Native + TypeScript，Android/iOS 使用官方 React Native 原生工程，HarmonyOS 使用 RNOH + ArkTS 宿主。
 
-当前版本为 `0.1.0` 第一阶段工程版，已迁移 Figma Make 原型的 28 个页面。登录、支付、AI、媒体、直播、下载、推送和远端数据仍是明确标识的 Mock，不是正式线上能力。
+当前版本为 `0.1.0` 第一阶段工程版，已建立 Figma Make 原型 28 个页面的 React Native 技术骨架和路由，但不代表 28 页已经完成 1:1 复刻。逐页真实状态见 [28 页 1:1 核验矩阵](docs/PAGE_PARITY_MATRIX.md)。登录、支付、AI、媒体、直播、下载、推送和远端数据仍是明确标识的 Mock，不是正式线上能力。
 
 需要通过 Codex Goal 模式继续推进时，使用 [Goal 模式开发提示词](docs/GOAL_PROMPT.md)。该提示词包含技术栈、三端边界、文档要求和验收标准。
 
@@ -86,7 +86,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\android-build.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\android-build.ps1 -DriveLetter T: -EmbeddedBundle
 ```
 
-`-EmbeddedBundle` 会先在真实工程路径重新生成 production JS Bundle，再通过临时 ASCII 盘符执行 Gradle，避免中文路径和 pnpm 链接导致的解析问题，也避免 APK 复用旧 Bundle。
+`-EmbeddedBundle` 会先在真实工程路径重新生成 production JS Bundle，并把图片等 Metro 资源写入 Android `debug/res`，再通过临时 ASCII 盘符执行 Gradle，避免中文路径和 pnpm 链接导致的解析问题、图片资源缺失或 APK 复用旧 Bundle。
 
 2026-08-28 已在本机完成 `assembleDebug`、APK 安装和 Android API 36 模拟器冷启动。APK 位于 `android/app/build/outputs/apk/debug/app-debug.apk`，运行截图见 [Android 首页](docs/screenshots/android-home-api36.png)。详见 [平台文档](docs/PLATFORMS.md)。
 

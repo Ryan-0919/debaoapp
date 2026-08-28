@@ -4,7 +4,7 @@
 
 ## 结论
 
-Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript 工程骨架。28 个原型页面均有对应的 React Native 页面和类型化路由，但“存在对应页面”不等于“视觉和交互 1:1 完成”。截至 2026-08-28，题库页已按原型源码和实际渲染完成逐项重做及 Android 三态截图验证；首页仅恢复右上角主客观题切换，其余页面仍需逐页 1:1 核验。Android/iOS production JS bundle 与 HarmonyOS production Hermes bundle 已验证通过。
+Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript 工程骨架。28 个原型页面均有对应的 React Native 页面和类型化路由，但“存在对应页面”不等于“视觉和交互 1:1 完成”。截至 2026-08-28，首页和题库已按原型源码及实际渲染完成逐项重做、关键交互和 Android 截图验证；其余 25 页仍需逐页 1:1 核验。Android/iOS production JS bundle 与 HarmonyOS production Hermes bundle 已验证通过。
 
 “页面迁移完成”只代表共享源码和 bundle 层完成。Android Debug APK 已在 API 36 模拟器完成构建、安装、冷启动和首页视觉验证；当前 Windows 主机仍缺少 DevEco 工具链，且不能运行 Xcode，因此本报告不声称 iOS App 或 Harmony HAP 已完成原生构建、安装或真机验证。
 
@@ -23,13 +23,13 @@ Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript �
 
 - `得宝APP (1)` 是视觉、文案、信息层级和交互的唯一基准；React Native 现有实现只作为原生技术骨架。
 - 1:1 验收基准为原型 390x844 渲染，并覆盖正常态、切换/展开/弹层等关键状态。允许的差异只限系统状态栏、Safe Area 和平台字体栅格化。
-- 题库页已有原型客观题/主观题渲染对照、React Native 三态截图和 UIAutomator 文案证据。其他页面不能沿用“路由存在”作为 1:1 完成证据。
+- 首页和题库已有原型渲染对照、React Native 多态截图、UIAutomator 和 Jest 证据。其他页面不能沿用“路由存在”作为 1:1 完成证据。
 
 ## 页面映射
 
 | 优先级 | Figma Make 页面 | React Native 页面/路由 | 状态 | 验证边界 |
 |---|---|---|---|---|
-| P0 | `Home.tsx` | `HomeScreen` / `Home` Tab | 已完成 | 右上角主客观题切换、联动入口、路由、类型检查、三端 bundle |
+| P0 | `Home.tsx` | `HomeScreen` / `Home` Tab | 已完成 | 1:1 源码/渲染对照；主客观题、双 Banner、入口、促销、倒计时、课程、公告、社区、路由、Android 多态截图 |
 | P0 | `QuestionBank.tsx` | `QuestionBankScreen` / `Questions` Tab | 已完成 | 1:1 源码/渲染对照；切换、年份弹层、章节展开、路由、组件测试、Android 三态截图 |
 | P0 | `Mall.tsx` | `MallScreen` / `Mall` Tab | 已完成 | 路由、类型检查、三端 bundle |
 | P0 | `Courses.tsx` | `CoursesScreen` / `Courses` Tab | 已完成 | 路由、类型检查、三端 bundle |

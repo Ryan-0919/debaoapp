@@ -23,8 +23,13 @@ try {
   if ($EmbeddedBundle) {
     $node = (Get-Command node -ErrorAction Stop).Source
     $embeddedAssets = Join-Path $projectRoot 'android\app\src\debug\assets'
+    $embeddedResources = Join-Path $projectRoot 'android\app\src\debug\res'
     $bundleOutput = Join-Path $embeddedAssets 'index.android.bundle'
     New-Item -ItemType Directory -Force $embeddedAssets | Out-Null
+    if (Test-Path -LiteralPath $embeddedResources) {
+      Remove-Item -LiteralPath $embeddedResources -Recurse -Force
+    }
+    New-Item -ItemType Directory -Force $embeddedResources | Out-Null
     Push-Location $projectRoot
     try {
       & $node 'node_modules\react-native\cli.js' bundle `
@@ -33,7 +38,7 @@ try {
         --minify true `
         --entry-file index.js `
         --bundle-output $bundleOutput `
-        --assets-dest $embeddedAssets
+        --assets-dest $embeddedResources
       if ($LASTEXITCODE -ne 0) {
         throw "React Native bundle failed with exit code $LASTEXITCODE."
       }

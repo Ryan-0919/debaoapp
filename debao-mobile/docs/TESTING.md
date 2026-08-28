@@ -52,11 +52,13 @@ pnpm harmony:bundle
 
 已在 `Debao_API_36`（Pixel 6、Android API 36、Google APIs x86_64）完成 Debug APK 构建、安装和冷启动。应用进程保持前台，logcat 无 JavaScript/Android Runtime 崩溃，首页视觉检查通过。
 
+首页已按 Figma Make `Home.tsx` 完成 1:1 重做。原型基准：![Figma 首页客观题](screenshots/figma-home-objective.png) ![Figma 首页主观题](screenshots/figma-home-subjective.png)
+
 客观题状态：![Android 首页客观题状态](screenshots/android-home-api36.png)
 
 主观题状态：![Android 首页主观题状态](screenshots/android-home-subjective.png)
 
-右上角分段控件通过 UIAutomator 验证：默认“客观题”的 `selected` 为 true；点击“主观题”后选中态切换，并显示“主观题、法条检索、批改服务、AI 助手”四个对应入口。切换后应用进程保持存活且无崩溃日志。
+右上角分段控件通过 UIAutomator 验证：默认“客观题”的 `selected` 为 true；点击“主观题”后选中态切换，并显示“课程、法条检索、做题记录、收藏夹、批改、AI答疑”六个原型入口。第二张 Banner、第二条公告、公告关闭、社区热帖滚动内容也已验证；切换后应用进程保持存活且无崩溃日志。补充截图见 `android-home-banner-two.png` 和 `android-home-community.png`。
 
 题库页 1:1 原型回归已完成：默认客观题态显示“历年真题、章节练习、民法总则”，主观题态显示“分科真题、历年整卷、2023年主观题”，年份弹层显示“选择年份、2023年、2018年”。三态均在 API 36 模拟器截图确认。
 

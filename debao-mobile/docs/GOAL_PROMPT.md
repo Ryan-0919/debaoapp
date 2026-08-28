@@ -28,16 +28,26 @@
 8. 登录、支付、AI、媒体、直播、下载、推送和远程数据在真实服务未接入前必须明确标为 Mock，不得伪造成线上能力。
 9. 不写入或提交 API token、支付密钥、正式签名、证书、生产 keystore 或用户隐私数据。
 
-四、执行顺序
+四、28 页强制范围（一个都不能少）
+1. 五个主 Tab：Home、QuestionBank、Mall、Courses、Profile。
+2. 题目流程：SubjectiveSelect、SubjectiveAnswer、ObjectiveAnswer、ObjectiveReport。
+3. 商品与订单：ProductDetail、PurchaseSuccess、OrderList、OrderDetail。
+4. 课程与媒体：CourseDetail、VideoPlayer、LiveCourse、AudioPlayer。
+5. 学习与工具：LearningReport、LearningPlan、MistakeBook、Favorites、LawSearch、AIChat、GradingService、QuestionRecords。
+6. 账户：UserProfile、Settings、Notifications。
+7. 开始开发前打开 docs/PAGE_PARITY_MATRIX.md。每完成一页就立即补齐该页的原型截图、Android 截图、关键状态和导航证据，再把状态改为“已完成”；不能在最后批量补状态。
+8. 页面文件存在、路由能打开、页面无崩溃、功能大致相似，都不等于 1:1 完成。28 页中只要有一页缺少上述证据，整个 Goal 就不能标记完成。
+
+五、执行顺序
 1. 先运行 pnpm install --frozen-lockfile 和 pnpm check，修复现有错误。
-2. 建立 28 页 1:1 核验矩阵，逐页比较“得宝APP (1)/src/pages”与“debao-mobile/src/screens”；优先修复五个主 Tab，再按真实导航顺序修复二级页面。一次只以一个原型页面为视觉真相，不批量套用通用近似模板。
+2. 以 docs/PAGE_PARITY_MATRIX.md 为唯一逐页进度表，逐页比较“得宝APP (1)/src/pages”与“debao-mobile/src/screens”；优先修复五个主 Tab，再按真实导航顺序修复二级页面。一次只以一个原型页面为视觉真相，不批量套用通用近似模板。
 3. Android：使用 SDK 36、NDK 27.1.12297006 和 scripts/android-build.ps1；构建 APK，安装到模拟器，冷启动并用 logcat 检查崩溃。当前中文路径下 Gradle 必须使用脚本的临时 ASCII 盘符映射。
-4. Android 无 Metro 演示包：运行 scripts/android-build.ps1 -EmbeddedBundle。脚本会先在真实工程路径重新生成 android/app/src/debug/assets/index.android.bundle，再通过 ASCII 临时盘符构建，禁止复用旧 Bundle 截图。
+4. Android 无 Metro 演示包：运行 scripts/android-build.ps1 -EmbeddedBundle。脚本会先在真实工程路径重新生成 android/app/src/debug/assets/index.android.bundle，并把 Metro 图片资源写入 android/app/src/debug/res，再通过 ASCII 临时盘符构建，禁止复用旧 Bundle 截图。
 5. iOS：在 macOS/Xcode 环境执行 bundle install、pod install、原生构建和模拟器验证；如果当前仍是 Windows，只验证工程结构和 production bundle，并明确记录外部环境阻塞，绝不声称原生通过。
 6. HarmonyOS：运行 pnpm harmony:link 和 pnpm harmony:bundle；有 DevEco/ohpm/hvigor/hdc 时继续构建 HAP、签名并启动设备。缺工具链时记录准确缺项，不声称 HAP 通过。
 7. 按 docs/TESTING.md 验证五 Tab、主客观题、课程、商城/Mock 支付、AI Mock、资料持久化、返回、键盘、旋转和小屏；每个已运行平台保存原型基准截图、实现截图和日志证据。
 
-五、文档必须与代码同批更新
+六、文档必须与代码同批更新
 1. README.md：环境、安装、运行、构建和当前验证结论。
 2. docs/DEVELOPMENT.md：新增约定、脚本、依赖和故障处理。
 3. docs/PLATFORMS.md：Android/iOS/HarmonyOS 的实际能力矩阵和工具链状态。
@@ -46,15 +56,17 @@
 6. MIGRATION_REPORT.md：Figma 页面映射、Mock 边界、验证证据和剩余风险。
 7. 架构或依赖方向变化时更新 docs/ARCHITECTURE.md 与 docs/DECISIONS.md；接口变化时更新 docs/API.md。
 8. 文档只写真实执行结果。Bundle 成功不等于原生包成功，模拟器成功不等于真机成功。
+9. docs/PAGE_PARITY_MATRIX.md：每个页面的状态、关键交互、原型截图、实现截图、已知差异和导航验证必须随该页代码同步更新。
 
-六、完成门槛
+七、完成门槛
 1. 28 个页面全部完成源码结构、正常态、关键交互态和导航的 1:1 核验矩阵；任何只存在 RN 路由但未对照原型的页面都不能算完成。
 2. pnpm check 全通过。
 3. Android 和 iOS production bundle 通过。
 4. pnpm harmony:link 与 pnpm harmony:bundle 通过。
 5. 当前具备工具链的平台完成原生构建、安装、冷启动、日志检查和截图；不具备工具链的平台形成可直接执行的阻塞清单。
 6. git diff --check 通过，工作区没有误提交的 bundle、APK、密钥、缓存或构建目录。
-7. 更新所有相关文档后提交一个清晰的稳定里程碑，并在最终报告中列出提交号、逐页 1:1 状态、通过项、未验证项、产物路径和截图路径。
+7. 更新所有相关文档后提交清晰的稳定里程碑，并在最终报告中逐行列出 28 页状态；禁止用“其余页面已完成”等汇总语句代替逐页结果。
+8. 最终回答前再次统计 docs/PAGE_PARITY_MATRIX.md：必须恰好 28 页且 28 页全部为“已完成”。如未满足，只能继续工作或准确报告外部阻塞，不能宣称 Goal 完成。
 
 持续定位和修复可解决的问题。只有真正依赖 macOS、DevEco、签名账户、后端接口或产品决策时才标记受阻；不得以“建议后续处理”代替本机可以完成的工作。
 ```
