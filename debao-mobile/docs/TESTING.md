@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 3 suites / 4 tests |
+| Jest | 通过 | 6 suites / 7 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -73,6 +73,14 @@ pnpm harmony:bundle
 默认态：![Android 商城](screenshots/android-mall.png)
 
 空态：![Android 商城空态](screenshots/android-mall-empty.png)
+
+课程页 1:1 回归已完成：学习日历与全部课程两态、当前课程、周日历、快捷筛选、时间线、动态周切换、月份选择、待补课调整、加入学习安排及录播/专项/音频/直播分组均与原型结构一致。Jest 覆盖页面状态和类型化导航；UIAutomator 确认下一周变为 8月31日到 9月6日。
+
+原型基准：![Figma 课程日历](screenshots/figma-courses-calendar.png) ![Figma 全部课程](screenshots/figma-courses-all.png)
+
+Android 正常态：![Android 课程日历](screenshots/android-courses-calendar-raw.png) ![Android 全部课程](screenshots/android-courses-all-raw.png)
+
+Android 弹层态：![Android 月份选择](screenshots/android-courses-month-sheet-raw.png) ![Android 调整补课](screenshots/android-courses-reschedule-sheet-raw.png) ![Android 加入安排](screenshots/android-courses-add-sheet-raw.png)
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 
