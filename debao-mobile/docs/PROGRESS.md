@@ -35,8 +35,9 @@
 | AI 对话 `AIChat.tsx` | 已完成 | 欢迎消息、四个快捷问题、输入发送、三点思考态、五类回答、连续对话、右上角重置和键盘避让均已迁移；原型三态、Android 四态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 订单列表 `OrderList.tsx` | 已完成 | 原型两条订单、状态、商品名、日期、金额和详情参数跳转均已迁移；原型、Android 截图、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 订单详情 `OrderDetail.tsx` | 已完成 | `o1/o2` 完成/待开课两态、商品信息、订单信息和商品/课程跳转均已迁移；原型两态、Android 两态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
-| 其余 5 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做用户资料 `UserProfile.tsx` |
-| 三端 1:1 视觉验收 | 进行中 | Android 前 23 个页面已逐页验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
+| 用户资料 `UserProfile.tsx` | 已完成 | 五项资料、手机号只读、文本/阶段编辑、六色头像、保存反馈和账号安全展示均已迁移；原型五态、Android 六态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
+| 其余 4 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做设置 `Settings.tsx` |
+| 三端 1:1 视觉验收 | 进行中 | Android 前 24 个页面已逐页验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
 
 ## P0
 
@@ -66,7 +67,7 @@
 | 订单列表 | 已完成 | `OrderList` 已按原型实现 2 条订单、完成/待开课状态、日期、金额及 `o1/o2` 详情参数 | 当前仍为原型 Mock；真实分页、刷新和服务端状态未接入 |
 | 订单详情 | 已完成 | `OrderDetail` 按 `orderId` 展示 `o1/o2` 完成/待开课两态，并连接对应商品与已购课程 | 当前仍为原型 Mock；物流、退款和售后未接入 |
 | AI 对话 | 已完成 | `AIChat` 已按原型实现 4 个快捷问题、0.8-1.3 秒思考态、4 类定制答案、通用答案、连续对话和重置 | 回答仍为原型本地固定逻辑；外部模型、鉴权、配额、审查和中断协议未接入 |
-| 用户资料 | 已完成 | `UserProfile` 可编辑本地资料并持久化 | 登录身份和服务端同步未接入 |
+| 用户资料 | 已完成 | `UserProfile` 已按原型实现五项资料、文本/阶段 Bottom Sheet、六色头像和 2 秒保存反馈 | 当前为页面内原型状态；登录身份、照片上传和服务端同步未接入 |
 | 设置 | 已完成 | `Settings` 与本地状态联动 | 推送权限、缓存清理和账号安全能力未接入 |
 | 通知 | 已完成 | `Notifications` 展示 Mock 通知 | APNs、Android 厂商/FCM、Harmony Push 均未接入 |
 
@@ -86,7 +87,7 @@
 
 | 项目 | 状态 | 验证结果 | 唯一明确的下一步 |
 |---|---|---|---|
-| TypeScript、Lint、单元测试 | 已完成 | `pnpm check` 已通过：25 suites / 33 tests；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
+| TypeScript、Lint、单元测试 | 已完成 | `pnpm check` 已通过：26 suites / 36 tests；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
 | Android production JS bundle | 已完成 | Metro production bundle 已生成成功 | 原生依赖变化后重新 bundle |
 | Android 原生构建与安装 | 已完成 | Debug APK 构建成功，并在 `Debao_API_36`（API 36 / x86_64）完成安装、冷启动、首页截图和五 Tab 烟雾测试；进程保持前台且无运行期崩溃 | 继续完成返回、键盘、旋转、小屏及真机矩阵 |
 | iOS production JS bundle | 已完成 | Windows 上 production JS bundle 已生成成功 | 原生依赖变化后在 macOS 再次 bundle |

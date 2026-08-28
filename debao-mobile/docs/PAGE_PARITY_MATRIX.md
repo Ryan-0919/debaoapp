@@ -38,7 +38,7 @@
 | 21 | `src/pages/AIChat.tsx` | `src/screens/ai/AIChatScreen.tsx` | 初始消息、输入、发送、加载、连续对话、键盘和滚动 | 已完成 |
 | 22 | `src/pages/OrderList.tsx` | `src/screens/commerce/OrderListScreen.tsx` | 订单列表、状态/金额/商品信息、详情跳转 | 已完成 |
 | 23 | `src/pages/OrderDetail.tsx` | `src/screens/commerce/OrderDetailScreen.tsx` | 订单信息、商品跳转、课程跳转和不同订单参数 | 已完成 |
-| 24 | `src/pages/UserProfile.tsx` | `src/screens/account/AccountScreens.tsx` (`UserProfileScreen`) | 资料展示、字段编辑 Bottom Sheet、头像颜色 Bottom Sheet、保存反馈 | 未开始 |
+| 24 | `src/pages/UserProfile.tsx` | `src/screens/account/UserProfileScreen.tsx` | 资料展示、字段编辑 Bottom Sheet、头像颜色 Bottom Sheet、保存反馈 | 已完成 |
 | 25 | `src/pages/Settings.tsx` | `src/screens/account/AccountScreens.tsx` (`SettingsScreen`) | 设置分组、开关/入口、退出登录 Dialog | 未开始 |
 | 26 | `src/pages/Notifications.tsx` | `src/screens/account/AccountScreens.tsx` (`NotificationsScreen`) | 通知分组、已读/未读视觉和滚动内容 | 未开始 |
 | 27 | `src/pages/GradingService.tsx` | `src/screens/tools/ToolScreens.tsx` (`GradingServiceScreen`) | 服务说明、提交入口和主观题跳转 | 未开始 |
@@ -262,3 +262,12 @@
 - 关键交互：UIAutomator 已验证 `o1` 的“已完成/课程权限已自动开通”和 `o2` 的“待开课/课程将于开课日自动激活”；`o2` 点击“查看商品”进入 `product-detail` 并显示法考直播冲刺班与 `¥680`，`o1` 点击“进入课程”进入 `course-detail`。Jest 固定验证两态全部文案、未知订单回退、`{productId: 'p1'/'p4'}` 和 `{courseId: 'c1'}` 导航参数。
 - 数据与状态：详情页复用 `src/data/orders.ts` 的两条订单和商品图片；`o1` 展示视频课程、`¥3,980`、`DB2024031200001`、微信支付及双按钮，`o2` 展示直播课程、`¥680`、`DB2024052800078`、微信支付且仅保留查看商品。未知 `orderId` 按原型回退 `o1`。
 - 已知差异：订单仍为原型 Mock，不包含真实服务端订单状态、物流、退款或售后流程；除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+
+### 24. 用户资料
+
+- 原型源码：`得宝APP (1)/src/pages/UserProfile.tsx`、公共 `TopBar`/`BottomSheet` 和个人页头像/编辑资料入口已核对。
+- 原型截图：`docs/screenshots/figma-user-profile.png`、`figma-user-profile-edit.png`、`figma-user-profile-stage.png`、`figma-user-profile-avatar.png`、`figma-user-profile-saved.png`，均为 390x844。
+- Android 截图：`docs/screenshots/android-user-profile.png`、`android-user-profile-edit.png`、`android-user-profile-keyboard.png`、`android-user-profile-stage.png`、`android-user-profile-avatar.png`、`android-user-profile-saved.png`。
+- 关键交互：UIAutomator 已从“我的 → 编辑资料”进入，确认五项资料、手机号禁用、账号安全三行、文本编辑和计数、5 个备考阶段、6 个头像色板及 2 秒保存提示；昵称输入获得焦点后浮动键盘不遮挡取消/保存。Jest 固定验证默认内容、只读/无事件行、空值回退、阶段选择、六色头像和提示自动消失。
+- 数据与状态：初始昵称、手机号、备考目标、阶段和学校与原型一致；文本字段最大 30 字，空白保存保留旧值；头像颜色仅在原型给定的 `#4C4BEA/#C0385A/#3A7A46/#A87000/#1A5FA8/#1A8B8B` 中选择。
+- 已知差异：原型资料修改只保存在页面状态，当前同样未接入账号持久化、头像照片上传、密码/微信/注销业务；账号安全三行按原型保留为无事件展示。除此之外仅有平台状态栏、Safe Area、设备纵向空间、系统键盘和字体栅格化差异。

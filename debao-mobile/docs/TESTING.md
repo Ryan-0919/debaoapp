@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 25 suites / 33 tests |
+| Jest | 通过 | 26 suites / 36 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -219,6 +219,14 @@ UIAutomator 已从“我的 → 订单与已购”进入页面，确认两条订
 Android 两态：![Android 已完成订单详情](screenshots/android-order-detail-complete.png) ![Android 待开课订单详情](screenshots/android-order-detail-pending.png)
 
 UIAutomator 已确认 `o1` 的“已完成”、`DB2024031200001` 与“进入课程”，以及 `o2` 的“待开课”、`DB2024052800078` 和唯一“查看商品”按钮。实机点击验证 `o2 → ProductDetail(p4)` 显示法考直播冲刺班和 `¥680`，`o1 → CourseDetail(c1)` 进入 `course-detail`。Jest 固定验证两态内容、未知订单回退和商品/课程导航参数。
+
+用户资料页 1:1 回归已完成：账号资料标题、初始资料、手机号禁用、文本/单选 Bottom Sheet、六色头像选择、账号安全展示和保存反馈均与原型对应；旧 RN 的整页输入表单、目标考试年份和页面级保存按钮已移除。
+
+原型关键态：![Figma 用户资料](screenshots/figma-user-profile.png) ![Figma 文本编辑](screenshots/figma-user-profile-edit.png) ![Figma 阶段选择](screenshots/figma-user-profile-stage.png) ![Figma 头像颜色](screenshots/figma-user-profile-avatar.png) ![Figma 保存反馈](screenshots/figma-user-profile-saved.png)
+
+Android 关键态：![Android 用户资料](screenshots/android-user-profile.png) ![Android 文本编辑](screenshots/android-user-profile-edit.png) ![Android 浮动键盘](screenshots/android-user-profile-keyboard.png) ![Android 阶段选择](screenshots/android-user-profile-stage.png) ![Android 头像颜色](screenshots/android-user-profile-avatar.png) ![Android 保存反馈](screenshots/android-user-profile-saved.png)
+
+UIAutomator 已从“我的 → 编辑资料”进入，命中五项资料、手机号“不可修改”、账号安全三行、昵称输入/字数/取消/保存、5 个备考阶段、6 个头像色板和“已保存修改”；选择“主观题冲刺阶段”后列表即时更新，提示 2 秒后消失。Jest 固定验证全部原型内容、不可编辑/无事件约束、文本空值回退、阶段和头像选择。
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 

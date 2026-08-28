@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react';
-import {StyleSheet, Switch, Text, TextInput, View} from 'react-native';
-import {Bell, LogOut, Shield, UserRound} from 'lucide-react-native';
+import {StyleSheet, Switch, Text, View} from 'react-native';
+import {Bell, LogOut, Shield} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
@@ -15,37 +15,7 @@ import type {RootStackParamList} from '@/types/navigation';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
-export function UserProfileScreen() {
-  const profile = useAppStore(state => state.profile);
-  const updateProfile = useAppStore(state => state.updateProfile);
-  const [name, setName] = useState(profile.name);
-  const [year, setYear] = useState(profile.examYear);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const save = async () => {
-    setSaving(true);
-    const updated = await authService.updateProfile({...profile, name: name.trim() || profile.name, examYear: year.trim() || profile.examYear});
-    updateProfile(updated);
-    setSaving(false);
-    setSaved(true);
-  };
-  return (
-    <AppScreen keyboardAware>
-      <PageHeader title="个人资料" />
-      <View style={styles.content}>
-        <View style={styles.avatar}><UserRound size={32} color={colors.brand} /></View>
-        <Text style={styles.label}>昵称</Text>
-        <TextInput value={name} onChangeText={value => {setName(value); setSaved(false);}} style={styles.input} />
-        <Text style={styles.label}>手机号</Text>
-        <TextInput value={profile.phone} editable={false} style={[styles.input, styles.readonly]} />
-        <Text style={styles.label}>目标考试年份</Text>
-        <TextInput value={year} keyboardType="number-pad" maxLength={4} onChangeText={value => {setYear(value); setSaved(false);}} style={styles.input} />
-        {saved ? <Text style={styles.saved}>资料已保存到本机</Text> : null}
-        <View style={styles.button}><AppButton label="保存" loading={saving} onPress={save} /></View>
-      </View>
-    </AppScreen>
-  );
-}
+export {default as UserProfileScreen} from './UserProfileScreen';
 
 export function SettingsScreen() {
   const navigation = useNavigation<Navigation>();
@@ -96,11 +66,6 @@ export function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   content: {padding: spacing.lg},
-  avatar: {width: 76, height: 76, borderRadius: 38, alignSelf: 'center', backgroundColor: colors.brandLight, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xl},
-  label: {fontSize: 12, fontWeight: '600', color: colors.body, marginTop: spacing.md, marginBottom: spacing.sm},
-  input: {height: 50, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, paddingHorizontal: spacing.md, color: colors.ink, fontSize: 14},
-  readonly: {color: colors.muted, backgroundColor: '#ECEEF1'},
-  saved: {fontSize: 12, color: colors.success, textAlign: 'center', marginTop: spacing.lg},
   button: {marginTop: spacing.xl},
   listCard: {paddingVertical: 0},
   notification: {flexDirection: 'row', marginBottom: spacing.md},
