@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 28 suites / 41 tests |
+| Jest | 通过 | 29 suites / 43 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -243,6 +243,14 @@ UIAutomator 已从“我的 → 设置与隐私”进入并确认全部内容；
 Android 全页：![Android 消息通知](screenshots/android-notifications.png)
 
 UIAutomator 已从“我的 → 消息通知”进入并确认全文，统计 `ROWS=4 / CLICKABLE=0 / UNREAD=2`；Jest 固定验证 4 条原型数据顺序、三类图标、两条未读圆点和静态无事件约束。
+
+批改服务页 1:1 回归已完成：剩余/已用次数、20% 进度、虚线提交入口、已批改/待批改记录、分数和反馈均与原型一致；旧 RN 的 Mock 提示、题目卡、答案输入、图片/PDF 占位和本页提交成功态已移除。
+
+原型全页：![Figma 批改服务](screenshots/figma-grading-service.png)
+
+Android 全页：![Android 批改服务](screenshots/android-grading-service.png)
+
+UIAutomator 已从“我的 → 批改服务”进入，确认 2 条记录均不可点击；点击“提交主观题答案批改”后进入 `subjective-answer-screen`，标题“民法 · 分科真题”、题号 `1 / 5`。Jest 固定验证全部原型数据及 `{questionIndex: 0, subjectName: '民法'}` 导航参数。
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 

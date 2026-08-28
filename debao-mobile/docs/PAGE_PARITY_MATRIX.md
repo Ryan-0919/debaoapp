@@ -41,7 +41,7 @@
 | 24 | `src/pages/UserProfile.tsx` | `src/screens/account/UserProfileScreen.tsx` | 资料展示、字段编辑 Bottom Sheet、头像颜色 Bottom Sheet、保存反馈 | 已完成 |
 | 25 | `src/pages/Settings.tsx` | `src/screens/account/SettingsScreen.tsx` | 设置分组、静态入口、退出登录 Dialog | 已完成 |
 | 26 | `src/pages/Notifications.tsx` | `src/screens/account/NotificationsScreen.tsx` | 通知列表、已读/未读视觉和滚动内容 | 已完成 |
-| 27 | `src/pages/GradingService.tsx` | `src/screens/tools/ToolScreens.tsx` (`GradingServiceScreen`) | 服务说明、提交入口和主观题跳转 | 未开始 |
+| 27 | `src/pages/GradingService.tsx` | `src/screens/tools/GradingServiceScreen.tsx` | 次数/进度、提交入口、批改记录和主观题跳转 | 已完成 |
 | 28 | `src/pages/QuestionRecords.tsx` | `src/screens/tools/ToolScreens.tsx` (`QuestionRecordsScreen`) | 记录列表、成绩/时间/状态、报告跳转 | 未开始 |
 
 ## 单页完成证据
@@ -289,3 +289,12 @@
 - 关键状态：UIAutomator 已从“我的 → 消息通知”进入并命中 4 条完整通知；`notification-row-*` 共 4 个且均不可点击，`notification-unread-*` 仅有 2 个。Jest 固定验证顺序、全文、时间、三类图标、两条未读圆点及无“未读”文字胶囊。
 - 数据与状态：固定展示学习提醒、课程更新、订单通知和错题复习提醒；前两条使用 `#FAFAFE` 未读底色和品牌色圆点，后两条为已读标题色；提醒/课程/订单分别使用紫/绿/玫红图标。
 - 已知差异：原型页面为无事件静态列表，当前同样未接入服务端通知、标记已读、分页、推送权限或跳转目标；除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+
+### 27. 批改服务
+
+- 原型源码：`得宝APP (1)/src/pages/GradingService.tsx`、公共 `TopBar` 和首页/个人页批改入口已核对。
+- 原型截图：`docs/screenshots/figma-grading-service.png`，390x844。
+- Android 截图：`docs/screenshots/android-grading-service.png`。
+- 关键交互：UIAutomator 已从“我的 → 批改服务”进入，确认剩余/已用次数、20% 进度、提交入口和两条记录；两条记录均不可点击。点击提交入口进入 `subjective-answer-screen`，显示“民法 · 分科真题”和 `1 / 5`。Jest 固定验证全文、静态记录和 `{questionIndex: 0, subjectName: '民法'}` 参数。
+- 数据与状态：展示剩余 8 次、已使用 2/共 10 次；记录为 2023 民法股权转让案例 `38/50` 已批改及 2022 合同解除与违约责任待批改，只有首条包含反馈。
+- 已知差异：当前为原型静态次数与批改记录，未接入真实权益、答案上传、人工派单、进度和反馈服务；除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。

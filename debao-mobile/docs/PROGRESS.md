@@ -38,8 +38,9 @@
 | 用户资料 `UserProfile.tsx` | 已完成 | 五项资料、手机号只读、文本/阶段编辑、六色头像、保存反馈和账号安全展示均已迁移；原型五态、Android 六态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 设置 `Settings.tsx` | 已完成 | 通知/隐私/关于三组 8 项、版本信息、退出按钮和确认 Dialog 均已迁移；原型两态、Android 两态、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
 | 消息通知 `Notifications.tsx` | 已完成 | 4 条通知、三类图标、两条未读底色/圆点、时间与正文均已迁移；原型、Android、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
-| 其余 2 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做批改服务 `GradingService.tsx` |
-| 三端 1:1 视觉验收 | 进行中 | Android 前 26 个页面已逐页验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
+| 批改服务 `GradingService.tsx` | 已完成 | 次数/20% 进度、虚线提交入口、两条批改记录和民法主观题跳转均已迁移；原型、Android、UIAutomator 和 Jest 证据齐全 | 在 iOS/HarmonyOS 原生环境补同页视觉回归 |
+| 其余 1 页 | 未开始 | RN 技术页面和路由存在，但尚未建立逐页 1:1 对照证据 | 下一页按原型完整重做答题记录 `QuestionRecords.tsx` |
+| 三端 1:1 视觉验收 | 进行中 | Android 前 27 个页面已逐页验证；iOS/HarmonyOS 只有共享 Bundle 结果 | 完成 Android 全页面，再在 macOS/DevEco 环境补平台差异验证 |
 
 ## P0
 
@@ -82,14 +83,14 @@
 | 错题本 | 已完成 | `MistakeBook` 路由和列表状态已实现 | 真实错题归档、筛选和同步未接入 |
 | 收藏 | 已完成 | `Favorites` 已按原型实现 4 条收藏、题目/法条标签和统一收藏题目导航 | 当前仍为原型 Mock；账号级同步未接入 |
 | 法条检索 | 已完成 | `LawSearch` 已按原型实现三 Tab、10 条法条、搜索/筛选/空态、全文与收藏、关联练习、6 篇论坛帖子和 6 条公告 | 当前仍为原型 Mock；权威法规数据源、版本和全文索引未接入 |
-| 批改服务 | 已完成 | `Grading` 路由和提交 UI 已实现 | 文件上传、人工派单、进度和结果接口未接入 |
+| 批改服务 | 已完成 | `Grading` 已按原型实现次数/进度、提交入口、已批改/待批改记录和民法主观题参数 | 当前为原型静态数据；文件上传、人工派单、进度和结果接口未接入 |
 | 答题记录 | 已完成 | `QuestionRecords` 路由和 Mock 记录已实现 | 真实分页、筛选和服务端记录未接入 |
 
 ## 工程与平台
 
 | 项目 | 状态 | 验证结果 | 唯一明确的下一步 |
 |---|---|---|---|
-| TypeScript、Lint、单元测试 | 已完成 | `pnpm check` 已通过：28 suites / 41 tests；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
+| TypeScript、Lint、单元测试 | 已完成 | `pnpm check` 已通过：29 suites / 43 tests；最终提交前重新执行 | 依赖或源码变化后继续由 `pnpm check` 守护 |
 | Android production JS bundle | 已完成 | Metro production bundle 已生成成功 | 原生依赖变化后重新 bundle |
 | Android 原生构建与安装 | 已完成 | Debug APK 构建成功，并在 `Debao_API_36`（API 36 / x86_64）完成安装、冷启动、首页截图和五 Tab 烟雾测试；进程保持前台且无运行期崩溃 | 继续完成返回、键盘、旋转、小屏及真机矩阵 |
 | iOS production JS bundle | 已完成 | Windows 上 production JS bundle 已生成成功 | 原生依赖变化后在 macOS 再次 bundle |
