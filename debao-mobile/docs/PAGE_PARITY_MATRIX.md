@@ -37,7 +37,7 @@
 | 20 | `src/pages/LawSearch.tsx` | `src/screens/tools/LawSearchScreen.tsx` | 法条/论坛/公告 Tab、搜索前后、科目筛选、列表展开、收藏、法条全文 Bottom Sheet、关联练习 | 已完成 |
 | 21 | `src/pages/AIChat.tsx` | `src/screens/ai/AIChatScreen.tsx` | 初始消息、输入、发送、加载、连续对话、键盘和滚动 | 已完成 |
 | 22 | `src/pages/OrderList.tsx` | `src/screens/commerce/OrderListScreen.tsx` | 订单列表、状态/金额/商品信息、详情跳转 | 已完成 |
-| 23 | `src/pages/OrderDetail.tsx` | `src/screens/commerce/OrderScreens.tsx` (`OrderDetailScreen`) | 订单信息、商品跳转、课程跳转和不同订单参数 | 未开始 |
+| 23 | `src/pages/OrderDetail.tsx` | `src/screens/commerce/OrderDetailScreen.tsx` | 订单信息、商品跳转、课程跳转和不同订单参数 | 已完成 |
 | 24 | `src/pages/UserProfile.tsx` | `src/screens/account/AccountScreens.tsx` (`UserProfileScreen`) | 资料展示、字段编辑 Bottom Sheet、头像颜色 Bottom Sheet、保存反馈 | 未开始 |
 | 25 | `src/pages/Settings.tsx` | `src/screens/account/AccountScreens.tsx` (`SettingsScreen`) | 设置分组、开关/入口、退出登录 Dialog | 未开始 |
 | 26 | `src/pages/Notifications.tsx` | `src/screens/account/AccountScreens.tsx` (`NotificationsScreen`) | 通知分组、已读/未读视觉和滚动内容 | 未开始 |
@@ -253,3 +253,12 @@
 - 关键交互：UIAutomator 已从“我的 → 订单与已购”进入页面，确认两条订单的状态、商品名、日期和金额；点击第二条进入“订单详情”。Jest 固定验证两条唯一订单行和 `navigation.navigate('OrderDetail', {orderId: 'o2'})`。
 - 数据与导航：新增 `src/data/orders.ts` 保存与原型同源的 `o1/o2` 订单、订单号、商品/课程关联；列表仅展示原型定义的状态、商品名、日期和金额，不保留旧 RN 的订单号副标题、状态胶囊和“实付”前缀。
 - 已知差异：订单仍为原型 Mock，尚未接入账号订单分页、刷新和服务端状态；第 23 页订单详情单独验收。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+
+### 23. 订单详情
+
+- 原型源码：`得宝APP (1)/src/pages/OrderDetail.tsx`、`src/data.ts`、公共 `TopBar` 及订单列表入口已核对。
+- 原型截图：`docs/screenshots/figma-order-detail-complete.png`、`figma-order-detail-pending.png`，均为 390x844。
+- Android 截图：`docs/screenshots/android-order-detail-complete.png`、`android-order-detail-pending.png`。
+- 关键交互：UIAutomator 已验证 `o1` 的“已完成/课程权限已自动开通”和 `o2` 的“待开课/课程将于开课日自动激活”；`o2` 点击“查看商品”进入 `product-detail` 并显示法考直播冲刺班与 `¥680`，`o1` 点击“进入课程”进入 `course-detail`。Jest 固定验证两态全部文案、未知订单回退、`{productId: 'p1'/'p4'}` 和 `{courseId: 'c1'}` 导航参数。
+- 数据与状态：详情页复用 `src/data/orders.ts` 的两条订单和商品图片；`o1` 展示视频课程、`¥3,980`、`DB2024031200001`、微信支付及双按钮，`o2` 展示直播课程、`¥680`、`DB2024052800078`、微信支付且仅保留查看商品。未知 `orderId` 按原型回退 `o1`。
+- 已知差异：订单仍为原型 Mock，不包含真实服务端订单状态、物流、退款或售后流程；除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。

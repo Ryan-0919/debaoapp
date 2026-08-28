@@ -15,7 +15,7 @@ pnpm check
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 24 suites / 31 tests |
+| Jest | 通过 | 25 suites / 33 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -211,6 +211,14 @@ UIAutomator 已从首页 AI 答疑入口进入，命中欢迎语、4 个快捷�
 Android 全页：![Android 订单列表](screenshots/android-order-list.png)
 
 UIAutomator 已从“我的 → 订单与已购”进入页面，确认两条订单完整显示；点击第二条进入“订单详情”。Jest 固定验证两条唯一订单行和 `{orderId: 'o2'}` 路由参数。订单详情内容属于第 23 页，未在本页提前计入完成。
+
+订单详情页 1:1 回归已完成：`o1` 已完成和 `o2` 待开课两种原型状态、状态说明、商品图片/课程类型、实付金额、订单号、下单时间、支付方式和底部按钮均已迁移。
+
+原型两态：![Figma 已完成订单详情](screenshots/figma-order-detail-complete.png) ![Figma 待开课订单详情](screenshots/figma-order-detail-pending.png)
+
+Android 两态：![Android 已完成订单详情](screenshots/android-order-detail-complete.png) ![Android 待开课订单详情](screenshots/android-order-detail-pending.png)
+
+UIAutomator 已确认 `o1` 的“已完成”、`DB2024031200001` 与“进入课程”，以及 `o2` 的“待开课”、`DB2024052800078` 和唯一“查看商品”按钮。实机点击验证 `o2 → ProductDetail(p4)` 显示法考直播冲刺班和 `¥680`，`o1 → CourseDetail(c1)` 进入 `course-detail`。Jest 固定验证两态内容、未知订单回退和商品/课程导航参数。
 
 五 Tab 烟雾测试已通过：依次点击题库、商城、课程、我的和首页，UIAutomator 分别匹配到“客观题”“精选课程”“我的课程”“得宝 AI 学习助手”“法考学习者”，测试后应用进程保持存活且无崩溃日志。
 
