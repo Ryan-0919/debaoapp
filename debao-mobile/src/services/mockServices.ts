@@ -31,6 +31,8 @@ let mockProfile: UserProfile = {
 const createdOrders: Order[] = [];
 
 export const mockAuthService: AuthService = {
+  async login(phone, _code) { await delay(); return {accessToken: 'mock-access-token', refreshToken: 'mock-refresh-token', expiresIn: 604800, profile: {...mockProfile, phone: `${phone.slice(0, 3)}****${phone.slice(-4)}`}}; },
+  async refresh(refreshToken) { await delay(); return {accessToken: 'mock-access-token', refreshToken, expiresIn: 604800}; },
   async getProfile() {
     await delay();
     return {...mockProfile};

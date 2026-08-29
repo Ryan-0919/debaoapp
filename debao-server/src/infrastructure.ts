@@ -22,5 +22,15 @@ export class Infrastructure {
     if (this.redis) { try { if (this.redis.status === 'wait') await this.redis.connect(); await this.redis.ping(); redisReachable = true; } catch { redisReachable = false; this.redis.disconnect(); } }
     return {postgresConfigured: Boolean(this.config.databaseUrl), postgresReachable, redisConfigured: Boolean(this.config.redisUrl), redisReachable};
   }
+  async query<T extends Record<string, unknown> = Record<string, unknown>>(text: string, values: unknown[] = []): Promise<{rows: T[]; rowCount: number} | null> {
+    if (!this.pool) return null;
+    try {
+      const result = await this.pool.query<T>(text, values);
+      return {rows: result.rows, rowCount: result.rowCount ?? result.rows.length};
+    } catch (error) {
+      console.warn('database query skipped:', error instanceof Error ? error.message : error);
+      return null;
+    }
+  }
   async close() { await this.pool?.end(); this.redis?.disconnect(); }
 }

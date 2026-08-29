@@ -1,14 +1,47 @@
 import type {AppNotification, Course, Order, Product, Subject, UserProfile} from '@/types/domain';
+import {environment} from '@/config/environment';
 import {apiClient} from './apiClient';
 import type {AIService, AuthService, CourseService, DeviceService, GradingService, HomeService, LegalService, LearningService, MediaService, NotificationService, OrderService, PaymentService, ProductService, QuestionService} from './contracts';
 
-const token = 'demo-token';
+const SESSION_KEY = 'debao.auth.session';
+let token = 'demo-token';
+let refreshTokenValue: string | undefined;
+type StorageLike = {getItem(key: string): Promise<string | null>; setItem(key: string, value: string): Promise<void>; removeItem(key: string): Promise<void>};
+let storagePromise: Promise<StorageLike> | undefined;
+function getStorage() {
+  storagePromise ??= import('@react-native-async-storage/async-storage').then(module => module.default as unknown as StorageLike);
+  return storagePromise;
+}
+if (!environment.useMocks) {
+  getStorage().then(storage => storage.getItem(SESSION_KEY)).then(value => {
+    if (!value) return;
+    try { const session = JSON.parse(value) as {accessToken?: string; refreshToken?: string}; if (session.accessToken) token = session.accessToken; if (session.refreshToken) refreshTokenValue = session.refreshToken; } catch { /* corrupted local session is ignored */ }
+  }).catch(() => undefined);
+}
+
+async function saveSession(session: {accessToken: string; refreshToken: string}) {
+  token = session.accessToken; refreshTokenValue = session.refreshToken;
+  await (await getStorage()).setItem(SESSION_KEY, JSON.stringify(session));
+}
 
 export const apiAuthService: AuthService = {
+  async login(phone, code, deviceId) {
+    const session = await apiClient.request<{accessToken: string; refreshToken: string; expiresIn: number; profile?: UserProfile}>('/auth/login', {method: 'POST', body: {phone, code, deviceId}});
+    await saveSession(session); return session;
+  },
+  async refresh(refreshToken) {
+    const session = await apiClient.request<{accessToken: string; refreshToken: string; expiresIn: number}>('/auth/refresh', {method: 'POST', body: {refreshToken}});
+    await saveSession(session); return session;
+  },
   getProfile: () => apiClient.request<UserProfile>('/me', {token}),
   updateProfile: profile => apiClient.request<UserProfile>('/me', {method: 'PATCH', body: {name: profile.name, examYear: profile.examYear}, token}),
-  logout: async () => { await apiClient.request('/auth/logout', {method: 'POST', token}); },
+  logout: async () => { await apiClient.request('/auth/logout', {method: 'POST', token}); token = 'demo-token'; refreshTokenValue = undefined; await (await getStorage()).removeItem(SESSION_KEY); },
 };
+
+export async function refreshStoredSession() {
+  if (!refreshTokenValue) return false;
+  try { await apiAuthService.refresh?.(refreshTokenValue); return true; } catch { return false; }
+}
 
 export const apiQuestionService: QuestionService = {
   listSubjects: () => apiClient.request<Subject[]>('/question-subjects', {token}),

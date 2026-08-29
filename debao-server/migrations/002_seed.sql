@@ -26,3 +26,12 @@ insert into products (id, name, category, price, original_price, sold, accent, b
   ('p2', '主观题案例突破班', '主观题', 1680, 2280, 1536, '#E27663', '["80 个核心案例", "逐题人工批改", "考前模拟 6 套"]'),
   ('p3', '法条音频随身课', '音频课', 299, 399, 4203, '#56A878', '["全科重点法条", "逐字稿配套", "离线能力待接入"]')
 on conflict (id) do update set name = excluded.name, price = excluded.price, original_price = excluded.original_price, sold = excluded.sold, benefits = excluded.benefits;
+
+insert into orders (id, user_id, product_id, amount, status, client_request_id, created_at, paid_at) values
+  ('DB202608270001', '00000000-0000-0000-0000-000000000001', 'p1', 3980, 'paid', 'seed-order-1', '2026-08-27T20:18:00Z', '2026-08-27T20:18:00Z'),
+  ('DB202608110016', '00000000-0000-0000-0000-000000000001', 'p3', 299, 'paid', 'seed-order-2', '2026-08-11T09:42:00Z', '2026-08-11T09:42:00Z')
+on conflict (id) do update set status = excluded.status, paid_at = excluded.paid_at;
+
+insert into course_entitlements (user_id, course_id, source_order_id)
+values ('00000000-0000-0000-0000-000000000001', 'c1', 'DB202608270001')
+on conflict (user_id, course_id) do nothing;

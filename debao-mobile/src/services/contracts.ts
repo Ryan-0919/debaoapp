@@ -8,9 +8,18 @@ import type {
 } from '@/types/domain';
 
 export interface AuthService {
+  login?(phone: string, code: string, deviceId?: string): Promise<AuthSession>;
+  refresh?(refreshToken: string): Promise<AuthSession>;
   getProfile(): Promise<UserProfile>;
   updateProfile(profile: UserProfile): Promise<UserProfile>;
   logout(): Promise<void>;
+}
+
+export interface AuthSession {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  profile?: UserProfile;
 }
 
 export interface QuestionSubmission {

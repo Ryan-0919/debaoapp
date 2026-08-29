@@ -24,7 +24,7 @@ interface ApiFailure {
 
 ## AuthService
 
-状态：Mock。
+状态：默认 Mock；设置 `DEBAO_USE_MOCKS=false` 后使用真实本地 API，支持登录/刷新/资料/登出。
 
 | 方法 | 建议端点 | 说明 |
 |---|---|---|
@@ -36,7 +36,7 @@ interface ApiFailure {
 
 ## QuestionService
 
-状态：Mock，草稿另存本机 Zustand/AsyncStorage。
+状态：默认 Mock；真实模式使用本地 API，草稿同时保留本地缓存以支持离线恢复。
 
 ```ts
 interface QuestionSubmission {
@@ -55,7 +55,7 @@ interface QuestionSubmission {
 
 ## CourseService
 
-状态：Mock。
+状态：默认 Mock；真实模式使用本地 API。
 
 | 方法 | 建议端点 | 说明 |
 |---|---|---|
@@ -66,7 +66,7 @@ interface QuestionSubmission {
 
 ## OrderService 与 PaymentService
 
-状态：Mock，不会扣款。
+状态：默认 Mock；真实模式使用本地订单 API，支付由服务端适配器决定，当前 local 适配器不会产生真实扣款。
 
 ```ts
 interface CreateOrderRequest {
@@ -94,7 +94,7 @@ sequenceDiagram
 
 ## AIService
 
-状态：本地 Mock 流式文本。
+状态：默认 Mock 流式文本；真实模式调用服务端 AI 适配器，正式 provider 仍需密钥和审核策略。
 
 ```ts
 streamReply(prompt: string, onChunk: (chunk: string) => void): Promise<void>
@@ -104,13 +104,13 @@ streamReply(prompt: string, onChunk: (chunk: string) => void): Promise<void>
 
 ## MediaService
 
-状态：Mock，只返回 `available: false` 及原因。
+状态：默认 Mock；真实模式调用媒体授权适配器，当前未配置 CDN/DRM 时返回 `available: false`。
 
 正式能力至少包含：播放授权、媒体 URL、直播房间 token、播放进度同步、离线清单、下载校验、DRM 和过期清理。
 
 ## NotificationService
 
-状态：Mock，不请求系统权限。
+状态：默认 Mock；真实模式调用服务端通知接口，三端系统权限仍需原生模块申请。
 
 真实流程需区分 APNs、FCM/厂商通道和 Harmony Push。设备 token 只能提交给自有后端，后端记录平台、环境、用户和 token 更新时间。
 

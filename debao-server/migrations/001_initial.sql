@@ -33,12 +33,12 @@ create table if not exists favorites (user_id uuid references users(id) on delet
 create table if not exists mistakes (user_id uuid references users(id) on delete cascade, question_id text references questions(id), wrong_count integer not null default 1, last_answer text, resolved_at timestamptz, primary key (user_id, question_id));
 
 create table if not exists learning_plans (
-  id uuid primary key default gen_random_uuid(), user_id uuid references users(id) on delete cascade,
+  id text primary key, user_id uuid references users(id) on delete cascade,
   title varchar(160) not null, daily_minutes integer not null, start_date date not null, end_date date not null,
   status varchar(20) not null default 'active', created_at timestamptz not null default now(), updated_at timestamptz not null default now()
 );
 create table if not exists learning_tasks (
-  id uuid primary key default gen_random_uuid(), plan_id uuid references learning_plans(id) on delete cascade,
+  id text primary key, plan_id text references learning_plans(id) on delete cascade,
   title varchar(160) not null, due_date date not null, minutes integer not null, status varchar(20) not null default 'todo', completed_at timestamptz
 );
 
@@ -49,7 +49,7 @@ create table if not exists products (id text primary key, name varchar(160) not 
 create table if not exists orders (id text primary key, user_id uuid references users(id), product_id text references products(id), amount numeric(12,2) not null, status varchar(20) not null, client_request_id text unique, created_at timestamptz not null default now(), paid_at timestamptz);
 create table if not exists order_events (id uuid primary key default gen_random_uuid(), order_id text references orders(id) on delete cascade, event_type varchar(40) not null, payload jsonb not null, created_at timestamptz not null default now());
 create table if not exists grading_submissions (
-  id uuid primary key default gen_random_uuid(), user_id uuid references users(id) on delete cascade,
+  id text primary key, user_id uuid references users(id) on delete cascade,
   question_id text references questions(id), file_url text, status varchar(20) not null default 'queued',
   score numeric, feedback text, created_at timestamptz not null default now(), completed_at timestamptz
 );
@@ -70,6 +70,6 @@ create table if not exists legal_documents (
   effective_from date not null, effective_to date
 );
 create table if not exists forum_posts (
-  id uuid primary key default gen_random_uuid(), user_id uuid references users(id), title varchar(160) not null,
+  id text primary key, user_id uuid references users(id), title varchar(160) not null,
   body text not null, likes integer not null default 0, status varchar(20) not null default 'published', created_at timestamptz not null default now()
 );

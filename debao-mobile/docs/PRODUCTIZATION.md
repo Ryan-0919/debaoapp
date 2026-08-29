@@ -6,7 +6,7 @@
 - 统一 requestId、成功/错误 envelope、鉴权校验和参数校验。
 - 首批业务接口：用户、题库科目、答题草稿/提交、课程、订单、支付状态、通知、AI/媒体适配器占位。
 - PostgreSQL 初始迁移覆盖用户、刷新会话、设备、科目/题目、课程权益、商品/订单/订单事件、学习/批改/公告/论坛；`002_seed.sql` 提供可重复执行的演示数据。
-- Redis 与 PostgreSQL 已加入 Docker Compose，生产连接和迁移执行仍需按环境接入。
+- Redis 与 PostgreSQL 已加入 Docker Compose，关键用户、设备、草稿、答题提交、订单、权益、学习计划和批改写入已接入 PostgreSQL；未配置数据库时保留内存降级。
 - Compose API 容器会等待 PostgreSQL/Redis 健康检查，通过后自动执行 `001_initial.sql` 与 `002_seed.sql`。
 - React Native 服务层支持 Mock/真实 API 运行时切换，页面和导航保持 1:1 原型结构。
 - AI 对话、题库科目、商城商品、订单列表和通知页已在真实模式接入 API，失败时保留原型可用数据。
