@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {ChevronLeft, ChevronRight, CircleAlert, RefreshCw} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
@@ -7,6 +7,9 @@ import {AppScreen} from '@/components/AppScreen';
 import {OBJECTIVE_QUESTIONS} from '@/data/objectiveQuestions';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
+import {environment} from '@/config/environment';
+import {questionService} from '@/services';
+import type {QuestionMistake} from '@/services';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -17,9 +20,41 @@ const MISTAKE_QUESTIONS = OBJECTIVE_QUESTIONS.slice(0, 3).map((question, index) 
   userAnswer: ['B', 'C', 'B'][index],
 }));
 
+function toUiMistake(item: QuestionMistake) {
+  const question = item.question;
+  const answerIndex = question?.answer ?? 0;
+  const answer = String.fromCharCode(65 + answerIndex);
+  return {
+    id: item.questionId,
+    subject: question?.id === 'oq1' || question?.id === 'oq2' ? '民法' : '题库',
+    year: '在线',
+    num: 0,
+    stem: question?.stem ?? '题目内容暂不可用',
+    options: (question?.options ?? []).map((text, index) => ({key: String.fromCharCode(65 + index), text})),
+    answer,
+    explanation: question?.analysis ?? '',
+    point: '',
+    lawBasis: '',
+    wrongCount: item.wrongCount,
+    userAnswer: item.lastAnswer,
+  };
+}
+
 export default function MistakeBookScreen() {
   const navigation = useNavigation<Navigation>();
   const [filter, setFilter] = useState('全部');
+  const [mistakes, setMistakes] = useState(MISTAKE_QUESTIONS);
+
+  useEffect(() => {
+    if (environment.useMocks) return;
+    let active = true;
+    questionService.listMistakes().then(items => {
+      if (active) setMistakes(items.map(toUiMistake));
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+
+  const visibleMistakes = filter === '全部' ? mistakes : mistakes.filter(item => item.subject === filter);
 
   return (
     <AppScreen scroll={false} backgroundColor={colors.page} testID="mistake-book-screen">
@@ -62,7 +97,7 @@ export default function MistakeBookScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} testID="mistake-book-scroll">
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryText}>共 3 道错题待复习</Text>
+          <Text style={styles.summaryText}>共 {visibleMistakes.length} 道错题待复习</Text>
           <View style={styles.redoAction} testID="mistake-redo-action">
             <RefreshCw size={12} color={colors.brand} />
             <Text style={styles.redoText}>一键重做</Text>
@@ -70,7 +105,7 @@ export default function MistakeBookScreen() {
         </View>
 
         <View style={styles.cards}>
-          {MISTAKE_QUESTIONS.map(question => (
+          {visibleMistakes.map(question => (
             <Pressable
               key={question.id}
               accessibilityRole="button"

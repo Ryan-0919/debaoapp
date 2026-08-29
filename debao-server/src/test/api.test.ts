@@ -55,3 +55,26 @@ test('learning, grading and admin routes expose local product workflows', async 
   const grade = await fetch(`${base}/v1/grading/submissions`, {method: 'POST', headers: auth, body: JSON.stringify({questionId: 'oq1'})}); const gradeJson = await grade.json() as any; assert.equal(grade.status, 201); assert.equal(gradeJson.data.status, 'queued');
   const overview = await fetch(`${base}/v1/admin/overview`, {headers: {authorization: 'Bearer admin-token'}}); const overviewJson = await overview.json() as any; assert.equal(overview.status, 200); assert.equal(overviewJson.data.gradingQueue >= 1, true);
 }));
+
+test('question activity feeds records, mistakes, favorites and learning report', async () => withServer(async base => {
+  const auth = {authorization: 'Bearer demo-token', 'content-type': 'application/json'};
+  const submitted = await fetch(`${base}/v1/question-submissions`, {method: 'POST', headers: auth, body: JSON.stringify({questionId: 'oq1', answers: ['0']})});
+  const submission = await submitted.json() as any;
+  assert.equal(submitted.status, 200); assert.equal(submission.data.correct, false);
+
+  const records = await fetch(`${base}/v1/question-records`, {headers: auth}); const recordsJson = await records.json() as any;
+  assert.equal(records.status, 200); assert.equal(recordsJson.data.some((item: any) => item.id === submission.data.submissionId), true);
+
+  const mistakes = await fetch(`${base}/v1/mistakes`, {headers: auth}); const mistakesJson = await mistakes.json() as any;
+  assert.equal(mistakes.status, 200); assert.equal(mistakesJson.data.some((item: any) => item.questionId === 'oq1'), true);
+
+  const favorite = await fetch(`${base}/v1/favorites`, {method: 'POST', headers: auth, body: JSON.stringify({questionId: 'oq1'})}); const favoriteJson = await favorite.json() as any;
+  assert.equal(favorite.status === 200 || favorite.status === 201, true);
+  const favorites = await fetch(`${base}/v1/favorites`, {headers: auth}); const favoritesJson = await favorites.json() as any;
+  assert.equal(favoritesJson.data.some((item: any) => item.questionId === 'oq1'), true);
+  const removed = await fetch(`${base}/v1/favorites/${encodeURIComponent(favoriteJson.data.id)}`, {method: 'DELETE', headers: auth});
+  assert.equal(removed.status, 200);
+
+  const report = await fetch(`${base}/v1/learning/report?period=week`, {headers: auth}); const reportJson = await report.json() as any;
+  assert.equal(report.status, 200); assert.equal(reportJson.data.answered >= 1, true);
+}));

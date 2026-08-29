@@ -1,3 +1,4 @@
+import {useEffect, useMemo, useState} from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {CheckCircle2, ChevronLeft, Circle, Clock3} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
@@ -5,6 +6,8 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
+import {environment} from '@/config/environment';
+import {learningService} from '@/services';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -27,8 +30,28 @@ const PLAN = [
   },
 ] as const;
 
+type PlanSection = {week: string; tasks: ReadonlyArray<{title: string; detail: string; done: boolean; time: string}>};
+
 export default function LearningPlanScreen() {
   const navigation = useNavigation<Navigation>();
+  const [sections, setSections] = useState<PlanSection[]>([...PLAN]);
+  useEffect(() => {
+    if (environment.useMocks) return;
+    let active = true;
+    Promise.all([learningService.plans(), learningService.tasks()]).then(([plans, tasks]) => {
+      if (!active) return;
+      const plan = plans[0];
+      const planTasks = plan ? tasks.filter(task => task.planId === plan.id) : tasks;
+      setSections([{week: plan ? `${plan.title}（${plan.startDate}–${plan.endDate}）` : '学习任务', tasks: planTasks.map(task => ({title: task.title, detail: `${task.status === 'done' ? '已完成' : '待完成'} · 截止 ${task.dueDate}`, done: task.status === 'done', time: `${task.minutes}分钟`}))}]);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+  const progress = useMemo(() => {
+    const tasks = sections.flatMap(section => section.tasks);
+    const done = tasks.filter(task => task.done).length;
+    const minutes = tasks.filter(task => task.done).reduce((sum, task) => sum + Number.parseInt(task.time, 10), 0);
+    return {done, total: tasks.length, minutes};
+  }, [sections]);
 
   return (
     <AppScreen scroll={false} backgroundColor={colors.page} testID="learning-plan-screen">
@@ -52,15 +75,15 @@ export default function LearningPlanScreen() {
         <View style={styles.progressCard}>
           <View style={styles.progressHeading}>
             <Text style={styles.progressTitle}>本周完成进度</Text>
-            <Text style={styles.progressValue} testID="learning-plan-progress-value">1 / 4</Text>
+            <Text style={styles.progressValue} testID="learning-plan-progress-value">{environment.useMocks ? '1 / 4' : `${progress.done} / ${progress.total}`}</Text>
           </View>
           <View style={styles.progressTrack} testID="learning-plan-progress-track">
-            <View style={styles.progressFill} testID="learning-plan-progress-fill" />
+            <View style={environment.useMocks ? styles.progressFill : [styles.progressFill, {width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%`}]} testID="learning-plan-progress-fill" />
           </View>
-          <Text style={styles.progressDetail}>预计本周学习时长 3.5 小时，已完成 0.9 小时</Text>
+          <Text style={styles.progressDetail}>{environment.useMocks ? '预计本周学习时长 3.5 小时，已完成 0.9 小时' : `已完成学习时长 ${(progress.minutes / 60).toFixed(1)} 小时`}</Text>
         </View>
 
-        {PLAN.map(section => (
+        {sections.map(section => (
           <View key={section.week} style={styles.section} testID={`learning-plan-section-${section.week}`}>
             <Text style={styles.sectionLabel}>{section.week}</Text>
             <View style={styles.taskCard}>

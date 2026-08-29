@@ -1,3 +1,4 @@
+import {useEffect, useState} from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {ChevronLeft, ChevronRight, Star} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
@@ -5,6 +6,9 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
+import {environment} from '@/config/environment';
+import {questionService} from '@/services';
+import type {QuestionFavorite} from '@/services';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -14,9 +18,22 @@ const FAVORITES = [
   {id: 'favorite-3', subject: '民法', year: '2022', title: '关于诉讼时效适用规则的判断（第3题）'},
   {id: 'favorite-4', subject: '刑法', year: '2023', title: '犯罪未完成形态的认定（第5题）'},
 ] as const;
+type FavoriteItem = {id: string; subject: string; year?: string; title: string};
+
+function toUiFavorite(item: QuestionFavorite) {
+  return {id: item.id, subject: '题库', year: undefined as string | undefined, title: item.question?.stem ?? '收藏题目'};
+}
 
 export default function FavoritesScreen() {
   const navigation = useNavigation<Navigation>();
+  const [favorites, setFavorites] = useState<FavoriteItem[]>([...FAVORITES]);
+
+  useEffect(() => {
+    if (environment.useMocks) return;
+    let active = true;
+    questionService.listFavorites().then(items => { if (active) setFavorites(items.map(toUiFavorite)); }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   return (
     <AppScreen scroll={false} backgroundColor={colors.page} testID="favorites-screen">
@@ -29,16 +46,16 @@ export default function FavoritesScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} testID="favorites-scroll">
-        <Text style={styles.summary} testID="favorites-summary">共 4 条收藏</Text>
+        <Text style={styles.summary} testID="favorites-summary">共 {favorites.length} 条收藏</Text>
         <View style={styles.list}>
-          {FAVORITES.map((favorite, index) => (
+          {favorites.map((favorite, index) => (
             <Pressable
               key={favorite.id}
               accessibilityRole="button"
               accessibilityLabel={`${favorite.subject}${favorite.year ? ` ${favorite.year}年` : ''} ${favorite.title}`}
               testID={favorite.id}
               onPress={() => navigation.navigate('ObjectiveAnswer', {mode: 'chapter', title: '收藏题目'})}
-              style={({pressed}) => [styles.row, index < FAVORITES.length - 1 && styles.rowDivider, pressed && styles.pressed]}>
+              style={({pressed}) => [styles.row, index < favorites.length - 1 && styles.rowDivider, pressed && styles.pressed]}>
               <Star size={16} color="#A87000" fill="#A87000" style={styles.star} />
               <View style={styles.rowCopy}>
                 <View style={styles.tags}>

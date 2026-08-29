@@ -69,11 +69,19 @@ export const apiQuestionService: QuestionService = {
   listSubjects: () => request<Subject[]>('/question-subjects', {token}),
   saveDraft: async submission => { await request(`/question-drafts/${submission.questionId}`, {method: 'PUT', body: submission, token}); },
   submit: submission => request<{submissionId: string}>('/question-submissions', {method: 'POST', body: submission, token}),
+  listRecords: () => request('/question-records', {token}),
+  listMistakes: () => request('/mistakes', {token}),
+  resolveMistake: async id => { await request(`/mistakes/${id}`, {method: 'DELETE', token}); },
+  listFavorites: () => request('/favorites', {token}),
+  addFavorite: questionId => request('/favorites', {method: 'POST', body: {questionId}, token}),
+  removeFavorite: async id => { await request(`/favorites/${id}`, {method: 'DELETE', token}); },
 };
 
 export const apiCourseService: CourseService = {
   list: () => request<Course[]>('/courses', {token}),
   get: id => request<Course | null>(`/courses/${id}`, {token}),
+  entitlement: id => request(`/courses/${id}/entitlement`, {token}),
+  updateProgress: (id, progress) => request(`/courses/${id}/progress`, {method: 'POST', body: {progress}, token}),
 };
 
 export const apiProductService: ProductService = {

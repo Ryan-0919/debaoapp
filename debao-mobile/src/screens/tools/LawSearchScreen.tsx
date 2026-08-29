@@ -6,6 +6,8 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
+import {environment} from '@/config/environment';
+import {legalService} from '@/services';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type MainTab = 'laws' | 'forum' | 'notices';
@@ -91,18 +93,24 @@ export default function LawSearchScreen() {
   const [starred, setStarred] = useState<string[]>([]);
   const [forumTag, setForumTag] = useState('全部');
   const [expandedNotice, setExpandedNotice] = useState<string | null>(null);
+  const [apiSearchResults, setApiSearchResults] = useState<LawArticle[]>([]);
 
-  const searchResults = useMemo(() => LAW_DB.filter(article => {
+  const localSearchResults = useMemo(() => LAW_DB.filter(article => {
     const value = searchedQuery.trim();
     return value && `${article.title}${article.article}${article.content}${article.keywords.join('')}`.includes(value);
   }), [searchedQuery]);
+  const searchResults = environment.useMocks ? localSearchResults : apiSearchResults;
   const subjectResults = subjectFilter === '全部' ? LAW_DB : LAW_DB.filter(article => article.subject === subjectFilter);
   const posts = forumTag === '全部' ? FORUM_POSTS : FORUM_POSTS.filter(post => post.tag === forumTag);
   const toggleStar = (article: string) => setStarred(items => items.includes(article) ? items.filter(item => item !== article) : [...items, article]);
   const doSearch = () => {
-    if (query.trim()) {
-      setSearchedQuery(query.trim());
+    const value = query.trim();
+    if (value) {
+      setSearchedQuery(value);
       setSubjectFilter('全部');
+      if (!environment.useMocks) {
+        legalService.search(value).then(result => setApiSearchResults(result.items.map(item => ({subject: '法规', law: item.article.split('第')[0] || '法律法规', article: item.article.includes('第') ? `第${item.article.split('第').slice(1).join('第')}` : item.article, title: item.title, content: item.content, fullText: item.content, chapter: item.article, version: `${item.effectiveFrom} 生效`, keywords: [value]})))).catch(() => setApiSearchResults([]));
+      }
     }
   };
 

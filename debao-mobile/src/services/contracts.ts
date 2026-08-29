@@ -27,15 +27,55 @@ export interface QuestionSubmission {
   answers: string[];
 }
 
+export interface ApiQuestion {
+  id: string;
+  stem: string;
+  options: string[];
+  answer: number;
+  analysis: string;
+}
+
+export interface QuestionRecord {
+  id: string;
+  questionId: string;
+  answers: string[];
+  correct: boolean;
+  createdAt: string;
+}
+
+export interface QuestionMistake {
+  id: string;
+  questionId: string;
+  wrongCount: number;
+  lastAnswer: string;
+  resolved: boolean;
+  question?: ApiQuestion;
+}
+
+export interface QuestionFavorite {
+  id: string;
+  questionId: string;
+  createdAt: string;
+  question?: ApiQuestion;
+}
+
 export interface QuestionService {
   listSubjects(): Promise<Subject[]>;
   saveDraft(submission: QuestionSubmission): Promise<void>;
   submit(submission: QuestionSubmission): Promise<{submissionId: string}>;
+  listRecords(): Promise<QuestionRecord[]>;
+  listMistakes(): Promise<QuestionMistake[]>;
+  resolveMistake(id: string): Promise<void>;
+  listFavorites(): Promise<QuestionFavorite[]>;
+  addFavorite(questionId: string): Promise<QuestionFavorite>;
+  removeFavorite(id: string): Promise<void>;
 }
 
 export interface CourseService {
   list(): Promise<Course[]>;
   get(id: string): Promise<Course | null>;
+  entitlement(id: string): Promise<{hasAccess: boolean; sourceOrderId?: string; expiresAt?: string}>;
+  updateProgress(id: string, progress: number): Promise<{courseId: string; progress: number; updatedAt: string}>;
 }
 
 export interface ProductService {
@@ -49,12 +89,19 @@ export interface HomeService {
 
 export interface LearningPlan { id: string; title: string; dailyMinutes: number; startDate: string; endDate: string; status: 'active' | 'completed' | 'archived'; }
 export interface LearningTask { id: string; planId: string; title: string; dueDate: string; minutes: number; status: 'todo' | 'done' | 'overdue'; }
+export interface LearningReport {
+  period: 'week' | 'month';
+  minutes: number;
+  answered: number;
+  correctRate: number;
+  subjects: Array<{subjectId: string; minutes: number; correctRate: number}>;
+}
 export interface LearningService {
   plans(): Promise<LearningPlan[]>;
   createPlan(input: Pick<LearningPlan, 'title' | 'dailyMinutes' | 'startDate' | 'endDate'>): Promise<LearningPlan>;
   tasks(): Promise<LearningTask[]>;
   completeTask(id: string): Promise<LearningTask>;
-  report(period?: 'week' | 'month'): Promise<Record<string, unknown>>;
+  report(period?: 'week' | 'month'): Promise<LearningReport>;
 }
 
 export interface GradingSubmission { id: string; questionId?: string; fileUrl?: string; status: 'queued' | 'processing' | 'completed' | 'rejected'; score?: number; feedback?: string; createdAt: string; }
@@ -62,7 +109,8 @@ export interface GradingService { list(): Promise<GradingSubmission[]>; submit(i
 
 export interface DeviceService { list(): Promise<Array<{id: string; platform: 'android' | 'ios' | 'harmony'; name: string; pushToken?: string; lastSeenAt: string}>>; register(input: {deviceId: string; platform: 'android' | 'ios' | 'harmony'; name: string; pushToken?: string}): Promise<unknown>; remove(id: string): Promise<void>; }
 
-export interface LegalService { search(query: string): Promise<{items: Array<Record<string, unknown>>; total: number; query: string}>; }
+export interface LegalDocument { id: string; title: string; article: string; content: string; effectiveFrom: string; effectiveTo?: string; }
+export interface LegalService { search(query: string): Promise<{items: LegalDocument[]; total: number; query: string}>; }
 
 export interface OrderService {
   list(): Promise<Order[]>;

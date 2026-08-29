@@ -1,3 +1,4 @@
+import {useEffect, useMemo, useState} from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {ChevronRight} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
@@ -6,6 +7,9 @@ import {AppScreen} from '@/components/AppScreen';
 import {PageHeader} from '@/components/PageHeader';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
+import {environment} from '@/config/environment';
+import {questionService} from '@/services';
+import type {QuestionRecord} from '@/services';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -16,8 +20,27 @@ const records = [
   {id: 'r4', date: '8月23日', time: '21:40', mode: '章节练习', title: '民法·合同法', count: 25, correct: 17},
 ];
 
+function toUiRecord(item: QuestionRecord) {
+  const date = new Date(item.createdAt);
+  const validDate = !Number.isNaN(date.getTime());
+  return {id: item.id, date: validDate ? date.toLocaleDateString('zh-CN', {month: 'numeric', day: 'numeric'}) : item.createdAt, time: validDate ? date.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit', hour12: false}) : '', mode: '在线练习', title: `题目 ${item.questionId}`, count: 1, correct: item.correct ? 1 : 0};
+}
+
 export default function QuestionRecordsScreen() {
   const navigation = useNavigation<Navigation>();
+  const [recordList, setRecordList] = useState(records);
+  useEffect(() => {
+    if (environment.useMocks) return;
+    let active = true;
+    questionService.listRecords().then(items => { if (active) setRecordList(items.map(toUiRecord)); }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+  const totals = useMemo(() => {
+    if (environment.useMocks) return {answered: 2847, correctRate: 68};
+    const answered = recordList.reduce((sum, item) => sum + item.count, 0);
+    const correct = recordList.reduce((sum, item) => sum + item.correct, 0);
+    return {answered, correctRate: answered ? Math.round((correct / answered) * 100) : 0};
+  }, [recordList]);
 
   return (
     <AppScreen backgroundColor={colors.page} scroll={false} testID="question-records-screen">
@@ -25,18 +48,18 @@ export default function QuestionRecordsScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.statsCard}>
           <View style={styles.stat}>
-            <Text style={styles.statValue}>2,847</Text>
+            <Text style={styles.statValue}>{totals.answered.toLocaleString()}</Text>
             <Text style={styles.statLabel}>累计做题</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.stat}>
-            <Text style={styles.statValue}>68%</Text>
+            <Text style={styles.statValue}>{totals.correctRate}%</Text>
             <Text style={styles.statLabel}>正确率</Text>
           </View>
         </View>
 
         <View style={styles.recordsCard}>
-          {records.map((record, index) => {
+          {recordList.map((record, index) => {
             const rate = Math.round((record.correct / record.count) * 100);
             const successful = rate >= 70;
             const accessibilityLabel = `${record.mode} ${record.date} ${record.time} ${record.title} ${record.count}题 · 正确${record.correct}题 · 正确率${rate}%`;
@@ -46,10 +69,10 @@ export default function QuestionRecordsScreen() {
                 accessibilityLabel={accessibilityLabel}
                 accessibilityRole="button"
                 key={record.id}
-                onPress={() => navigation.navigate('ObjectiveReport', {correct: 3, total: 4})}
+                onPress={() => navigation.navigate('ObjectiveReport', environment.useMocks ? {correct: 3, total: 4} : {correct: record.correct, total: record.count})}
                 style={({pressed}) => [
                   styles.record,
-                  index < records.length - 1 && styles.recordDivider,
+                  index < recordList.length - 1 && styles.recordDivider,
                   pressed && styles.pressed,
                 ]}
                 testID={`question-record-${record.id}`}>

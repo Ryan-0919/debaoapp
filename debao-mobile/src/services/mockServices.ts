@@ -59,6 +59,12 @@ export const mockQuestionService: QuestionService = {
     await delay(350);
     return {submissionId: `SUB-${Date.now()}`};
   },
+  async listRecords() { await delay(); return []; },
+  async listMistakes() { await delay(); return []; },
+  async resolveMistake() { await delay(); },
+  async listFavorites() { await delay(); return []; },
+  async addFavorite(questionId) { await delay(); return {id: `favorite-${Date.now()}`, questionId, createdAt: new Date().toISOString()}; },
+  async removeFavorite() { await delay(); },
 };
 
 export const mockCourseService: CourseService = {
@@ -70,6 +76,8 @@ export const mockCourseService: CourseService = {
     await delay();
     return courses.find(course => course.id === id) ?? null;
   },
+  async entitlement(id) { await delay(); return {hasAccess: id === 'c1', sourceOrderId: id === 'c1' ? 'DB202608270001' : undefined}; },
+  async updateProgress(id, progress) { await delay(); return {courseId: id, progress, updatedAt: new Date().toISOString()}; },
 };
 
 export const mockProductService: ProductService = {
@@ -83,7 +91,7 @@ export const mockLearningService: LearningService = {
   async createPlan(input) { await delay(); return {id: `plan-${Date.now()}`, ...input, status: 'active'}; },
   async tasks() { await delay(); return []; },
   async completeTask(id) { await delay(); return {id, planId: 'plan-demo', title: '', dueDate: '', minutes: 0, status: 'done'}; },
-  async report() { await delay(); return {minutes: 0, answered: 0, correctRate: 0}; },
+  async report(period = 'week') { await delay(); return {period, minutes: 0, answered: 0, correctRate: 0, subjects: []}; },
 };
 export const mockGradingService: GradingService = {async list() { await delay(); return []; }, async submit(input) { await delay(); return {id: `grade-${Date.now()}`, ...input, status: 'queued', createdAt: new Date().toISOString()}; }, async get() { await delay(); return null; }, async retry(id) { await delay(); return {id, status: 'queued', createdAt: new Date().toISOString()}; }};
 export const mockDeviceService: DeviceService = {async list() { await delay(); return []; }, async register(input) { await delay(); return input; }, async remove() { await delay(); }};

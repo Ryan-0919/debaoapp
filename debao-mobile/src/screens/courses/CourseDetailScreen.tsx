@@ -1,4 +1,4 @@
-import {useMemo, useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {Image, Pressable, StyleSheet, Text, View} from 'react-native';
 import {CheckCircle, ChevronDown, Circle, Play} from 'lucide-react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
@@ -9,6 +9,8 @@ import {PageHeader} from '@/components/PageHeader';
 import {findCourse, isCourseOwned, type CourseLesson} from '@/data/courses';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
+import {environment} from '@/config/environment';
+import {courseService} from '@/services';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type ScreenRoute = RouteProp<RootStackParamList, 'CourseDetail'>;
@@ -36,7 +38,14 @@ export default function CourseDetailScreen() {
   const route = useRoute<ScreenRoute>();
   const course = useMemo(() => findCourse(route.params.courseId), [route.params.courseId]);
   const [openChapter, setOpenChapter] = useState(0);
-  const owned = isCourseOwned(course.id);
+  const [owned, setOwned] = useState(() => isCourseOwned(course.id));
+
+  useEffect(() => {
+    if (environment.useMocks) return;
+    let active = true;
+    courseService.entitlement(course.id).then(result => { if (active) setOwned(result.hasAccess); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [course.id]);
 
   const openLesson = (lessonId?: string) => {
     if (owned) {

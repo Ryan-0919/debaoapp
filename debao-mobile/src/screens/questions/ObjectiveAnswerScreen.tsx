@@ -8,6 +8,8 @@ import {AppScreen} from '@/components/AppScreen';
 import {OBJECTIVE_QUESTIONS} from '@/data/objectiveQuestions';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
+import {environment} from '@/config/environment';
+import {questionService} from '@/services';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type ScreenRoute = RouteProp<RootStackParamList, 'ObjectiveAnswer'>;
@@ -19,6 +21,7 @@ export default function ObjectiveAnswerScreen() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [cardVisible, setCardVisible] = useState(false);
   const [submitVisible, setSubmitVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const question = OBJECTIVE_QUESTIONS[currentIdx];
   const userAnswer = answers[question.id];
   const title = route.params?.title ?? (route.params?.mode === 'exam' ? '客观题考试' : '客观题练习');
@@ -37,8 +40,19 @@ export default function ObjectiveAnswerScreen() {
     setCardVisible(false);
   };
 
-  const submit = () => {
+  const submit = async () => {
+    if (submitting) return;
     setSubmitVisible(false);
+    if (!environment.useMocks) {
+      setSubmitting(true);
+      try {
+        await Promise.all(Object.entries(answers).filter(([, value]) => value).map(([questionId, value]) => questionService.submit({questionId, answers: [String(value.charCodeAt(0) - 65)]})));
+      } catch {
+        // Keep the local report available when the API is temporarily unavailable.
+      } finally {
+        setSubmitting(false);
+      }
+    }
     navigation.navigate('ObjectiveReport', {correct, total: OBJECTIVE_QUESTIONS.length});
   };
 
@@ -170,7 +184,7 @@ export default function ObjectiveAnswerScreen() {
                 <Text style={styles.dialogCancelText}>继续作答</Text>
               </Pressable>
               <View style={styles.dialogDivider} />
-              <Pressable testID="objective-submit-confirm" onPress={submit} style={({pressed}) => [styles.dialogButton, pressed && styles.pressed]}>
+              <Pressable disabled={submitting} testID="objective-submit-confirm" onPress={submit} style={({pressed}) => [styles.dialogButton, pressed && styles.pressed]}>
                 <Text style={styles.dialogConfirmText}>确认交卷</Text>
               </Pressable>
             </View>

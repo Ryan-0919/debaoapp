@@ -1,3 +1,4 @@
+import {useEffect, useState} from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {AlertCircle, ChevronLeft} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
@@ -5,6 +6,9 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
+import {environment} from '@/config/environment';
+import {learningService} from '@/services';
+import type {LearningReport} from '@/services';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -39,6 +43,13 @@ function subjectTone(rate: number) {
 
 export default function LearningReportScreen() {
   const navigation = useNavigation<Navigation>();
+  const [report, setReport] = useState<LearningReport | null>(null);
+  useEffect(() => {
+    if (environment.useMocks) return;
+    let active = true;
+    learningService.report('week').then(value => { if (active) setReport(value); }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   return (
     <AppScreen scroll={false} backgroundColor={colors.page} testID="learning-report-screen">
@@ -53,7 +64,7 @@ export default function LearningReportScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} testID="learning-report-scroll">
         <View style={styles.overview}>
           <Text style={styles.overviewLabel}>本周学习时长</Text>
-          <Text style={styles.overviewValue} testID="learning-week-hours">4.2 <Text style={styles.overviewUnit}>小时</Text></Text>
+          <Text style={styles.overviewValue} testID="learning-week-hours">{`${report ? (report.minutes / 60).toFixed(1) : '4.2'} `}<Text style={styles.overviewUnit}>小时</Text></Text>
           <View style={styles.chart} testID="learning-week-chart">
             {WEEK.map(item => (
               <View key={item.day} style={styles.chartColumn}>
@@ -101,8 +112,8 @@ export default function LearningReportScreen() {
           <Text style={styles.sectionTitle}>做题统计</Text>
           <View style={styles.statsRow}>
             {[
-              {label: '累计做题', value: '2,847'},
-              {label: '正确率', value: '68%'},
+              {label: '累计做题', value: report ? report.answered.toLocaleString() : '2,847'},
+              {label: '正确率', value: report ? `${report.correctRate}%` : '68%'},
               {label: '错题待复习', value: '28'},
             ].map(item => (
               <View key={item.label} style={styles.stat}>

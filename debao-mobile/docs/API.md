@@ -1,6 +1,6 @@
 # Service 与 API 契约
 
-当前 `environment.useMocks=true`，真实 HTTP 被主动禁止。下列契约已经在 TypeScript 中建立，但服务端 URL、鉴权和错误码仍需后端确认。
+客户端默认 `environment.useMocks=true` 以保持 Figma 原型演示；设置 `DEBAO_USE_MOCKS=false` 后，已接入页面通过统一 `ApiClient` 调用同级 `debao-server` 的真实本地 API。
 
 ## 通用约定
 
@@ -50,6 +50,11 @@ interface QuestionSubmission {
 | `listSubjects()` | `GET /question-subjects` | 科目与题量 |
 | `saveDraft()` | `PUT /question-drafts/:id` | 跨设备草稿 |
 | `submit()` | `POST /question-submissions` | 服务端生成 submissionId |
+| `listRecords()` | `GET /question-records` | 当前用户答题记录 |
+| `listMistakes()` | `GET /mistakes` | 未解决错题与题目内容 |
+| `resolveMistake(id)` | `DELETE /mistakes/:id` | 标记错题已复习 |
+| `listFavorites()` | `GET /favorites` | 当前用户收藏题目 |
+| `addFavorite/removeFavorite()` | `POST/DELETE /favorites` | 收藏增删与幂等 |
 
 正式答题接口必须由服务端校验题目版本，不能相信客户端分值或正确答案。
 
@@ -60,7 +65,9 @@ interface QuestionSubmission {
 | 方法 | 建议端点 | 说明 |
 |---|---|---|
 | `list()` | `GET /courses` | 当前用户课程 |
-| `get(id)` | `GET /courses/:id` | 课程、目录和权益 |
+| `get(id)` | `GET /courses/:id` | 课程基础信息 |
+| `entitlement(id)` | `GET /courses/:id/entitlement` | 当前用户课程权益 |
+| `updateProgress(id, progress)` | `POST /courses/:id/progress` | 持久化学习进度 |
 
 媒体 URL 应由服务端返回短时签名地址，并包含 DRM/清晰度/字幕元数据。
 
@@ -142,6 +149,6 @@ npm run dev
 
 移动端仍默认 Mock。启动 Metro 前设置 `DEBAO_USE_MOCKS=false` 后，`AuthService`、`QuestionService`、`CourseService`、`OrderService`、`PaymentService`、`AIService`、`MediaService` 和 `NotificationService` 会切换到 `realServices.ts`，统一通过 `ApiClient` 请求本地服务。开发演示令牌为 `demo-token`，仅限本地使用。
 
-当前 API 已覆盖健康检查、用户资料、登出、科目、答题草稿与提交、课程、订单创建/查询/支付、通知、AI 本地适配器和媒体授权占位接口。服务响应为 `{ data, requestId }`，错误为 `{ error: { code, message, requestId } }`。
+当前 API 已覆盖健康检查、用户资料、会话刷新/登出、科目、答题草稿/提交/记录/错题/收藏、课程权益与进度、学习计划/任务/报告、订单创建/查询/支付、通知、AI 本地适配器、媒体授权占位、法条检索、论坛和运营接口。服务响应为 `{ data, requestId }`，错误为 `{ error: { code, message, requestId } }`。
 
 PostgreSQL/Redis 的表结构与编排位于 `../debao-server/migrations/001_initial.sql` 和 `../debao-server/docker-compose.yml`。内存仓储是默认开发实现，接入正式数据库前必须完成迁移、连接池、备份和密钥配置。
