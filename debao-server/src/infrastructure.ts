@@ -32,5 +32,19 @@ export class Infrastructure {
       return null;
     }
   }
+  private async redisReady() {
+    if (!this.redis) return false;
+    if (this.redis.status === 'wait') await this.redis.connect();
+    return this.redis.status === 'ready' || this.redis.status === 'connect';
+  }
+  async cacheGet<T = unknown>(key: string): Promise<T | null> {
+    try { if (!await this.redisReady()) return null; const value = await this.redis!.get(key); return value ? JSON.parse(value) as T : null; } catch { this.redis?.disconnect(); return null; }
+  }
+  async cacheSet(key: string, value: unknown, ttlSeconds: number): Promise<boolean> {
+    try { if (!await this.redisReady()) return false; await this.redis!.set(key, JSON.stringify(value), 'EX', ttlSeconds); return true; } catch { this.redis?.disconnect(); return false; }
+  }
+  async cacheDelete(key: string): Promise<boolean> {
+    try { if (!await this.redisReady()) return false; await this.redis!.del(key); return true; } catch { this.redis?.disconnect(); return false; }
+  }
   async close() { await this.pool?.end(); this.redis?.disconnect(); }
 }

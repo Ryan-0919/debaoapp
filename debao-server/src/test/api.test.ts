@@ -21,7 +21,7 @@ test('health endpoint returns service status', async () => withServer(async base
 
 test('auth and course endpoints enforce token and return data', async () => withServer(async base => {
   const denied = await fetch(`${base}/v1/courses`); assert.equal(denied.status, 401);
-  const forged = await fetch(`${base}/v1/courses`, {headers: {authorization: 'Bearer local-forged-token'}}); assert.equal(forged.status, 401);
+  const forged = await fetch(`${base}/v1/courses`, {headers: {authorization: 'Bearer local-forged-token'}}); const forgedJson = await forged.json() as any; assert.equal(forged.status, 401); assert.equal(forgedJson.error.code, 'AUTH_REQUIRED'); assert.match(forgedJson.error.requestId, /^[0-9a-f-]{36}$/);
   const response = await fetch(`${base}/v1/courses`, {headers: {authorization: 'Bearer demo-token'}}); const json = await response.json() as any;
   assert.equal(response.status, 200); assert.equal(json.data.length, 4);
 }));

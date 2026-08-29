@@ -1,5 +1,5 @@
 import {type IncomingMessage, type ServerResponse} from 'node:http';
-import {randomUUID} from 'node:crypto';
+import {createHash, randomUUID} from 'node:crypto';
 import {createStore} from './store.js';
 import {createPaymentAdapter, gradingAdapter, pushAdapter, smsAdapter} from './adapters.js';
 import {loadConfig} from './config.js';
@@ -14,6 +14,16 @@ const DEMO_DB_USER_ID = '00000000-0000-0000-0000-000000000001';
 
 function dbUserId(userId: string) { return userId === 'u-demo' ? DEMO_DB_USER_ID : userId; }
 async function persist(text: string, values: unknown[] = []) { await infrastructure.query(text, values); }
+function tokenHash(value: string) { return createHash('sha256').update(value).digest('hex'); }
+async function sessionByRefreshToken(refreshToken: string) {
+  const memory = [...store.sessions.values()].find(item => item.refreshToken === refreshToken && !item.revokedAt && Date.parse(item.expiresAt) > Date.now());
+  if (memory) return memory;
+  const cached = await infrastructure.cacheGet<{userId: string; refreshToken: string; deviceId: string; expiresAt: string}>(`session:${tokenHash(refreshToken)}`);
+  if (cached && Date.parse(cached.expiresAt) > Date.now()) return cached;
+  const result = await infrastructure.query<{user_id: string; device_id: string; expires_at: string}>('select user_id, device_id, expires_at from refresh_sessions where token_hash = $1 and revoked_at is null and expires_at > now()', [tokenHash(refreshToken)]);
+  const row = result?.rows[0];
+  return row ? {userId: row.user_id === DEMO_DB_USER_ID ? 'u-demo' : row.user_id, refreshToken, deviceId: row.device_id, expiresAt: new Date(row.expires_at).toISOString()} : undefined;
+}
 
 export async function hydrateStore() {
   const profile = await infrastructure.query<{name: string; phone: string; exam_year: string; study_days: number}>('select name, phone, exam_year, study_days from users order by created_at asc limit 1');
@@ -97,13 +107,15 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       if (code !== '123456') throw new HttpError(401, 'AUTH_CODE_INVALID', '验证码错误或已过期');
       const access = `local-${randomUUID()}`; const refresh = `refresh-${randomUUID()}`; const deviceId = String(input.deviceId ?? `device-${randomUUID()}`);
       store.sessions.set(access, {userId: store.profile.id, refreshToken: refresh, deviceId, expiresAt: new Date(Date.now() + 7 * 86400000).toISOString()});
+      await persist('insert into refresh_sessions (user_id, token_hash, device_id, expires_at) values ($1, $2, $3, $4)', [DEMO_DB_USER_ID, tokenHash(refresh), deviceId, new Date(Date.now() + 7 * 86400000).toISOString()]);
+      await infrastructure.cacheSet(`session:${tokenHash(refresh)}`, {userId: store.profile.id, refreshToken: refresh, deviceId, expiresAt: new Date(Date.now() + 7 * 86400000).toISOString()}, 604800);
       store.profile = {...store.profile, phone: `${phone.slice(0, 3)}****${phone.slice(-4)}`};
       return send(res, 200, {accessToken: access, refreshToken: refresh, expiresIn: 604800, profile: store.profile}, requestId);
     }
     if (req.method === 'POST' && path === '/v1/auth/refresh') {
-      const input = await body(req); const refresh = String(input.refreshToken ?? ''); const session = [...store.sessions.values()].find(item => item.refreshToken === refresh && !item.revokedAt);
+      const input = await body(req); const refresh = String(input.refreshToken ?? ''); const session = await sessionByRefreshToken(refresh);
       if (!session) throw new HttpError(401, 'AUTH_REQUIRED', 'refresh token 无效');
-      const access = `local-${randomUUID()}`; store.sessions.set(access, {...session, expiresAt: new Date(Date.now() + 7 * 86400000).toISOString()});
+      const access = `local-${randomUUID()}`; const expiresAt = new Date(Date.now() + 7 * 86400000).toISOString(); store.sessions.set(access, {...session, expiresAt});
       return send(res, 200, {accessToken: access, refreshToken: refresh, expiresIn: 604800}, requestId);
     }
     if (req.method === 'GET' && path === '/v1/me') { requireAuth(req); return send(res, 200, store.profile, requestId); }
@@ -113,8 +125,8 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       if (!next.name || !/^20\d{2}$/.test(next.examYear)) throw new HttpError(422, 'VALIDATION_ERROR', '昵称和考试年份格式不正确');
       store.profile = next; await persist('insert into users (id, name, phone, exam_year, study_days) values ($1, $2, $3, $4, $5) on conflict (id) do update set name = excluded.name, phone = excluded.phone, exam_year = excluded.exam_year, study_days = excluded.study_days, updated_at = now()', [dbUserId(userId), next.name, next.phone, next.examYear, next.studyDays]); return send(res, 200, next, requestId);
     }
-    if (req.method === 'POST' && path === '/v1/auth/logout') { const token = accessToken(req); requireAuth(req); if (token) { const session = store.sessions.get(token); if (session) session.revokedAt = new Date().toISOString(); } return send(res, 200, {loggedOut: true}, requestId); }
-    if (req.method === 'POST' && path === '/v1/account/deletion') { const userId = requireAuth(req); store.profile = {...store.profile, name: '已注销用户', phone: '已脱敏', studyDays: 0}; for (const session of store.sessions.values()) if (session.userId === userId) session.revokedAt = new Date().toISOString(); return send(res, 200, {scheduled: true, coolingOffDays: 7}, requestId); }
+    if (req.method === 'POST' && path === '/v1/auth/logout') { const token = accessToken(req); requireAuth(req); if (token) { const session = store.sessions.get(token); if (session) { session.revokedAt = new Date().toISOString(); await persist('update refresh_sessions set revoked_at = now() where token_hash = $1', [tokenHash(session.refreshToken)]); await infrastructure.cacheDelete(`session:${tokenHash(session.refreshToken)}`); } } return send(res, 200, {loggedOut: true}, requestId); }
+    if (req.method === 'POST' && path === '/v1/account/deletion') { const userId = requireAuth(req); store.profile = {...store.profile, name: '已注销用户', phone: '已脱敏', studyDays: 0}; for (const session of store.sessions.values()) if (session.userId === userId) session.revokedAt = new Date().toISOString(); await persist('update refresh_sessions set revoked_at = now() where user_id = $1 and revoked_at is null', [dbUserId(userId)]); await persist('insert into account_deletion_requests (user_id, execute_after) values ($1, now() + interval \'7 days\')', [dbUserId(userId)]); return send(res, 200, {scheduled: true, coolingOffDays: 7}, requestId); }
     if (req.method === 'GET' && path === '/v1/devices') { const userId = requireAuth(req); return send(res, 200, store.devices.filter(item => item.userId === userId), requestId); }
     if (req.method === 'POST' && path === '/v1/devices') { const userId = requireAuth(req); const input = await body(req); const platform = String(input.platform ?? 'android'); if (!['android', 'ios', 'harmony'].includes(platform)) throw new HttpError(422, 'VALIDATION_ERROR', '不支持的平台'); const device = {id: String(input.deviceId ?? randomUUID()), userId, platform: platform as 'android' | 'ios' | 'harmony', name: String(input.name ?? '未命名设备'), pushToken: typeof input.pushToken === 'string' ? input.pushToken : undefined, lastSeenAt: new Date().toISOString()}; store.devices = [device, ...store.devices.filter(item => item.id !== device.id)]; await persist('insert into devices (id, user_id, platform, name, push_token, last_seen_at) values ($1, $2, $3, $4, $5, $6) on conflict (id) do update set name = excluded.name, push_token = excluded.push_token, last_seen_at = excluded.last_seen_at', [device.id, dbUserId(userId), device.platform, device.name, device.pushToken ?? null, device.lastSeenAt]); return send(res, 201, device, requestId); }
     const deviceMatch = path.match(/^\/v1\/devices\/([^/]+)$/);
