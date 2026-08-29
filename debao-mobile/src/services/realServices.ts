@@ -33,12 +33,14 @@ async function refreshAccessToken() {
 }
 async function request<T>(path: string, options: ApiRequestOptions = {}, retry = true): Promise<T> {
   await sessionReady;
+  const anonymous = path === '/auth/login' || path === '/auth/refresh' || path === '/auth/send-code';
+  const authenticatedOptions = anonymous ? options : {...options, token};
   try {
-    return await apiClient.request<T>(path, options);
+    return await apiClient.request<T>(path, authenticatedOptions);
   } catch (error) {
     if (retry && path !== '/auth/login' && path !== '/auth/refresh' && error instanceof Error && 'status' in error && (error as {status?: number}).status === 401 && refreshTokenValue) {
       refreshInFlight ??= refreshAccessToken().finally(() => { refreshInFlight = undefined; });
-      if (await refreshInFlight) return request<T>(path, {...options, token}, false);
+      if (await refreshInFlight) return request<T>(path, {...authenticatedOptions, token}, false);
     }
     throw error;
   }
