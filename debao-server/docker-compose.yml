@@ -7,12 +7,22 @@ services:
       POSTGRES_PASSWORD: debao
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U debao -d debao"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     volumes:
       - debao-postgres:/var/lib/postgresql/data
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     volumes:
       - debao-redis:/data
   api:
@@ -26,9 +36,11 @@ services:
       PAYMENT_ADAPTER: local
     ports:
       - "4000:4000"
+    command: ["sh", "-c", "npm run migrate && node dist/server.js"]
     depends_on:
       - postgres
       - redis
+    restart: on-failure
 volumes:
   debao-postgres:
   debao-redis:

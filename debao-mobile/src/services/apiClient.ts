@@ -5,6 +5,7 @@ export class ApiError extends Error {
     message: string,
     public readonly status: number,
     public readonly code: string,
+    public readonly requestId?: string,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -62,6 +63,7 @@ export class ApiClient {
           payload.error?.message ?? `请求失败（HTTP ${response.status}）`,
           response.status,
           payload.error?.code ?? 'HTTP_ERROR',
+          payload.error?.requestId,
         );
       }
       return ('data' in payload ? payload.data : payload) as T;

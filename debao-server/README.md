@@ -19,7 +19,7 @@ npm run dev
 docker compose up --build
 ```
 
-该编排启动 PostgreSQL、Redis 和 API。SQL 迁移位于 `migrations/001_initial.sql`，生产部署需使用正式迁移工具执行并配置密钥管理。
+该编排启动 PostgreSQL、Redis 和 API；API 容器等待两个依赖健康后自动执行迁移再启动。SQL 迁移位于 `migrations/001_initial.sql`，生产部署需使用正式迁移工具执行并配置密钥管理。
 
 数据库已提供可重复执行的 `001_initial.sql` 与 `002_seed.sql`。数据库可达后运行 `npm run migrate`；迁移脚本按文件名顺序执行，生产环境应在发布流水线中执行并记录版本。
 
