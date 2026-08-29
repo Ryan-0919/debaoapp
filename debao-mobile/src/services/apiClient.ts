@@ -16,6 +16,15 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
   token?: string;
 }
 
+interface ApiEnvelope<T> {
+  data: T;
+  requestId: string;
+}
+
+interface ApiFailure {
+  error?: {code?: string; message?: string; requestId?: string};
+}
+
 export class ApiClient {
   constructor(private readonly baseUrl = environment.apiBaseUrl) {}
 
@@ -47,14 +56,15 @@ export class ApiClient {
         },
       });
 
+      const payload = (await response.json()) as ApiEnvelope<T> & ApiFailure;
       if (!response.ok) {
         throw new ApiError(
-          `请求失败（HTTP ${response.status}）`,
+          payload.error?.message ?? `请求失败（HTTP ${response.status}）`,
           response.status,
-          'HTTP_ERROR',
+          payload.error?.code ?? 'HTTP_ERROR',
         );
       }
-      return (await response.json()) as T;
+      return ('data' in payload ? payload.data : payload) as T;
     } catch (error) {
       if (error instanceof ApiError) throw error;
       if (error instanceof Error && error.name === 'AbortError') {

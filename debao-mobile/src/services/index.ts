@@ -1,11 +1,31 @@
 export * from './contracts';
-export {
-  mockAIService as aiService,
-  mockAuthService as authService,
-  mockCourseService as courseService,
-  mockMediaService as mediaService,
-  mockNotificationService as notificationService,
-  mockOrderService as orderService,
-  mockPaymentService as paymentService,
-  mockQuestionService as questionService,
+import {environment} from '@/config/environment';
+import {
+  mockAIService,
+  mockAuthService,
+  mockCourseService,
+  mockMediaService,
+  mockNotificationService,
+  mockOrderService,
+  mockPaymentService,
+  mockQuestionService,
 } from './mockServices';
+import {
+  apiAIService,
+  apiAuthService,
+  apiCourseService,
+  apiMediaService,
+  apiNotificationService,
+  apiOrderService,
+  apiPaymentService,
+  apiQuestionService,
+} from './realServices';
+
+export const aiService = environment.useMocks ? mockAIService : apiAIService;
+export const authService = environment.useMocks ? mockAuthService : apiAuthService;
+export const courseService = environment.useMocks ? mockCourseService : apiCourseService;
+export const mediaService = environment.useMocks ? mockMediaService : apiMediaService;
+export const notificationService = environment.useMocks ? mockNotificationService : apiNotificationService;
+export const orderService = environment.useMocks ? mockOrderService : apiOrderService;
+export const paymentService = environment.useMocks ? mockPaymentService : apiPaymentService;
+export const questionService = environment.useMocks ? mockQuestionService : apiQuestionService;

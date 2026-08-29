@@ -1,0 +1,58 @@
+openapi: 3.0.3
+info:
+  title: Debao API
+  version: 0.1.0
+  description: Local productization API for the Debao mobile app.
+servers:
+  - url: http://127.0.0.1:4000/v1
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      security: []
+      responses:
+        '200': {description: Service health}
+  /me:
+    get: {responses: {'200': {description: Current profile}, '401': {description: Unauthorized}}}
+    patch: {responses: {'200': {description: Updated profile}, '422': {description: Validation error}}}
+  /auth/logout:
+    post: {responses: {'200': {description: Session revoked}}}
+  /question-subjects:
+    get: {responses: {'200': {description: Subject list}}}
+  /question-drafts/{id}:
+    put:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Draft saved}}
+  /question-submissions:
+    post: {responses: {'200': {description: Submission accepted}, '422': {description: Invalid answer}}}
+  /courses:
+    get: {responses: {'200': {description: Course list}}}
+  /courses/{id}:
+    get:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Course detail}}
+  /orders:
+    get: {responses: {'200': {description: Order list}}}
+    post: {responses: {'201': {description: Order created}, '422': {description: Invalid product}}}
+  /orders/{id}:
+    get:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Order detail}}
+  /orders/{id}/pay:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Payment adapter result}}
+  /notifications:
+    get: {responses: {'200': {description: Notification list}}}
+  /notifications/permission:
+    post: {responses: {'200': {description: Native permission result}}}
+  /ai/reply:
+    post: {responses: {'200': {description: Local AI adapter reply}}}
+  /media/prepare:
+    post: {responses: {'200': {description: Media authorization result}}}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer

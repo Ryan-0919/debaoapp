@@ -64,6 +64,10 @@ pnpm test
 pnpm check
 ```
 
+## 本地 API 产品化开发
+
+同级目录 `debao-server` 是配套 TypeScript API。详见 [产品化开发记录](docs/PRODUCTIZATION.md) 和 [API 契约](docs/API.md)。默认客户端保持 Mock；设置 `DEBAO_USE_MOCKS=false` 并启动 API 后即可切换到真实本地服务。
+
 ## Android
 
 需要 Android Studio、SDK Platform 36、Build Tools 36、NDK `27.1.12297006`，并设置 `ANDROID_HOME`。

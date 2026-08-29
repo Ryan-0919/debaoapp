@@ -36,7 +36,7 @@ export interface OrderService {
 }
 
 export interface PaymentService {
-  pay(order: Order): Promise<{status: 'mock-paid'; transactionId: string}>;
+  pay(order: Order): Promise<{status: 'mock-paid' | 'paid' | 'pending'; transactionId: string}>;
 }
 
 export interface AIService {

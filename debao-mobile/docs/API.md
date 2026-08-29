@@ -126,3 +126,22 @@ streamReply(prompt: string, onChunk: (chunk: string) => void): Promise<void>
 | `RATE_LIMITED` | AI/接口限流 | 显示等待时间 |
 | `MEDIA_TOKEN_EXPIRED` | 媒体授权过期 | 静默刷新一次 |
 | `INTERNAL_ERROR` | 服务端错误 | 可重试并记录 requestId |
+
+## 本地产品化服务（已实现）
+
+本仓库同级目录 `../debao-server` 提供本地 API。默认地址为 Android 模拟器可访问的 `http://10.0.2.2:4000/v1`；真机或 iOS 模拟器请设置 `DEBAO_API_BASE_URL` 为开发机局域网地址。
+
+启动方式：
+
+```powershell
+cd ..\debao-server
+Copy-Item .env.example .env
+npm install
+npm run dev
+```
+
+移动端仍默认 Mock。启动 Metro 前设置 `DEBAO_USE_MOCKS=false` 后，`AuthService`、`QuestionService`、`CourseService`、`OrderService`、`PaymentService`、`AIService`、`MediaService` 和 `NotificationService` 会切换到 `realServices.ts`，统一通过 `ApiClient` 请求本地服务。开发演示令牌为 `demo-token`，仅限本地使用。
+
+当前 API 已覆盖健康检查、用户资料、登出、科目、答题草稿与提交、课程、订单创建/查询/支付、通知、AI 本地适配器和媒体授权占位接口。服务响应为 `{ data, requestId }`，错误为 `{ error: { code, message, requestId } }`。
+
+PostgreSQL/Redis 的表结构与编排位于 `../debao-server/migrations/001_initial.sql` 和 `../debao-server/docker-compose.yml`。内存仓储是默认开发实现，接入正式数据库前必须完成迁移、连接池、备份和密钥配置。
