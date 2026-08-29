@@ -4,11 +4,13 @@ import {BookOpen, ChevronLeft, RotateCcw, Scale, Send, Sparkles} from 'lucide-re
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
+import {aiService} from '@/services';
+import {environment} from '@/config/environment';
 import {colors, shadows} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
-type Message = {id: string; role: 'assistant' | 'user'; text: string; time: string};
+type Message = {id: string; role: 'assistant' | 'user'; text: string; time: string; streaming?: boolean};
 
 const QUICK_QUESTIONS = [
   {kind: 'book', label: '善意取得的三个要件是什么？'},
@@ -81,6 +83,19 @@ export default function AIChatScreen() {
     setMessages(items => [...items, {id: `user-${Date.now()}`, role: 'user', text, time: tick()}]);
     setInput('');
     setLoading(true);
+    if (!environment.useMocks) {
+      aiService.streamReply(text, chunk => {
+        setMessages(items => {
+          const existing = items[items.length - 1];
+          if (existing?.role === 'assistant' && existing.streaming) return [...items.slice(0, -1), {...existing, text: existing.text + chunk}];
+          return [...items, {id: `assistant-${Date.now()}`, role: 'assistant', text: chunk, time: tick(), streaming: true}];
+        });
+      }).catch(() => setMessages(items => [...items, {id: `assistant-error-${Date.now()}`, role: 'assistant', text: 'AI 服务暂时不可用，请稍后重试。', time: tick()}])).finally(() => {
+        setMessages(items => items.map(item => item.streaming ? {...item, streaming: false} : item));
+        setLoading(false);
+      });
+      return;
+    }
     timerRef.current = setTimeout(() => {
       setMessages(items => [...items, {id: `assistant-${Date.now()}`, role: 'assistant', text: getReply(text), time: tick()}]);
       setLoading(false);

@@ -39,5 +39,21 @@ export function createStore(): Store {
       {id: 'oq2', stem: '甲将自己的房屋出租给乙，租赁期间将房屋出售给丙。下列说法正确的是？', options: ['租赁合同自动终止', '乙必须立即搬离', '买卖不破租赁', '丙可以单方提高租金'], answer: 2, analysis: '租赁物在承租人占有期间发生所有权变动，不影响租赁合同效力。'},
     ],
     drafts: new Map(),
+    sessions: new Map([['demo-token', {userId: 'u-demo', refreshToken: 'demo-refresh-token', deviceId: 'demo-device', expiresAt: '2099-01-01T00:00:00.000Z'}]]),
+    devices: [{id: 'demo-device', userId: 'u-demo', platform: 'android', name: '本地演示设备', lastSeenAt: new Date().toISOString()}],
+    submissions: [],
+    learningPlans: [{id: 'plan-demo', userId: 'u-demo', title: '2026 法考冲刺计划', dailyMinutes: 120, startDate: '2026-08-01', endDate: '2026-10-31', status: 'active'}],
+    learningTasks: [
+      {id: 'task-demo-1', planId: 'plan-demo', title: '完成民法体系精讲 2 节', dueDate: '2026-08-29', minutes: 45, status: 'todo'},
+      {id: 'task-demo-2', planId: 'plan-demo', title: '完成民法专项练习 20 题', dueDate: '2026-08-29', minutes: 35, status: 'todo'},
+    ],
+    favorites: [],
+    mistakes: [],
+    entitlements: [{userId: 'u-demo', courseId: 'c1', sourceOrderId: 'DB202608270001'}],
+    grading: [],
+    announcements: [{id: 'a-demo', title: '2026 法考冲刺阶段安排', body: '请按学习计划完成本周课程与专项练习。', status: 'published', createdAt: new Date().toISOString()}],
+    banners: [{id: 'banner-demo', title: '2026 法考全程班', imageUrl: 'https://cdn.example.invalid/debao/banner-demo.png', target: '/products/p1', startsAt: '2026-01-01T00:00:00.000Z'}],
+    legalDocuments: [{id: 'civil-311', title: '善意取得', article: '《民法典》第三百一十一条', content: '无处分权人将不动产或者动产转让给受让人的，所有权人有权追回。', effectiveFrom: '2021-01-01'}],
+    forumPosts: [{id: 'post-demo', userName: '法考学习者', title: '民法物权复习方法分享', body: '整理请求权基础后再做真题，复习效率会更高。', likes: 128, createdAt: new Date().toISOString()}],
   };
 }

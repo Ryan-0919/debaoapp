@@ -1,4 +1,4 @@
-import {useMemo, useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {
   Image,
   Pressable,
@@ -12,6 +12,8 @@ import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
 import {catalogProducts} from '@/data/products';
+import {productService} from '@/services';
+import {environment} from '@/config/environment';
 import {colors} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
 
@@ -24,12 +26,26 @@ export default function MallScreen() {
   const navigation = useNavigation<Navigation>();
   const [category, setCategory] = useState<(typeof categories)[number]>('全部');
   const [type, setType] = useState<(typeof types)[number]>('全部');
+  const [products, setProducts] = useState(catalogProducts);
+
+  useEffect(() => {
+    if (environment.useMocks) return;
+    let active = true;
+    productService.list().then(items => {
+      if (!active) return;
+      setProducts(items.map(item => {
+        const local = catalogProducts.find(product => product.id === item.id);
+        return local ? {...local, name: item.name, category: item.category, price: item.price, originalPrice: item.originalPrice, sold: item.sold} : null;
+      }).filter((item): item is (typeof catalogProducts)[number] => Boolean(item)));
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   const filteredProducts = useMemo(
-    () => catalogProducts.filter(product =>
+    () => products.filter(product =>
       (category === '全部' || product.category === category) &&
       (type === '全部' || product.type === type)),
-    [category, type],
+    [category, products, type],
   );
 
   return (

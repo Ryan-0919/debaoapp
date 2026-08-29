@@ -8,6 +8,12 @@ import {
   mockNotificationService,
   mockOrderService,
   mockPaymentService,
+  mockProductService,
+  mockHomeService,
+  mockLearningService,
+  mockGradingService,
+  mockDeviceService,
+  mockLegalService,
   mockQuestionService,
 } from './mockServices';
 import {
@@ -18,6 +24,12 @@ import {
   apiNotificationService,
   apiOrderService,
   apiPaymentService,
+  apiProductService,
+  apiHomeService,
+  apiLearningService,
+  apiGradingService,
+  apiDeviceService,
+  apiLegalService,
   apiQuestionService,
 } from './realServices';
 
@@ -28,4 +40,10 @@ export const mediaService = environment.useMocks ? mockMediaService : apiMediaSe
 export const notificationService = environment.useMocks ? mockNotificationService : apiNotificationService;
 export const orderService = environment.useMocks ? mockOrderService : apiOrderService;
 export const paymentService = environment.useMocks ? mockPaymentService : apiPaymentService;
+export const productService = environment.useMocks ? mockProductService : apiProductService;
+export const homeService = environment.useMocks ? mockHomeService : apiHomeService;
+export const learningService = environment.useMocks ? mockLearningService : apiLearningService;
+export const gradingService = environment.useMocks ? mockGradingService : apiGradingService;
+export const deviceService = environment.useMocks ? mockDeviceService : apiDeviceService;
+export const legalService = environment.useMocks ? mockLegalService : apiLegalService;
 export const questionService = environment.useMocks ? mockQuestionService : apiQuestionService;

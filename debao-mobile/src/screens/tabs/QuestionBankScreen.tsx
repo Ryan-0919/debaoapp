@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {
   Modal,
   Pressable,
@@ -12,6 +12,8 @@ import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
 import {subjects} from '@/data/mock';
+import {questionService} from '@/services';
+import {environment} from '@/config/environment';
 import {colors, radius, spacing} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
 
@@ -45,6 +47,14 @@ export default function QuestionBankScreen() {
   const [selectedYear, setSelectedYear] = useState<(typeof years)[number]>('2023');
   const [expandedSubject, setExpandedSubject] = useState<string | null>('民法');
   const [volume, setVolume] = useState<ExamVolume>('卷一');
+  const [subjectList, setSubjectList] = useState(subjects);
+
+  useEffect(() => {
+    if (environment.useMocks) return;
+    let active = true;
+    questionService.listSubjects().then(next => { if (active) setSubjectList(next); }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   return (
     <AppScreen scroll={false} testID="questions-screen">
@@ -142,7 +152,7 @@ export default function QuestionBankScreen() {
               </View>
               {objectiveChapters.map(({subject, chapters, done}) => {
                 const expanded = expandedSubject === subject;
-                const subjectInfo = subjects.find(item => item.name === subject);
+                const subjectInfo = subjectList.find(item => item.name === subject);
                 return (
                   <View key={subject}>
                     <Pressable
@@ -189,7 +199,7 @@ export default function QuestionBankScreen() {
                 <Text style={styles.panelTitle}>分科真题</Text>
                 <Text style={styles.panelSubtitle}>选择科目查看题目，支持按年份和难度筛选</Text>
               </View>
-              {subjects.slice(0, 6).map(subject => (
+              {subjectList.slice(0, 6).map(subject => (
                 <Pressable
                   accessibilityRole="button"
                   key={subject.id}

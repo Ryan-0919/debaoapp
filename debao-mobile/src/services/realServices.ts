@@ -1,6 +1,6 @@
 import type {AppNotification, Course, Order, Product, Subject, UserProfile} from '@/types/domain';
 import {apiClient} from './apiClient';
-import type {AIService, AuthService, CourseService, MediaService, NotificationService, OrderService, PaymentService, QuestionService} from './contracts';
+import type {AIService, AuthService, CourseService, DeviceService, GradingService, HomeService, LegalService, LearningService, MediaService, NotificationService, OrderService, PaymentService, ProductService, QuestionService} from './contracts';
 
 const token = 'demo-token';
 
@@ -20,6 +20,32 @@ export const apiCourseService: CourseService = {
   list: () => apiClient.request<Course[]>('/courses', {token}),
   get: id => apiClient.request<Course | null>(`/courses/${id}`, {token}),
 };
+
+export const apiProductService: ProductService = {
+  list: () => apiClient.request<Product[]>('/products', {token}),
+  get: id => apiClient.request<Product | null>(`/products/${id}`, {token}),
+};
+
+export const apiHomeService: HomeService = {get: () => apiClient.request('/home', {token})};
+export const apiLearningService: LearningService = {
+  plans: () => apiClient.request('/learning/plans', {token}),
+  createPlan: input => apiClient.request('/learning/plans', {method: 'POST', body: input, token}),
+  tasks: () => apiClient.request('/learning/tasks', {token}),
+  completeTask: id => apiClient.request(`/learning/tasks/${id}/complete`, {method: 'POST', token}),
+  report: period => apiClient.request(`/learning/report${period ? `?period=${period}` : ''}`, {token}),
+};
+export const apiGradingService: GradingService = {
+  list: () => apiClient.request('/grading/submissions', {token}),
+  submit: input => apiClient.request('/grading/submissions', {method: 'POST', body: input, token}),
+  get: id => apiClient.request(`/grading/submissions/${id}`, {token}),
+  retry: id => apiClient.request(`/grading/submissions/${id}/retry`, {method: 'POST', token}),
+};
+export const apiDeviceService: DeviceService = {
+  list: () => apiClient.request('/devices', {token}),
+  register: input => apiClient.request('/devices', {method: 'POST', body: input, token}),
+  remove: async id => { await apiClient.request(`/devices/${id}`, {method: 'DELETE', token}); },
+};
+export const apiLegalService: LegalService = {search: query => apiClient.request(`/law/search?q=${encodeURIComponent(query)}`, {token})};
 
 export const apiOrderService: OrderService = {
   list: () => apiClient.request<Order[]>('/orders', {token}),

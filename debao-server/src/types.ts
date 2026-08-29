@@ -35,6 +35,7 @@ export interface Order {
   status: OrderStatus;
   createdAt: string;
   productId: string;
+  clientRequestId?: string;
 }
 
 export interface UserProfile {
@@ -61,4 +62,17 @@ export interface Store {
   orders: Order[];
   questions: Question[];
   drafts: Map<string, {questionId: string; answers: string[]; updatedAt: string}>;
+  sessions: Map<string, {userId: string; refreshToken: string; deviceId: string; expiresAt: string; revokedAt?: string}>;
+  devices: Array<{id: string; userId: string; platform: 'android' | 'ios' | 'harmony'; name: string; pushToken?: string; lastSeenAt: string}>;
+  submissions: Array<{id: string; userId: string; questionId: string; answers: string[]; correct: boolean; createdAt: string}>;
+  learningPlans: Array<{id: string; userId: string; title: string; dailyMinutes: number; startDate: string; endDate: string; status: 'active' | 'completed' | 'archived'}>;
+  learningTasks: Array<{id: string; planId: string; title: string; dueDate: string; minutes: number; status: 'todo' | 'done' | 'overdue'}>;
+  favorites: Array<{id: string; userId: string; questionId: string; createdAt: string}>;
+  mistakes: Array<{id: string; userId: string; questionId: string; wrongCount: number; lastAnswer: string; resolved: boolean}>;
+  entitlements: Array<{userId: string; courseId: string; sourceOrderId: string; expiresAt?: string}>;
+  grading: Array<{id: string; userId: string; questionId?: string; fileUrl?: string; status: 'queued' | 'processing' | 'completed' | 'rejected'; score?: number; feedback?: string; createdAt: string}>;
+  announcements: Array<{id: string; title: string; body: string; status: 'draft' | 'published'; startsAt?: string; endsAt?: string; createdAt: string}>;
+  banners: Array<{id: string; title: string; imageUrl: string; target: string; startsAt: string; endsAt?: string}>;
+  legalDocuments: Array<{id: string; title: string; article: string; content: string; effectiveFrom: string; effectiveTo?: string}>;
+  forumPosts: Array<{id: string; userName: string; title: string; body: string; likes: number; createdAt: string}>;
 }

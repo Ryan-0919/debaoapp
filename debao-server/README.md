@@ -21,12 +21,14 @@ docker compose up --build
 
 该编排启动 PostgreSQL、Redis 和 API。SQL 迁移位于 `migrations/001_initial.sql`，生产部署需使用正式迁移工具执行并配置密钥管理。
 
+数据库已提供可重复执行的 `001_initial.sql` 与 `002_seed.sql`。数据库可达后运行 `npm run migrate`；迁移脚本按文件名顺序执行，生产环境应在发布流水线中执行并记录版本。
+
 ## 接口契约
 
 机器可读契约见 `openapi.yaml`。
 
 ## 已实现接口
 
-`GET /v1/health`、`GET/PATCH /v1/me`、`POST /v1/auth/logout`、`GET /v1/question-subjects`、`PUT /v1/question-drafts/:id`、`POST /v1/question-submissions`、`GET /v1/courses`、`GET /v1/courses/:id`、`GET/POST /v1/orders`、`GET /v1/orders/:id`、`POST /v1/orders/:id/pay`。
+`GET /v1/health`、`POST /v1/auth/send-code|login|refresh|logout`、`GET/PATCH /v1/me`、设备管理与注销、题目/答题记录/报告、学习计划/任务/报告、错题/收藏、课程/权益/进度、商品、订单/支付、首页/公告/通知、法条/论坛、批改队列、AI/媒体和运营概览均已提供本地实现。
 
 响应统一为 `{ data, requestId }`；错误统一为 `{ error: { code, message, requestId } }`。支付、短信、AI、媒体、推送等外部能力必须通过适配器接入，当前未宣称真实供应商联调。

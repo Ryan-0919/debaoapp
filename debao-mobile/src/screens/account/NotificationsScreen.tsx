@@ -1,12 +1,15 @@
+import {useEffect, useState} from 'react';
 import {ScrollView, StyleSheet, Text, View} from 'react-native';
 import {Bell, BookOpen, ShoppingBag} from 'lucide-react-native';
 import {AppScreen} from '@/components/AppScreen';
 import {PageHeader} from '@/components/PageHeader';
 import {colors, radius} from '@/theme';
+import {environment} from '@/config/environment';
+import {notificationService} from '@/services';
 
 type NotificationIcon = 'study' | 'course' | 'order';
 
-const notifications: Array<{
+const prototypeNotifications: Array<{
   id: string;
   icon: NotificationIcon;
   title: string;
@@ -33,6 +36,17 @@ function NotificationGlyph({icon, color}: {icon: NotificationIcon; color: string
 }
 
 export default function NotificationsScreen() {
+  const [notifications, setNotifications] = useState(prototypeNotifications);
+  useEffect(() => {
+    if (environment.useMocks) return;
+    let active = true;
+    notificationService.list().then(items => {
+      if (!active) return;
+      setNotifications(items.map(item => ({...item, icon: item.title.includes('订单') ? 'order' as const : item.title.includes('课程') ? 'course' as const : 'study' as const})));
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+
   return (
     <AppScreen backgroundColor={colors.page} scroll={false} testID="notifications-screen">
       <PageHeader title="消息通知" />

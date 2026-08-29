@@ -18,6 +18,21 @@ paths:
     patch: {responses: {'200': {description: Updated profile}, '422': {description: Validation error}}}
   /auth/logout:
     post: {responses: {'200': {description: Session revoked}}}
+  /auth/send-code:
+    post: {security: [], responses: {'200': {description: SMS adapter accepted}, '422': {description: Invalid phone}}}
+  /auth/login:
+    post: {security: [], responses: {'200': {description: Access and refresh tokens}, '401': {description: Invalid code}}}
+  /auth/refresh:
+    post: {security: [], responses: {'200': {description: Refreshed access token}, '401': {description: Invalid refresh token}}}
+  /account/deletion:
+    post: {responses: {'200': {description: Account deletion scheduled}}}
+  /devices:
+    get: {responses: {'200': {description: User devices}}}
+    post: {responses: {'201': {description: Device registered}}}
+  /devices/{id}:
+    delete:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Device removed}}
   /question-subjects:
     get: {responses: {'200': {description: Subject list}}}
   /question-drafts/{id}:
@@ -26,12 +41,32 @@ paths:
       responses: {'200': {description: Draft saved}}
   /question-submissions:
     post: {responses: {'200': {description: Submission accepted}, '422': {description: Invalid answer}}}
+  /questions:
+    get: {responses: {'200': {description: Paginated questions}}}
+  /questions/{id}:
+    get:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Question detail}}
+  /question-records:
+    get: {responses: {'200': {description: Answer records}}}
+  /question-submissions/{id}/report:
+    get:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Submission report}}
   /courses:
     get: {responses: {'200': {description: Course list}}}
   /courses/{id}:
     get:
       parameters: [{name: id, in: path, required: true, schema: {type: string}}]
       responses: {'200': {description: Course detail}}
+  /courses/{id}/entitlement:
+    get:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Course entitlement}}
+  /courses/{id}/progress:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Progress updated}}
   /orders:
     get: {responses: {'200': {description: Order list}}}
     post: {responses: {'201': {description: Order created}, '422': {description: Invalid product}}}
@@ -51,6 +86,71 @@ paths:
     post: {responses: {'200': {description: Local AI adapter reply}}}
   /media/prepare:
     post: {responses: {'200': {description: Media authorization result}}}
+  /learning/plans:
+    get: {responses: {'200': {description: Learning plans}}}
+    post: {responses: {'201': {description: Learning plan created}}}
+  /learning/plans/{id}:
+    patch:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Plan updated}}
+    delete:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Plan deleted}}
+  /learning/tasks:
+    get: {responses: {'200': {description: Learning tasks}}}
+  /learning/tasks/{id}/complete:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Task completed}}
+  /learning/report:
+    get: {responses: {'200': {description: Learning report}}}
+  /mistakes:
+    get: {responses: {'200': {description: Mistake list}}}
+  /mistakes/{id}:
+    delete:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Mistake resolved}}
+  /favorites:
+    get: {responses: {'200': {description: Favorites}}}
+    post: {responses: {'201': {description: Favorite created}}}
+  /favorites/{id}:
+    delete:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Favorite removed}}
+  /grading/submissions:
+    get: {responses: {'200': {description: Grading submissions}}}
+    post: {responses: {'201': {description: Grading job queued}}}
+  /grading/submissions/{id}:
+    get:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Grading result}}
+  /grading/submissions/{id}/retry:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Grading job requeued}}
+  /announcements:
+    get: {responses: {'200': {description: Published announcements}}}
+  /home:
+    get: {responses: {'200': {description: Home content and exam countdown}}}
+  /products:
+    get: {responses: {'200': {description: Product catalog}}}
+  /products/{id}:
+    get:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Product detail}}
+  /law/search:
+    get: {responses: {'200': {description: Legal search results}}}
+  /forum/posts:
+    get: {responses: {'200': {description: Forum posts}}}
+    post: {responses: {'201': {description: Forum post created}}}
+  /admin/overview:
+    get: {responses: {'200': {description: Operations dashboard}}}
+  /admin/orders:
+    get: {responses: {'200': {description: All orders}}}
+  /admin/announcements:
+    post: {responses: {'201': {description: Announcement created}}}
+  /admin/push/test:
+    post: {responses: {'200': {description: Push adapter result}}}
 components:
   securitySchemes:
     bearerAuth:

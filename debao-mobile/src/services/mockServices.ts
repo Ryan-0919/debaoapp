@@ -1,4 +1,4 @@
-import {courses, notifications, orders, subjects} from '@/data/mock';
+import {courses, notifications, orders, products, subjects} from '@/data/mock';
 import type {Order, Product, UserProfile} from '@/types/domain';
 import type {
   AIService,
@@ -9,6 +9,12 @@ import type {
   OrderService,
   PaymentService,
   QuestionService,
+  ProductService,
+  HomeService,
+  LearningService,
+  GradingService,
+  DeviceService,
+  LegalService,
 } from './contracts';
 
 const delay = (milliseconds = 220) =>
@@ -63,6 +69,23 @@ export const mockCourseService: CourseService = {
     return courses.find(course => course.id === id) ?? null;
   },
 };
+
+export const mockProductService: ProductService = {
+  async list() { await delay(); return products; },
+  async get(id) { await delay(); return products.find(product => product.id === id) ?? null; },
+};
+
+export const mockHomeService: HomeService = {async get() { await delay(); return {banners: [], announcements: notifications, hotCourses: courses, exam: {year: '2026', daysRemaining: 42}}; }};
+export const mockLearningService: LearningService = {
+  async plans() { await delay(); return [{id: 'plan-demo', title: '2026 法考冲刺计划', dailyMinutes: 120, startDate: '2026-08-01', endDate: '2026-10-31', status: 'active'}]; },
+  async createPlan(input) { await delay(); return {id: `plan-${Date.now()}`, ...input, status: 'active'}; },
+  async tasks() { await delay(); return []; },
+  async completeTask(id) { await delay(); return {id, planId: 'plan-demo', title: '', dueDate: '', minutes: 0, status: 'done'}; },
+  async report() { await delay(); return {minutes: 0, answered: 0, correctRate: 0}; },
+};
+export const mockGradingService: GradingService = {async list() { await delay(); return []; }, async submit(input) { await delay(); return {id: `grade-${Date.now()}`, ...input, status: 'queued', createdAt: new Date().toISOString()}; }, async get() { await delay(); return null; }, async retry(id) { await delay(); return {id, status: 'queued', createdAt: new Date().toISOString()}; }};
+export const mockDeviceService: DeviceService = {async list() { await delay(); return []; }, async register(input) { await delay(); return input; }, async remove() { await delay(); }};
+export const mockLegalService: LegalService = {async search(query) { await delay(); return {items: [], total: 0, query}; }};
 
 export const mockOrderService: OrderService = {
   async list() {

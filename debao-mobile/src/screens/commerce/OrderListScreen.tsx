@@ -1,9 +1,12 @@
+import {useEffect, useState} from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {ChevronLeft, ChevronRight} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
-import {prototypeOrders} from '@/data/orders';
+import {prototypeOrders, type PrototypeOrder} from '@/data/orders';
+import {environment} from '@/config/environment';
+import {orderService} from '@/services';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
 
@@ -11,6 +14,16 @@ type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
 export default function OrderListScreen() {
   const navigation = useNavigation<Navigation>();
+  const [orders, setOrders] = useState<PrototypeOrder[]>(prototypeOrders);
+  useEffect(() => {
+    if (environment.useMocks) return;
+    let active = true;
+    orderService.list().then(items => {
+      if (!active) return;
+      setOrders(items.map(item => ({id: item.id, productName: item.productName, orderNo: item.id, date: item.createdAt, amount: item.amount, status: item.status === 'paid' ? '已完成' : '待开课', productId: item.id, courseId: null})));
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
   return (
     <AppScreen scroll={false} backgroundColor={colors.page} testID="order-list-screen">
       <View style={styles.header}>
@@ -22,13 +35,13 @@ export default function OrderListScreen() {
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.orderGroup}>
-          {prototypeOrders.map((order, index) => (
+          {orders.map((order, index) => (
             <Pressable
               key={order.id}
               accessibilityLabel={`${order.status}, ${order.productName}, ${order.date}, ¥${order.amount.toLocaleString()}`}
               testID={`order-row-${order.id}`}
               onPress={() => navigation.navigate('OrderDetail', {orderId: order.id})}
-              style={({pressed}) => [styles.orderRow, index < prototypeOrders.length - 1 && styles.divider, pressed && styles.rowPressed]}>
+              style={({pressed}) => [styles.orderRow, index < orders.length - 1 && styles.divider, pressed && styles.rowPressed]}>
               <View style={styles.orderCopy}>
                 <Text style={[styles.status, order.status === '已完成' ? styles.completed : styles.pending]}>{order.status}</Text>
                 <Text numberOfLines={2} style={styles.productName}>{order.productName}</Text>
