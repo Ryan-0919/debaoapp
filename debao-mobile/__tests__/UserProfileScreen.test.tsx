@@ -4,9 +4,10 @@ import {Text, TextInput} from 'react-native';
 import UserProfileScreen from '../src/screens/account/UserProfileScreen';
 
 const mockGoBack = jest.fn();
+const mockNavigate = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({canGoBack: () => true, goBack: mockGoBack}),
+  useNavigation: () => ({canGoBack: () => true, goBack: mockGoBack, navigate: mockNavigate}),
 }));
 
 jest.mock('@/components/AppScreen', () => ({
@@ -31,6 +32,7 @@ function textValues(renderer: ReactTestRenderer.ReactTestRenderer) {
 describe('UserProfileScreen', () => {
   beforeEach(() => {
     mockGoBack.mockClear();
+    mockNavigate.mockClear();
     jest.useFakeTimers();
   });
 
@@ -39,7 +41,7 @@ describe('UserProfileScreen', () => {
     jest.useRealTimers();
   });
 
-  test('matches the complete prototype profile and keeps display-only rows inert', () => {
+  test('matches the complete prototype profile and exposes account security navigation', () => {
     let renderer: ReactTestRenderer.ReactTestRenderer;
     act(() => {renderer = ReactTestRenderer.create(<UserProfileScreen />);});
     expect(textValues(renderer!)).toEqual(expect.arrayContaining([
@@ -48,9 +50,9 @@ describe('UserProfileScreen', () => {
       '未填写', '账号安全', '修改密码', '上次修改：90天前', '绑定微信', '已绑定', '注销账号', '删除所有数据',
     ]));
     expect(renderer!.root.findByProps({testID: 'profile-field-phone'}).props.disabled).toBe(true);
-    for (const index of [0, 1, 2]) {
-      expect(renderer!.root.findByProps({testID: `profile-security-${index}`}).props.onPress).toBeUndefined();
-    }
+    for (const index of [0, 1, 2]) expect(renderer!.root.findByProps({testID: `profile-security-${index}`}).props.onPress).toEqual(expect.any(Function));
+    press(renderer!, 'profile-security-1');
+    expect(mockNavigate).toHaveBeenCalledWith('AccountSecurity');
     act(() => renderer!.unmount());
   });
 

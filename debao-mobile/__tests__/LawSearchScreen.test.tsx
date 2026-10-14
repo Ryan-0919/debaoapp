@@ -5,9 +5,11 @@ import LawSearchScreen from '../src/screens/tools/LawSearchScreen';
 
 const mockGoBack = jest.fn();
 const mockNavigate = jest.fn();
+let mockRouteParams: {source?: 'subjective-answer'; subject?: string} | undefined;
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({goBack: mockGoBack, navigate: mockNavigate}),
+  useRoute: () => ({params: mockRouteParams}),
 }));
 
 jest.mock('@/components/AppScreen', () => ({
@@ -29,7 +31,13 @@ function textValues(renderer: ReactTestRenderer.ReactTestRenderer) {
   );
 }
 
-test('law search covers search, forum, notices, article sheet and practice navigation', () => {
+beforeEach(() => {
+  mockRouteParams = undefined;
+  mockGoBack.mockClear();
+  mockNavigate.mockClear();
+});
+
+test('law search covers search, forum, article sheet and practice navigation', () => {
   let renderer: ReactTestRenderer.ReactTestRenderer;
   act(() => {renderer = ReactTestRenderer.create(<LawSearchScreen />);});
 
@@ -53,12 +61,41 @@ test('law search covers search, forum, notices, article sheet and practice navig
   press(renderer!, 'forum-tag-答疑求助');
   const filteredPostIDs = new Set(renderer!.root.findAll(node => String(node.props.testID ?? '').startsWith('forum-post-')).map(node => node.props.testID));
   expect(filteredPostIDs.size).toBe(2);
+  press(renderer!, 'forum-post-f2');
+  expect(mockNavigate).toHaveBeenCalledWith('ForumDetail', {postId: 'f2'});
+  press(renderer!, 'forum-compose');
+  expect(mockNavigate).toHaveBeenCalledWith('ForumCompose');
 
-  press(renderer!, 'law-main-tab-notices');
-  expect(new Set(renderer!.root.findAll(node => String(node.props.testID ?? '').startsWith('notice-')).map(node => node.props.testID)).size).toBe(6);
-  press(renderer!, 'notice-a1');
-  const firstNoticeBody = renderer!.root.findAllByType(Text).find(node => String(node.props.children).startsWith('根据司法部统一部署'));
-  expect(firstNoticeBody?.props.numberOfLines).toBeUndefined();
+  expect(renderer!.root.findAll(node => node.props.testID === 'law-main-tab-notices')).toHaveLength(0);
 
+  act(() => renderer!.unmount());
+});
+
+test('law search keeps the subjective answer context and presets its subject', () => {
+  mockRouteParams = {source: 'subjective-answer', subject: '民法'};
+  let renderer: ReactTestRenderer.ReactTestRenderer;
+  act(() => {renderer = ReactTestRenderer.create(<LawSearchScreen />);});
+
+  expect(renderer!.root.findByProps({testID: 'law-answer-context'})).toBeTruthy();
+  expect(textValues(renderer!)).toContain('正在作答：民法主观题，查询后可返回继续作答');
+  const subjectButton = renderer!.root.findAll(node => node.props.testID === 'law-subject-民法' && node.props.accessibilityState)[0];
+  expect(subjectButton.props.accessibilityState).toEqual({selected: true});
+  press(renderer!, 'law-return-to-subjective');
+  expect(mockGoBack).toHaveBeenCalledTimes(1);
+
+  act(() => renderer!.unmount());
+});
+
+test('law search exposes the RC empty state for an unmatched query', () => {
+  let renderer: ReactTestRenderer.ReactTestRenderer;
+  act(() => {renderer = ReactTestRenderer.create(<LawSearchScreen />);});
+  const input = renderer!.root.findByType(TextInput);
+  act(() => input.props.onChangeText('不存在的法条'));
+  press(renderer!, 'law-search-submit');
+  expect(textValues(renderer!)).toEqual(expect.arrayContaining([
+    '未找到「不存在的法条」相关法条',
+    '返回浏览',
+  ]));
+  expect(renderer!.root.findByProps({testID: 'law-search-empty-action'})).toBeTruthy();
   act(() => renderer!.unmount());
 });

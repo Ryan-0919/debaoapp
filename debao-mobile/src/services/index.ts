@@ -14,7 +14,9 @@ import {
   mockGradingService,
   mockDeviceService,
   mockLegalService,
+  mockForumService,
   mockQuestionService,
+  mockAttachmentService,
 } from './mockServices';
 import {
   apiAIService,
@@ -30,7 +32,9 @@ import {
   apiGradingService,
   apiDeviceService,
   apiLegalService,
+  apiForumService,
   apiQuestionService,
+  apiAttachmentService,
 } from './realServices';
 
 export const aiService = environment.useMocks ? mockAIService : apiAIService;
@@ -46,4 +50,6 @@ export const learningService = environment.useMocks ? mockLearningService : apiL
 export const gradingService = environment.useMocks ? mockGradingService : apiGradingService;
 export const deviceService = environment.useMocks ? mockDeviceService : apiDeviceService;
 export const legalService = environment.useMocks ? mockLegalService : apiLegalService;
+export const forumService = environment.useMocks ? mockForumService : apiForumService;
 export const questionService = environment.useMocks ? mockQuestionService : apiQuestionService;
+export const attachmentService = environment.useMocks ? mockAttachmentService : apiAttachmentService;

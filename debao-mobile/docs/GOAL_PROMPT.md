@@ -1,5 +1,7 @@
 # Codex Goal 模式开发提示词
 
+> 本文件对应已经完成的 28 页 Figma 1:1 迁移阶段。继续开发真实业务时不要重复运行本提示词，请改用 [BUSINESS_GOAL_PROMPT.md](BUSINESS_GOAL_PROMPT.md)，并以 [BUSINESS_DEVELOPMENT_PLAN.md](BUSINESS_DEVELOPMENT_PLAN.md) 为范围基准。移动端 Goal 不包含后台管理；独立 `debao-admin` 已按 [ADMIN_CONSOLE_DESIGN.md](ADMIN_CONSOLE_DESIGN.md) 单独推进。
+
 将下面整段内容作为 Goal 模式提示词使用。当前仓库已完成第一阶段迁移，提示词要求先读现状再继续，不重复推倒重做。
 
 ```text

@@ -1,0 +1,6 @@
+.learning-question-page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.learning-question-grid { display: grid; grid-template-columns: minmax(300px, 360px) minmax(0, 1fr); gap: 20px; min-height: 560px; }
+.learning-question-tree-card, .learning-question-content-card { min-width: 0; }
+.learning-directory-type, .learning-question-path { font-size: 12px; }
+.learning-question-filters { width: 100%; }
+@media (max-width: 960px) { .learning-question-grid { grid-template-columns: 1fr; } .learning-question-tree-card { max-height: 440px; overflow: auto; } }

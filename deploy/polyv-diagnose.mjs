@@ -1,0 +1,10 @@
+import {createHash} from 'node:crypto';
+import {writeFileSync} from 'node:fs';
+const secret = process.env.POLYV_APP_SECRET;
+if (!secret || !process.env.POLYV_APP_ID) throw new Error('Polyv credentials missing');
+const params = {appId:process.env.POLYV_APP_ID, channelId:'8396848',timestamp:String(Date.now())};
+params.sign = createHash('md5').update(secret + Object.keys(params).sort().map(k=>k+params[k]).join('') + secret).digest('hex').toUpperCase();
+const response = await fetch('https://api.polyv.net/live/v3/channel/auth/get?'+new URLSearchParams(params),{signal:AbortSignal.timeout(15000)});
+const result = await response.json();
+writeFileSync('/etc/debao/polyv-auth-diagnostic.json',JSON.stringify(result),{mode:0o600});
+console.log(JSON.stringify({http:response.status,code:result.code,message:result.message,auth:Array.isArray(result.data)?result.data.map(x=>({channelId:x.channelId,rank:x.rank,enabled:x.enabled,authType:x.authType,customUri:x.customUri,hasCustomKey:Boolean(x.customKey)})):null}));

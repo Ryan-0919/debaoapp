@@ -1,0 +1,20 @@
+.grading-drawer-grid { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(360px, .88fr); gap: 24px; align-items: start; }
+.answer-block { margin-top: 12px; padding: 14px; background: #f7f8fa; border: 1px solid #eef0f4; border-radius: 6px; }
+.question-prompt { display: block; margin-top: 5px; }
+.answer-text { margin-top: 8px; padding-top: 12px; white-space: pre-wrap; line-height: 1.85; user-select: text; }
+.annotation-mark { position: relative; display: inline-block; }
+.annotation-symbol { position: absolute; top: -1.05em; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 800; line-height: 1; pointer-events: none; }
+.correct-symbol { color: #1677ff; }
+.score-symbol { color: #1677ff; }
+.error-symbol { color: #cf1322; }
+.annotation-toolbar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 0; padding: 10px; background: #fffbe6; border: 1px solid #ffe58f; border-radius: 6px; }
+.annotation-toolbar > .ant-typography { max-width: 100%; margin-right: auto; }
+.point-editor { display: grid; grid-template-columns: minmax(0, 1fr) 108px minmax(160px, .7fr); gap: 10px; align-items: end; padding: 14px 0; border-bottom: 1px solid #eef0f4; }
+.point-copy { min-width: 0; }
+.point-copy .ant-segmented { margin-top: 8px; }
+.missed-point { padding-inline: 10px; background: #fff1f0; border-radius: 5px; }
+.review-point { padding: 10px 0; border-bottom: 1px solid #eef0f4; }
+.review-point > .ant-typography { display: block; margin-top: 5px; }
+.stat-tile { min-width: 160px; flex: 1 1 160px; background: #fff; border: 1px solid #e8e9ef; border-radius: 6px; padding: 14px 16px; }
+.workflow-strip { background: #fff; border: 1px solid #e8e9ef; border-radius: 6px; padding: 16px 20px; }
+@media (max-width: 900px) { .grading-drawer-grid { grid-template-columns: 1fr; } .point-editor { grid-template-columns: 1fr 108px; } .point-editor .ant-form-item:last-child { grid-column: 1 / -1; } }

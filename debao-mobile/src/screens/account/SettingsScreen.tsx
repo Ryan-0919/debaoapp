@@ -7,6 +7,8 @@ import {AppScreen} from '@/components/AppScreen';
 import {PageHeader} from '@/components/PageHeader';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
+import {environment} from '@/config/environment';
+import {authService} from '@/services';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -39,7 +41,15 @@ export default function SettingsScreen() {
 
   const confirmLogout = () => {
     setLogoutVisible(false);
-    navigation.goBack();
+    if (environment.useMocks) { navigation.goBack(); return; }
+    return authService.logout().catch(() => undefined).finally(() => navigation.goBack());
+  };
+
+  const actionFor = (label: string) => {
+    if (label === '账号与安全') return () => navigation.navigate('AccountSecurity');
+    if (label === '隐私政策') return () => navigation.navigate('LegalDocument', {document: 'privacy'});
+    if (label === '用户协议') return () => navigation.navigate('LegalDocument', {document: 'terms'});
+    return undefined;
   };
 
   return (
@@ -50,15 +60,11 @@ export default function SettingsScreen() {
           <View key={group.title} style={styles.group}>
             <Text style={styles.groupTitle}>{group.title}</Text>
             <View style={styles.card}>
-              {group.items.map((item, index) => (
-                <View key={item.label} style={[styles.row, index < group.items.length - 1 && styles.divider]} testID={`settings-row-${item.label}`}>
-                  <View style={styles.rowCopy}>
-                    <Text style={styles.rowTitle}>{item.label}</Text>
-                    {item.description ? <Text style={styles.rowDescription}>{item.description}</Text> : null}
-                  </View>
-                  <ChevronRight color="#C0C5D0" size={16} />
-                </View>
-              ))}
+              {group.items.map((item, index) => {
+                const onPress = actionFor(item.label);
+                const content = <><View style={styles.rowCopy}><Text style={styles.rowTitle}>{item.label}</Text>{item.description ? <Text style={styles.rowDescription}>{item.description}</Text> : null}</View><ChevronRight color="#C0C5D0" size={16} /></>;
+                return onPress ? <Pressable accessibilityRole="button" key={item.label} onPress={onPress} style={({pressed}) => [styles.row, index < group.items.length - 1 && styles.divider, pressed && styles.rowPressed]} testID={`settings-row-${item.label}`}>{content}</Pressable> : <View key={item.label} style={[styles.row, index < group.items.length - 1 && styles.divider]} testID={`settings-row-${item.label}`}>{content}</View>;
+              })}
             </View>
           </View>
         ))}
@@ -99,6 +105,7 @@ const styles = StyleSheet.create({
   groupTitle: {fontSize: 12, color: colors.muted, marginBottom: 6},
   card: {borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.surface},
   row: {minHeight: 56, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center'},
+  rowPressed: {backgroundColor: colors.page},
   divider: {borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line},
   rowCopy: {flex: 1},
   rowTitle: {fontSize: 14, color: colors.ink},

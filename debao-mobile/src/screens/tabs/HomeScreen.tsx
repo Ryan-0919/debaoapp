@@ -1,4 +1,4 @@
-import {useState, type ComponentType} from 'react';
+import {useEffect, useState, type ComponentType} from 'react';
 import {
   ImageBackground,
   Pressable,
@@ -29,6 +29,9 @@ import Svg, {Defs, LinearGradient, Rect, Stop} from 'react-native-svg';
 import {AppScreen} from '@/components/AppScreen';
 import {colors} from '@/theme';
 import type {MainTabParamList, RootStackParamList} from '@/types/navigation';
+import {environment} from '@/config/environment';
+import {homeService, notificationService} from '@/services';
+import {openAppTarget} from '@/navigation/openAppTarget';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type Channel = 'objective' | 'subjective';
@@ -54,6 +57,8 @@ const banners = [
   require('@/assets/images/home-library.png'),
   require('@/assets/images/home-office.png'),
 ] as ImageSourcePropType[];
+type RemoteBanner = {id: string; title: string; imageUrl: string; target: string};
+type HomeNotice = {id?: string; type: string; title?: string; text: string; important: boolean; deepLink?: string};
 
 const objectiveShortcuts: Shortcut[] = [
   {label: '我的课程', icon: PlayCircle, backgroundColor: '#F0F0FF', iconColor: '#4C4BEA', action: {kind: 'tab', tab: 'Courses'}},
@@ -78,9 +83,9 @@ const courses: Course[] = [
   {name: '主观题冲刺', teacher: '王晓峰', price: '¥1,280', productId: 'p3', image: require('@/assets/images/course-subjective.png')},
 ];
 
-const announcements = [
-  {type: '考试', text: '2024年法律职业资格考试客观题考试时间定于9月14日、15日举行，请提前做好准备。', important: true},
-  {type: '课程', text: '民法精讲课第19-22讲已更新上线，已购学员可直接进入课程观看。', important: false},
+const announcements: HomeNotice[] = [
+  {id: 'prototype-exam', type: '考试', title: '考试安排', text: '2024年法律职业资格考试客观题考试时间定于9月14日、15日举行，请提前做好准备。', important: true, deepLink: '/notifications'},
+  {id: 'prototype-course', type: '课程', title: '课程更新', text: '民法精讲课第19-22讲已更新上线，已购学员可直接进入课程观看。', important: false, deepLink: '/courses'},
 ];
 
 const hotPosts = [
@@ -95,7 +100,39 @@ export default function HomeScreen() {
   const [bannerIndex, setBannerIndex] = useState(0);
   const [noticeIndex, setNoticeIndex] = useState(0);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
+  const [remoteAnnouncements, setRemoteAnnouncements] = useState<HomeNotice[]>(environment.useMocks ? announcements : []);
+  const [remoteBanners, setRemoteBanners] = useState<RemoteBanner[]>([]);
+  const [remoteCourses, setRemoteCourses] = useState<Course[]>([]);
+  const [remotePosts, setRemotePosts] = useState<typeof hotPosts>([]);
+  const [featuredProduct, setFeaturedProduct] = useState<{id: string; name: string; price: number; originalPrice: number} | null>(null);
+  const [daysRemaining, setDaysRemaining] = useState(42);
+  useEffect(() => {
+    if (environment.useMocks) return;
+    let active = true;
+    homeService.get().then(home => {
+      if (!active) return;
+      setDaysRemaining(home.exam.daysRemaining);
+      if (home.banners.length) { setRemoteBanners(home.banners); setBannerIndex(0); }
+      setRemoteAnnouncements(home.announcements.map(item => ({id: item.id, type: item.isPinned ? '置顶公告' : '公告', title: item.title, text: item.body, important: Boolean(item.isPinned) || !item.read, deepLink: item.deepLink})));
+      setNoticeIndex(0);
+      setNoticeDismissed(false);
+      if (home.hotCourses.length) {
+        setRemoteCourses(home.hotCourses.map((course, index) => ({name: course.title, teacher: course.teacher, price: '', productId: course.id, image: courses[index % courses.length].image})));
+      }
+      if (home.hotPosts?.length) {
+        setRemotePosts(home.hotPosts.map(post => ({tag: '社区', title: post.title, likes: post.likeCount, replies: 0, pinned: false})));
+      }
+      if (home.featuredProduct) setFeaturedProduct(home.featuredProduct);
+    }).catch(() => { if (active) setRemoteAnnouncements([]); });
+    return () => { active = false; };
+  }, []);
   const shortcuts = channel === 'objective' ? objectiveShortcuts : subjectiveShortcuts;
+  const bannerItems: Array<{source: ImageSourcePropType; title?: string; target?: string}> = remoteBanners.length
+    ? remoteBanners.map(item => ({source: {uri: item.imageUrl}, title: item.title, target: item.target}))
+    : banners.map(source => ({source}));
+  const activeBanner = bannerItems[bannerIndex] ?? bannerItems[0];
+  const displayCourses = remoteCourses.length ? remoteCourses : courses;
+  const displayPosts = remotePosts.length ? remotePosts : hotPosts;
 
   const openShortcut = (shortcut: Shortcut) => {
     if (shortcut.action.kind === 'tab') {
@@ -105,12 +142,31 @@ export default function HomeScreen() {
     navigation.navigate(shortcut.action.route as never);
   };
 
+  const openBannerTarget = (target?: string) => {
+    openAppTarget(navigation, target);
+  };
+
+  const openNotice = (notice: HomeNotice) => {
+    if (!environment.useMocks && notice.id && !notice.id.startsWith('prototype-')) notificationService.markAnnouncementRead?.(notice.id).catch(() => undefined);
+    if (notice.deepLink) {
+      openBannerTarget(notice.deepLink);
+      return;
+    }
+    navigation.navigate('Notifications');
+  };
+
+  const dismissNotice = () => {
+    const notice = remoteAnnouncements[noticeIndex];
+    setNoticeDismissed(true);
+    if (!environment.useMocks && notice?.id && !notice.id.startsWith('prototype-')) notificationService.closeAnnouncement?.(notice.id).catch(() => undefined);
+  };
+
   return (
     <AppScreen testID="home-screen">
       <View style={styles.header}>
         <View style={styles.brandRow}>
           <Text style={styles.brand}>得宝法考</Text>
-          <Text style={styles.demoBadge}>演示数据</Text>
+          {environment.useMocks && <Text style={styles.demoBadge}>演示数据</Text>}
         </View>
         <View style={styles.headerActions}>
           <View accessibilityRole="tablist" style={styles.modeSwitch}>
@@ -145,14 +201,15 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.pageBody}>
-        <ImageBackground imageStyle={styles.bannerImage} source={banners[bannerIndex]} style={styles.banner}>
+        <Pressable accessibilityRole="button" onPress={() => openBannerTarget(activeBanner?.target)}>
+        <ImageBackground imageStyle={styles.bannerImage} source={activeBanner?.source ?? banners[0]} style={styles.banner}>
           <View style={styles.bannerShade} />
           <View style={styles.bannerCopy}>
-            <Text style={styles.bannerTitle}>{channel === 'objective' ? '2024客观题精英班' : '2024主观题冲刺班'}</Text>
+            <Text style={styles.bannerTitle}>{activeBanner?.title ?? (channel === 'objective' ? '2024客观题精英班' : '2024主观题冲刺班')}</Text>
             <Text style={styles.bannerMeta}>{channel === 'objective' ? '限时特惠 · 已有5312人报名' : '批改服务 · 已有1893人报名'}</Text>
           </View>
           <View style={styles.bannerDots}>
-            {banners.map((_, index) => (
+            {bannerItems.map((_, index) => (
               <Pressable
                 accessibilityLabel={`显示第${index + 1}张横幅`}
                 hitSlop={8}
@@ -163,6 +220,7 @@ export default function HomeScreen() {
             ))}
           </View>
         </ImageBackground>
+        </Pressable>
 
         <View style={styles.shortcutPanel}>
           <ScrollView
@@ -190,7 +248,7 @@ export default function HomeScreen() {
 
         <Pressable
           accessibilityRole="button"
-          onPress={() => navigation.navigate('ProductDetail', {productId: 'p1'})}
+          onPress={() => navigation.navigate('ProductDetail', {productId: featuredProduct?.id ?? 'p1'})}
           style={({pressed}) => [styles.promo, pressed && styles.pressed]}>
           <ImageBackground imageStyle={styles.promoImage} source={banners[0]} style={StyleSheet.absoluteFill}>
             <Svg height="100%" width="100%">
@@ -207,12 +265,12 @@ export default function HomeScreen() {
           <View style={styles.promoContent}>
             <View style={styles.promoCopy}>
               <Text style={styles.promoKicker}>限时特惠 · 倒计时 3 天</Text>
-              <Text style={styles.promoTitle}>2024法考全程班</Text>
+              <Text style={styles.promoTitle}>{featuredProduct?.name ?? '2024法考全程班'}</Text>
               <Text style={styles.promoMeta}>主客一体 · 名师精讲 · 含批改服务</Text>
             </View>
             <View style={styles.promoOffer}>
-              <Text style={styles.promoPrice}>¥3,980</Text>
-              <Text style={styles.promoOldPrice}>¥5,200</Text>
+              <Text style={styles.promoPrice}>{featuredProduct ? `¥${featuredProduct.price.toLocaleString()}` : '¥3,980'}</Text>
+              <Text style={styles.promoOldPrice}>{featuredProduct ? `¥${featuredProduct.originalPrice.toLocaleString()}` : '¥5,200'}</Text>
               <View style={styles.enrollButton}><Text style={styles.enrollLabel}>立即报名</Text></View>
             </View>
           </View>
@@ -224,7 +282,7 @@ export default function HomeScreen() {
             <Text style={styles.countdownLabel}>距今还有</Text>
           </View>
           <View style={styles.daysRow}>
-            <Text style={styles.days}>{channel === 'objective' ? '42' : '98'}</Text>
+            <Text style={styles.days}>{channel === 'objective' ? String(daysRemaining) : '98'}</Text>
             <Text style={styles.daysUnit}>天</Text>
           </View>
         </View>
@@ -243,7 +301,7 @@ export default function HomeScreen() {
           contentContainerStyle={styles.courseList}
           horizontal
           showsHorizontalScrollIndicator={false}>
-          {courses.map(course => (
+          {displayCourses.map(course => (
             <Pressable
               accessibilityRole="button"
               key={course.name}
@@ -259,20 +317,20 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
-        {!noticeDismissed && (
+        {!noticeDismissed && remoteAnnouncements.length > 0 && (
           <View style={styles.notice}>
-            <View style={styles.noticeMain}>
-              <Text style={[styles.noticeType, announcements[noticeIndex].important ? styles.noticeTypeImportant : styles.noticeTypeCourse]}>
-                {announcements[noticeIndex].type}
+            <Pressable accessibilityRole="button" onPress={() => openNotice(remoteAnnouncements[noticeIndex] ?? remoteAnnouncements[0])} style={styles.noticeMain}>
+              <Text style={[styles.noticeType, remoteAnnouncements[noticeIndex]?.important ? styles.noticeTypeImportant : styles.noticeTypeCourse]}>
+                {remoteAnnouncements[noticeIndex]?.type}
               </Text>
-              <Text numberOfLines={2} style={styles.noticeText}>{announcements[noticeIndex].text}</Text>
-              <Pressable accessibilityLabel="关闭公告" hitSlop={8} onPress={() => setNoticeDismissed(true)}>
+              <Text numberOfLines={2} style={styles.noticeText}>{remoteAnnouncements[noticeIndex]?.text}</Text>
+              <Pressable accessibilityLabel="关闭公告" hitSlop={8} onPress={dismissNotice}>
                 <X color="#C0C5D0" size={13} />
               </Pressable>
-            </View>
+            </Pressable>
             <View style={styles.noticeFooter}>
               <View style={styles.noticeDots}>
-                {announcements.map((_, index) => (
+                {remoteAnnouncements.map((_, index) => (
                   <Pressable
                     accessibilityLabel={`显示第${index + 1}条公告`}
                     hitSlop={7}
@@ -282,7 +340,7 @@ export default function HomeScreen() {
                   />
                 ))}
               </View>
-              <Pressable hitSlop={7} onPress={() => navigation.navigate('LawSearch')}>
+              <Pressable hitSlop={7} onPress={() => navigation.navigate('Notifications')}>
                 <Text style={styles.noticeLink}>查看全部公告 →</Text>
               </Pressable>
             </View>
@@ -297,11 +355,11 @@ export default function HomeScreen() {
           </Pressable>
         </View>
         <View style={styles.posts}>
-          {hotPosts.map((post, index) => (
+          {displayPosts.map((post, index) => (
             <Pressable
               key={post.title}
               onPress={() => navigation.navigate('LawSearch')}
-              style={({pressed}) => [styles.post, index < hotPosts.length - 1 && styles.postDivider, pressed && styles.postPressed]}>
+              style={({pressed}) => [styles.post, index < displayPosts.length - 1 && styles.postDivider, pressed && styles.postPressed]}>
               <View style={styles.postCopy}>
                 <View style={styles.postTagRow}>
                   <Text style={[styles.postTag, post.tag === '答疑求助' ? styles.postTagQuestion : post.tag === '经验分享' ? styles.postTagExperience : styles.postTagKnowledge]}>{post.tag}</Text>

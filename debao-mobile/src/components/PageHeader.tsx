@@ -9,9 +9,10 @@ interface Props {
   subtitle?: string;
   back?: boolean;
   right?: ReactNode;
+  rightWidth?: number;
 }
 
-export function PageHeader({title, subtitle, back = true, right}: Props) {
+export function PageHeader({title, subtitle, back = true, right, rightWidth}: Props) {
   const navigation = useNavigation();
   return (
     <View style={styles.container}>
@@ -31,7 +32,7 @@ export function PageHeader({title, subtitle, back = true, right}: Props) {
         <Text numberOfLines={1} style={styles.title}>{title}</Text>
         {subtitle ? <Text numberOfLines={1} style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
-      <View style={[styles.side, styles.right]}>{right}</View>
+      <View style={[styles.side, styles.right, rightWidth ? {width: rightWidth} : null]}>{right}</View>
     </View>
   );
 }

@@ -2,7 +2,7 @@
 
 得宝是一套面向法考学习者的三端移动 App 工程。共享界面和业务层使用 React Native + TypeScript，Android/iOS 使用官方 React Native 原生工程，HarmonyOS 使用 RNOH + ArkTS 宿主。
 
-当前版本为 `0.1.0` 第一阶段工程版，已建立 Figma Make 原型 28 个页面的 React Native 技术骨架和路由，但不代表 28 页已经完成 1:1 复刻。逐页真实状态见 [28 页 1:1 核验矩阵](docs/PAGE_PARITY_MATRIX.md)。登录、支付、AI、媒体、直播、下载、推送和远端数据仍是明确标识的 Mock，不是正式线上能力。
+当前版本为 `0.1.0` 第一阶段工程版，已建立 Figma Make 原型 28 个页面的 React Native 页面和路由，但不代表 28 页已经完成 1:1 复刻。逐页真实状态见 [28 页 1:1 核验矩阵](docs/PAGE_PARITY_MATRIX.md)。默认 Mock 模式用于复现原型；登录、题库、课程、学习、订单、论坛、通知和部分批改能力在 `DEBAO_USE_MOCKS=false` 下已接入本地 API。支付、AI 生产 Provider、媒体、直播、下载、推送和附件上传仍不是正式线上能力。
 
 需要通过 Codex Goal 模式继续推进时，使用 [Goal 模式开发提示词](docs/GOAL_PROMPT.md)。该提示词包含技术栈、三端边界、文档要求和验收标准。
 
@@ -124,7 +124,7 @@ pnpm harmony:run
 
 - TypeScript 严格检查：通过
 - ESLint：通过，无 warning
-- Jest：2 个测试套件、3 个测试通过
+- Jest：36 个测试套件、73 个测试通过（当前快照；Node 22 是工程支持版本）
 - Android production JS bundle：通过
 - iOS production JS bundle：通过
 - Harmony Hermes HBC bundle：通过，4 个 RNOH 端口正确重定向

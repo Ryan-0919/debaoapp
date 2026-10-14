@@ -1,25 +1,91 @@
-import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
-import {CheckCircle2, ChevronLeft, XCircle} from 'lucide-react-native';
+import {useCallback, useEffect, useState} from 'react';
+import {Linking, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {CheckCircle2, ChevronLeft, Headphones, PlayCircle, XCircle} from 'lucide-react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import type {RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
+import {RemoteState} from '@/components/ui';
 import {OBJECTIVE_QUESTIONS} from '@/data/objectiveQuestions';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
+import {environment} from '@/config/environment';
+import {questionService} from '@/services';
+import type {ObjectiveReport, QuestionSubmissionReport} from '@/services';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type ScreenRoute = RouteProp<RootStackParamList, 'ObjectiveReport'>;
 
 const REVIEW_ANSWERS = ['D', 'B', 'A', 'A'];
+const mediaUrl = (reference: string) => /^https?:\/\//i.test(reference) ? reference : `${environment.apiBaseUrl.replace(/\/v1\/?$/, '')}${reference}`;
+
+function submissionReportToObjectiveReport(snapshot: QuestionSubmissionReport): ObjectiveReport {
+  const correctAnswers = snapshot.correctAnswers ?? [];
+  const answers = snapshot.answers ?? [];
+  return {
+    id: `submission-report:${snapshot.id}`,
+    sessionId: snapshot.id,
+    mode: 'chapter',
+    title: `题目 ${snapshot.questionId}`,
+    total: 1,
+    answered: answers.length ? 1 : 0,
+    correct: snapshot.correct ? 1 : 0,
+    score: snapshot.correct ? 100 : 0,
+    maxScore: 100,
+    results: [{
+      questionId: snapshot.questionId,
+      ...(snapshot.subjectId ? {subjectId: snapshot.subjectId} : {}),
+      stem: snapshot.stem,
+      options: snapshot.options,
+      ...(snapshot.questionType ? {questionType: snapshot.questionType} : {}),
+      version: snapshot.version,
+      answers,
+      correctAnswers,
+      correct: snapshot.correct,
+      analysis: snapshot.analysis,
+    }],
+    subjectStats: snapshot.subjectId ? [{subjectId: snapshot.subjectId, total: 1, correct: snapshot.correct ? 1 : 0, correctRate: snapshot.correct ? 100 : 0}] : [],
+    submittedAt: snapshot.createdAt,
+  };
+}
 
 export default function ObjectiveReportScreen() {
   const navigation = useNavigation<Navigation>();
   const route = useRoute<ScreenRoute>();
-  const total = route.params.total;
-  const correct = Math.min(route.params.correct, total);
+  const sessionId = route.params?.sessionId;
+  const submissionId = route.params?.submissionId;
+  const remoteMode = !environment.useMocks && (
+    (Boolean(sessionId) && typeof questionService.getSessionReport === 'function')
+    || (Boolean(submissionId) && typeof questionService.getSubmissionReport === 'function')
+  );
+  const [report, setReport] = useState<ObjectiveReport | null>(null);
+  const [loading, setLoading] = useState(remoteMode);
+  const [error, setError] = useState('');
+  const loadReport = useCallback(async () => {
+    if (!remoteMode) return;
+    setLoading(true);
+    setError('');
+    try {
+      if (sessionId && questionService.getSessionReport) {
+        setReport(await questionService.getSessionReport(sessionId));
+      } else if (submissionId && questionService.getSubmissionReport) {
+        const snapshot = await questionService.getSubmissionReport(submissionId);
+        setReport(submissionReportToObjectiveReport(snapshot));
+      }
+    } catch (reason) {
+      setReport(null);
+      setError(reason instanceof Error ? reason.message : '答题报告加载失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
+  }, [remoteMode, sessionId, submissionId]);
+  useEffect(() => { loadReport().catch(() => undefined); }, [loadReport]);
+
+  const total = report?.total ?? route.params?.total ?? 0;
+  const correct = report?.correct ?? Math.min(route.params?.correct ?? 0, total);
   const wrong = Math.max(0, total - correct);
-  const score = total ? Math.round((correct / total) * 100) : 0;
+  const score = report?.score ?? (total ? Math.round((correct / total) * 100) : 0);
+  const remoteEmpty = remoteMode && !loading && !error && !report;
 
   return (
     <AppScreen scroll={false} testID="objective-report-screen">
@@ -31,7 +97,18 @@ export default function ObjectiveReportScreen() {
         <View style={styles.headerSide} />
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {remoteMode && (loading || error || remoteEmpty) ? (
+        <RemoteState
+          testID="objective-report-state"
+          loading={loading}
+          error={error}
+          empty={remoteEmpty}
+          loadingLabel="正在加载答题报告..."
+          emptyTitle="暂无答题报告"
+          emptyDescription="交卷完成后，报告会显示在这里。"
+          onRetry={loadReport}
+        />
+      ) : <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.scoreCard}>
           <View style={styles.scoreRing}>
             <Text testID="objective-report-score" style={styles.score}>{score}</Text>
@@ -58,31 +135,48 @@ export default function ObjectiveReportScreen() {
 
         <View style={styles.subjectCard}>
           <Text style={styles.sectionTitle}>科目分析</Text>
-          <SubjectProgress name="民法" value="2/3" progress={2 / 3} color={colors.error} />
-          <SubjectProgress name="刑法" value="1/1" progress={1} color={colors.success} last />
+          {report?.subjectStats?.length ? report.subjectStats.map((item, index) => (
+            <SubjectProgress key={item.subjectId} name={item.subjectId} value={`${item.correct}/${item.total}`} progress={item.total ? item.correct / item.total : 0} color={item.correctRate >= 60 ? colors.success : colors.error} last={index === report.subjectStats.length - 1} />
+          )) : <>
+            <SubjectProgress name="民法" value="2/3" progress={2 / 3} color={colors.error} />
+            <SubjectProgress name="刑法" value="1/1" progress={1} color={colors.success} last />
+          </>}
         </View>
 
         <Text style={[styles.sectionTitle, styles.reviewTitle]}>逐题解析</Text>
-        {OBJECTIVE_QUESTIONS.map((question, index) => {
-          const userAnswer = REVIEW_ANSWERS[index];
-          const isRight = userAnswer === question.answer;
+        {(report?.results ?? OBJECTIVE_QUESTIONS.map((question, index) => ({
+          questionId: question.id,
+          stem: question.stem,
+          options: question.options.map(item => item.text),
+          answers: [String(question.answer.charCodeAt(0) - 65)],
+          correctAnswers: [String(question.answer.charCodeAt(0) - 65)],
+          correct: REVIEW_ANSWERS[index] === question.answer,
+          analysis: question.explanation,
+          explanationMediaType: undefined as 'audio' | 'video' | undefined,
+          explanationMediaReference: undefined as string | undefined,
+        }))).map((question, index) => {
+          const userAnswer = report ? question.answers.map(value => String.fromCharCode(65 + Number(value))).join(', ') : REVIEW_ANSWERS[index];
+          const correctAnswer = report ? question.correctAnswers.map(value => String.fromCharCode(65 + Number(value))).join(', ') : OBJECTIVE_QUESTIONS[index].answer;
+          const isRight = report ? question.correct : userAnswer === correctAnswer;
           return (
-            <View key={question.id} testID={`objective-review-${index}`} style={styles.reviewCard}>
+            <View key={question.questionId} testID={`objective-review-${index}`} style={styles.reviewCard}>
               <View style={styles.reviewHeader}>
                 {isRight ? <CheckCircle2 size={16} color={colors.success} /> : <XCircle size={16} color={colors.error} />}
                 <Text numberOfLines={2} style={styles.reviewStem}>{question.stem}</Text>
               </View>
               <View style={styles.answerRow}>
                 <Text style={styles.answerLabel}>你的答案：<Text style={[styles.answerValue, isRight ? styles.answerRight : styles.answerWrong]}>{userAnswer}</Text></Text>
-                <Text style={styles.answerLabel}>正确答案：<Text style={styles.answerCorrect}>{question.answer}</Text></Text>
+                <Text style={styles.answerLabel}>正确答案：<Text style={styles.answerCorrect}>{correctAnswer}</Text></Text>
               </View>
               <View style={styles.explanationBox}>
-                <Text numberOfLines={3} style={styles.explanation}>{question.explanation}</Text>
+                <Text style={styles.explanationTitle}>答案解析</Text>
+                <Text style={styles.explanation}>{question.analysis}</Text>
+                {question.explanationMediaReference ? <Pressable accessibilityRole="button" testID={`objective-explanation-media-${index}`} onPress={() => void Linking.openURL(mediaUrl(question.explanationMediaReference as string))} style={styles.mediaButton}>{question.explanationMediaType === 'audio' ? <Headphones size={16} color={colors.brand} /> : <PlayCircle size={16} color={colors.brand} />}<Text style={styles.mediaButtonText}>{question.explanationMediaType === 'audio' ? '收听音频讲解' : '观看视频讲解'}</Text></Pressable> : null}
               </View>
             </View>
           );
         })}
-      </ScrollView>
+      </ScrollView>}
 
       <View style={styles.footer}>
         <Pressable testID="objective-report-mistakes" onPress={() => navigation.navigate('MistakeBook')} style={({pressed}) => [styles.footerSecondary, pressed && styles.pressed]}>
@@ -142,7 +236,10 @@ const styles = StyleSheet.create({
   answerWrong: {color: colors.error},
   answerCorrect: {color: colors.success, fontWeight: '700'},
   explanationBox: {marginLeft: 24, borderRadius: radius.sm, backgroundColor: colors.page, padding: 10},
-  explanation: {fontSize: 12, lineHeight: 19, color: colors.muted},
+  explanationTitle: {fontSize: 12, lineHeight: 18, fontWeight: '700', color: colors.ink, marginBottom: 4},
+  explanation: {fontSize: 12, lineHeight: 19, color: colors.body},
+  mediaButton: {height: 38, marginTop: 10, paddingHorizontal: 12, borderRadius: radius.sm, backgroundColor: colors.brandLight, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7},
+  mediaButtonText: {fontSize: 12, fontWeight: '700', color: colors.brand},
   footer: {height: 68, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: colors.surface, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line, flexDirection: 'row', gap: 8},
   footerSecondary: {height: 44, flex: 1, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center'},
   footerPrimary: {height: 44, flex: 1, borderRadius: radius.md, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center'},

@@ -54,12 +54,13 @@ test('subjective answer preserves independent answers and implements save, navig
   await act(() => {renderer = ReactTestRenderer.create(<SubjectiveAnswerScreen />);});
   expect(renderer!.root.findAll(node => node.props.children === '合同解除与违约责任').length).toBeGreaterThan(0);
 
-  await press('subjective-open-law-search');
-  expect(mockNavigate).toHaveBeenCalledWith('LawSearch');
-
   await act(() => input().props.onChangeText('第一问答案'));
   expect(input().props.value).toBe('第一问答案');
   expect(renderer!.root.findAll(node => node.props.children === '未保存').length).toBeGreaterThan(0);
+  await press('subjective-open-law-search');
+  expect(mockSaveLocalDraft).toHaveBeenCalledWith('subjective-q3-0', '第一问答案');
+  expect(mockNavigate).toHaveBeenCalledWith('LawSearch', {source: 'subjective-answer', subject: '民法'});
+  expect(input().props.value).toBe('第一问答案');
   await press('subjective-answer-save');
   expect(mockSaveLocalDraft).toHaveBeenCalledWith('subjective-q3-0', '第一问答案');
   expect(mockQuestionService.saveDraft).toHaveBeenCalledWith({questionId: 'q3', answers: ['第一问答案', '', '']});

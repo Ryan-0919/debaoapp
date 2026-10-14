@@ -32,6 +32,7 @@ import {AppScreen} from '@/components/AppScreen';
 import {findCourse, type CourseLesson} from '@/data/courses';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
+import {MediaAvailabilityNotice} from './MediaAvailabilityNotice';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type ScreenRoute = RouteProp<RootStackParamList, 'VideoPlayer'>;
@@ -128,6 +129,7 @@ export default function VideoPlayerScreen() {
   return (
     <AppScreen scroll={false} backgroundColor={colors.surface} testID="video-player-screen">
       <View style={styles.screen}>
+        <MediaAvailabilityNotice courseId={route.params.courseId} kind="video" />
         <Pressable
           testID="video-surface"
           onPress={() => {

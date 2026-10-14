@@ -9,13 +9,13 @@ pnpm test
 pnpm check
 ```
 
-当前结果（2026-08-28）：
+当前结果（2026-09-02）：
 
 | 检查 | 结果 | 范围 |
 |---|---|---|
 | TypeScript | 通过 | App TS/TSX 严格检查 |
 | ESLint | 通过 | 全工程 JS/TS/TSX，无 warning |
-| Jest | 通过 | 30 suites / 45 tests |
+| Jest | 通过 | 36 suites / 73 tests |
 | Service unit | 通过 | Mock 支付、AI 流式输出 |
 | Component | 通过 | AppButton 文案/按压；题库主客观题页内切换且不误导航 |
 
@@ -188,13 +188,15 @@ Android 全页：![Android 收藏夹](screenshots/android-favorites.png)
 
 UIAutomator 已从“我的”实际进入页面并确认 4 条收藏完整显示；点击首项后进入“收藏题目”且显示 `1 / 4`。Jest 同步固定全部收藏文案和章节练习路由参数。
 
-法条检索页 1:1 回归已完成：法条检索、学习论坛和官方公告三 Tab，10 条法条、4 条高频法条、搜索/清空/空态、科目筛选与浏览、全文弹层、收藏、关联练习、论坛筛选和公告展开均与原型一致。
+法条检索页回归已完成：页面只保留法条检索和学习论坛两个 Tab，10 条法条、4 条高频法条、搜索/清空/空态、科目筛选与浏览、全文弹层、收藏、关联练习和论坛筛选均可用。公告已从本页移出，统一在首页公告位和消息通知中展示。
 
-原型关键态：![Figma 法条检索](screenshots/figma-law-search.png) ![Figma 法条全文](screenshots/figma-law-article-sheet.png) ![Figma 学习论坛](screenshots/figma-law-forum.png) ![Figma 官方公告](screenshots/figma-law-notices.png)
+原型关键态：![Figma 法条检索](screenshots/figma-law-search.png) ![Figma 法条全文](screenshots/figma-law-article-sheet.png) ![Figma 学习论坛](screenshots/figma-law-forum.png)
 
-Android 关键态：![Android 法条检索](screenshots/android-law-search.png) ![Android 搜索结果](screenshots/android-law-search-result.png) ![Android 法条全文](screenshots/android-law-article-sheet.png) ![Android 学习论坛](screenshots/android-law-forum.png) ![Android 官方公告](screenshots/android-law-notices.png) ![Android 公告展开](screenshots/android-law-notice-expanded.png)
+Android 关键态：![Android 法条检索](screenshots/android-law-search.png) ![Android 搜索结果](screenshots/android-law-search-result.png) ![Android 法条全文](screenshots/android-law-article-sheet.png) ![Android 学习论坛](screenshots/android-law-forum.png)
 
-UIAutomator 已从首页主观题模式的“法条检索”入口进入，验证 `311` 唯一搜索结果、第311条全文、收藏与“第311条相关练习”导航、论坛“答疑求助”筛选和公告展开。Jest 另以原型关键词“善意取得”固定中文检索、全文收藏、6/2 篇论坛计数及 6 条公告；发布帖子、论坛点赞/回复和公告收藏按原型保持无业务事件。
+UIAutomator 已从首页主观题模式的“法条检索”入口进入，验证 `311` 唯一搜索结果、第311条全文、收藏与“第311条相关练习”导航及论坛“答疑求助”筛选。Jest 另以原型关键词“善意取得”固定中文检索、全文收藏和 6/2 篇论坛计数，并断言法条页不存在公告 Tab；论坛卡片和发布按钮现已接通业务子页面。
+
+论坛业务专项测试新增 `ForumScreens.test.tsx`：验证详情/评论加载、点赞、收藏、发表评论、举报理由校验与 pending 提交、发布表单分类与成功路由。服务端 `api.test.ts` 另覆盖字段校验、分类和游标分页、收藏 scope、点赞切换、双用户 `canDelete`/收藏隔离、评论作者权限、帖子作者权限、举报幂等/长度校验及软删除后 404。完整规则见 [FORUM.md](FORUM.md)。
 
 AI 对话页 1:1 回归已完成：欢迎消息、右上角重置、4 个快捷问题、输入发送、0.8-1.3 秒三点思考态、4 类定制回答、通用回答、连续对话和自动滚动均与原型一致；旧 RN 页中的“Mock 模式”副标题、提示条和非原型快捷问题已删除。
 
@@ -226,7 +228,7 @@ UIAutomator 已确认 `o1` 的“已完成”、`DB2024031200001` 与“进入�
 
 Android 关键态：![Android 用户资料](screenshots/android-user-profile.png) ![Android 文本编辑](screenshots/android-user-profile-edit.png) ![Android 浮动键盘](screenshots/android-user-profile-keyboard.png) ![Android 阶段选择](screenshots/android-user-profile-stage.png) ![Android 头像颜色](screenshots/android-user-profile-avatar.png) ![Android 保存反馈](screenshots/android-user-profile-saved.png)
 
-UIAutomator 已从“我的 → 编辑资料”进入，命中五项资料、手机号“不可修改”、账号安全三行、昵称输入/字数/取消/保存、5 个备考阶段、6 个头像色板和“已保存修改”；选择“主观题冲刺阶段”后列表即时更新，提示 2 秒后消失。Jest 固定验证全部原型内容、不可编辑/无事件约束、文本空值回退、阶段和头像选择。
+UIAutomator 已从“我的 → 编辑资料”进入，命中五项资料、手机号“不可修改”、账号安全三行、昵称输入/字数/取消/保存、5 个备考阶段、6 个头像色板和“已保存修改”；选择“主观题冲刺阶段”后列表即时更新，提示 2 秒后消失。Jest 固定验证全部原型内容、手机号只读、账号安全导航、文本空值回退、阶段和头像选择。
 
 设置页 1:1 回归已完成：通知/隐私/关于三组 8 项、说明、版本号、退出按钮和居中确认 Dialog 均与原型一致；旧 RN 的 Mock 提示、通知开关、功能图标、工程版版本号、清空 session 和跳转首页逻辑已移除。
 
@@ -292,7 +294,17 @@ APK：`android/app/build/outputs/apk/debug/app-debug.apk`。
 - 课程进入视频/音频/直播并显示真实能力未接入。
 - AI 文本逐段生成，发送中禁止重复提交。
 - 修改用户资料并重启恢复。
+- 登录后更换手机号，原号码与新号码分别验证且验证码不能重放。
+- 绑定/解绑微信均完成当前手机号二次验证，身份冲突不覆盖原账号。
+- 移除非当前设备后对应 Refresh Token 立即失效；当前设备标识正确。
+- 提交注销、重启读取冷静期状态、撤销；到期执行后所有设备退出。
+
+## 账号体系自动化覆盖（2026-08-31）
+
+服务端 `src/test/api.test.ts` 覆盖：未申请验证码拒绝登录、60 秒频控、单次消费、5 次失败上限、Refresh Token 轮换与重放拒绝、手机号双验证码换绑、微信解绑二次验证、登录设备登记、移除设备吊销会话、注销申请/撤销/到期执行。
+
+移动端 `AccountSecurityScreen.test.tsx` 覆盖：身份/设备/注销状态加载、手机号换绑表单、微信解绑、设备移除、注销申请和撤销；`SettingsScreen`、`UserProfileScreen` 保留全部原型文案断言并新增导航断言。
 
 ## 未覆盖范围
 
-真实鉴权、后端错误码、支付 SDK、真实媒体、直播、下载、推送、弱网、升级迁移、性能、崩溃恢复和无障碍读屏尚未接入或验证。每项需要在对应真实 Service/adapter 实现时补测试，不能沿用 Mock 测试作为上线证据。
+真实短信/微信/号码认证供应商、支付 SDK、头像对象存储、真实媒体、直播、下载、推送、弱网、升级迁移、性能、崩溃恢复和无障碍读屏尚未联调或验证。每项需要在对应真实 Service/adapter 实现时补测试，不能沿用 local/Mock 测试作为上线证据。

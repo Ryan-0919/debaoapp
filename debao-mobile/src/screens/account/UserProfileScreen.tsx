@@ -9,11 +9,20 @@ import {
   Text,
   TextInput,
   View,
+  Image,
 } from 'react-native';
 import {Camera, Check, ChevronRight, X} from 'lucide-react-native';
 import {AppScreen} from '@/components/AppScreen';
 import {PageHeader} from '@/components/PageHeader';
 import {colors, radius, shadows} from '@/theme';
+import {environment} from '@/config/environment';
+import {authService} from '@/services';
+import type {UserProfile} from '@/types/domain';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import type {RootStackParamList} from '@/types/navigation';
+
+type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
 type FieldKey = 'nickname' | 'phone' | 'goal' | 'stage' | 'school';
 
@@ -74,12 +83,27 @@ function SheetButtons({onCancel, onSave}: {onCancel: () => void; onSave: () => v
 }
 
 export default function UserProfileScreen() {
+  const navigation = useNavigation<Navigation>();
   const [values, setValues] = useState(initialValues);
   const [editing, setEditing] = useState<Field | null>(null);
   const [draft, setDraft] = useState('');
   const [avatarColor, setAvatarColor] = useState(avatarColors[0]);
   const [avatarVisible, setAvatarVisible] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [serverProfile, setServerProfile] = useState<UserProfile | null>(null);
+  const [saveError, setSaveError] = useState('');
+
+  useEffect(() => {
+    if (environment.useMocks) return;
+    let active = true;
+    authService.getProfile().then(profile => {
+      if (!active) return;
+      setServerProfile(profile);
+      setValues(current => ({...current, nickname: profile.name, phone: profile.phone, goal: `${profile.examYear}年法律职业资格考试`}));
+      if (profile.avatarColor) setAvatarColor(profile.avatarColor);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (!saved) return undefined;
@@ -96,8 +120,30 @@ export default function UserProfileScreen() {
   const confirmEdit = () => {
     if (!editing) return;
     const value = draft.trim();
-    setValues(current => ({...current, [editing.key]: value || current[editing.key]}));
+    const nextValues = {...values, [editing.key]: value || values[editing.key]};
+    setValues(nextValues);
+    setSaveError('');
+    if (!environment.useMocks && serverProfile && (editing.key === 'nickname' || editing.key === 'goal')) {
+      const year = editing.key === 'goal' ? nextValues.goal.match(/20\d{2}/)?.[0] ?? serverProfile.examYear : serverProfile.examYear;
+      const nextProfile = {...serverProfile, name: nextValues.nickname, examYear: year};
+      authService.updateProfile(nextProfile).then(setServerProfile).catch(error => {
+        setValues(values);
+        setSaveError(error instanceof Error ? error.message : '保存失败，请稍后重试。');
+      });
+    }
     setEditing(null);
+    setSaved(true);
+  };
+
+  const confirmAvatar = () => {
+    setSaveError('');
+    if (!environment.useMocks && serverProfile) {
+      authService.updateProfile({...serverProfile, avatarColor}).then(setServerProfile).catch(error => {
+          setAvatarColor(serverProfile.avatarColor ?? avatarColors[0]);
+          setSaveError(error instanceof Error ? error.message : '头像保存失败，请稍后重试。');
+        });
+    }
+    setAvatarVisible(false);
     setSaved(true);
   };
 
@@ -113,12 +159,11 @@ export default function UserProfileScreen() {
             <Text style={styles.savedText}>已保存修改</Text>
           </View>
         ) : null}
+        {saveError ? <View style={styles.errorBanner} testID="profile-save-error"><Text style={styles.errorText}>{saveError}</Text></View> : null}
 
         <View style={styles.profileCard}>
           <View style={styles.avatarWrap}>
-            <View style={[styles.avatar, {backgroundColor: avatarColor}]} testID="profile-avatar">
-              <Text style={styles.avatarText}>{nicknameInitial}</Text>
-            </View>
+            <View style={[styles.avatar, {backgroundColor: avatarColor}]} testID="profile-avatar">{serverProfile?.avatarUrl ? <Image source={{uri: serverProfile.avatarUrl}} style={styles.avatarImage} /> : <Text style={styles.avatarText}>{nicknameInitial}</Text>}</View>
             <Pressable accessibilityLabel="更换头像颜色" hitSlop={6} onPress={() => setAvatarVisible(true)} style={({pressed}) => [styles.cameraButton, pressed && styles.pressed]} testID="profile-avatar-camera">
               <Camera color={colors.surface} size={11} />
             </Pressable>
@@ -150,18 +195,18 @@ export default function UserProfileScreen() {
 
         <Text style={styles.sectionLabel}>账号安全</Text>
         <View style={styles.securityCard}>
-          {[
+            {[
             {label: '修改密码', description: '上次修改：90天前'},
             {label: '绑定微信', description: '已绑定'},
             {label: '注销账号', description: '删除所有数据', danger: true},
-          ].map((item, index, items) => (
-            <View key={item.label} style={[styles.securityRow, index < items.length - 1 && styles.divider]} testID={`profile-security-${index}`}>
+            ].map((item, index, items) => (
+            <Pressable accessibilityRole="button" key={item.label} onPress={() => navigation.navigate('AccountSecurity')} style={({pressed}) => [styles.securityRow, index < items.length - 1 && styles.divider, pressed && styles.rowPressed]} testID={`profile-security-${index}`}>
               <View style={styles.securityCopy}>
                 <Text style={[styles.securityTitle, item.danger && styles.danger]}>{item.label}</Text>
                 <Text style={styles.securityDescription}>{item.description}</Text>
               </View>
               <ChevronRight color="#C0C5D0" size={16} />
-            </View>
+            </Pressable>
           ))}
         </View>
       </ScrollView>
@@ -224,7 +269,7 @@ export default function UserProfileScreen() {
                 );
               })}
             </View>
-            <Pressable accessibilityRole="button" onPress={() => setAvatarVisible(false)} style={({pressed}) => [styles.confirmButton, pressed && styles.pressed]} testID="profile-avatar-confirm">
+            <Pressable accessibilityRole="button" onPress={confirmAvatar} style={({pressed}) => [styles.confirmButton, pressed && styles.pressed]} testID="profile-avatar-confirm">
               <Text style={styles.saveText}>确认</Text>
             </Pressable>
           </View>
@@ -239,10 +284,13 @@ const styles = StyleSheet.create({
   savedBanner: {height: 42, marginHorizontal: 16, marginTop: 12, paddingHorizontal: 16, borderRadius: radius.md, borderWidth: 1, borderColor: 'rgba(93, 167, 101, 0.3)', backgroundColor: colors.mint, flexDirection: 'row', alignItems: 'center', gap: 8},
   savedIcon: {width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.success},
   savedText: {fontSize: 13, fontWeight: '500', color: '#3A7A46'},
+  errorBanner: {minHeight: 42, marginHorizontal: 16, marginTop: 12, paddingHorizontal: 16, paddingVertical: 10, borderRadius: radius.md, backgroundColor: '#FFF1EE', justifyContent: 'center'},
+  errorText: {fontSize: 12, lineHeight: 18, color: '#B13B25'},
   profileCard: {minHeight: 102, marginHorizontal: 16, marginTop: 16, borderRadius: radius.lg, padding: 16, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center'},
   avatarWrap: {width: 68, height: 68},
   avatar: {width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', ...shadows.card},
   avatarText: {fontSize: 24, fontWeight: '700', color: colors.surface},
+  avatarImage: {width: '100%', height: '100%'},
   cameraButton: {position: 'absolute', right: 0, bottom: 0, width: 24, height: 24, borderRadius: 12, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center', ...shadows.card},
   profileCopy: {flex: 1, marginLeft: 16},
   profileName: {fontSize: 16, fontWeight: '700', color: colors.ink},

@@ -1,0 +1,35 @@
+name: debao_flutter
+description: 得宝法考学习 APP Flutter 重开发工程
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  dio: ^5.8.0+1
+  flutter_riverpod: ^2.6.1
+  flutter_secure_storage: ^9.2.4
+  go_router: ^15.1.2
+  webview_flutter: ^4.14.1
+  url_launcher: ^6.3.2
+  # Polyv's official native live-room viewer. Android resolution requires the
+  # private Maven credentials supplied by Polyv; see docs/POLYV_INTEGRATION.md.
+  polyv_live_scenes: ^0.0.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/

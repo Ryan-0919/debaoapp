@@ -9,6 +9,11 @@ export interface InfrastructureStatus {
   redisReachable: boolean;
 }
 
+export interface SqlStatement {
+  text: string;
+  values?: unknown[];
+}
+
 export class Infrastructure {
   private readonly pool?: Pool;
   private readonly redis?: RedisClient;
@@ -23,14 +28,44 @@ export class Infrastructure {
     return {postgresConfigured: Boolean(this.config.databaseUrl), postgresReachable, redisConfigured: Boolean(this.config.redisUrl), redisReachable};
   }
   async query<T extends Record<string, unknown> = Record<string, unknown>>(text: string, values: unknown[] = []): Promise<{rows: T[]; rowCount: number} | null> {
-    if (!this.pool) return null;
+    if (!this.pool) {
+      if (this.config.nodeEnv === 'production') throw new Error('PostgreSQL is not configured');
+      return null;
+    }
     try {
       const result = await this.pool.query<T>(text, values);
       return {rows: result.rows, rowCount: result.rowCount ?? result.rows.length};
     } catch (error) {
+      if (this.config.nodeEnv === 'production') throw error;
       console.warn('database query skipped:', error instanceof Error ? error.message : error);
       return null;
     }
+  }
+
+  async transaction(statements: SqlStatement[]): Promise<void> {
+    if (!this.pool) {
+      if (this.config.nodeEnv === 'production') throw new Error('PostgreSQL is not configured');
+      return;
+    }
+    const client = await this.pool.connect();
+    try {
+      await client.query('begin');
+      for (const statement of statements) {
+        await client.query(statement.text, statement.values ?? []);
+      }
+      await client.query('commit');
+    } catch (error) {
+      try { await client.query('rollback'); } catch { /* Preserve the original transaction error. */ }
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async assertReady(): Promise<void> {
+    const current = await this.status();
+    if (!current.postgresConfigured || !current.postgresReachable) throw new Error('PostgreSQL is required and must be reachable');
+    if (!current.redisConfigured || !current.redisReachable) throw new Error('Redis is required and must be reachable');
   }
   private async redisReady() {
     if (!this.redis) return false;

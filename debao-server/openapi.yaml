@@ -1,13 +1,961 @@
 openapi: 3.0.3
 info:
   title: Debao API
-  version: 0.1.0
+  version: 0.2.0
   description: Local productization API for the Debao mobile app.
 servers:
   - url: http://127.0.0.1:4000/v1
 security:
   - bearerAuth: []
 paths:
+  /learning-question-media/{file}:
+    get:
+      security: []
+      summary: Stream an uploaded question explanation audio or video file
+      parameters:
+        - name: file
+          in: path
+          required: true
+          schema: {type: string, pattern: '^[a-f0-9-]+\.(mp3|m4a|wav|ogg|mp4|webm|mov)$'}
+        - name: Range
+          in: header
+          required: false
+          schema: {type: string, example: bytes=0-1048575}
+      responses:
+        '200': {description: Complete media file}
+        '206': {description: Requested media byte range}
+        '404': {description: Media file not found}
+  /admin/learning-question-bank/media:
+    post:
+      security: [{cookieAuth: []}]
+      summary: Upload an optional explanation audio or video file for a learning question
+      parameters:
+        - name: x-csrf-token
+          in: header
+          required: true
+          schema: {type: string}
+        - name: x-file-name
+          in: header
+          required: true
+          schema: {type: string, description: URI-encoded original file name}
+      requestBody:
+        required: true
+        content:
+          audio/mpeg: {schema: {type: string, format: binary}}
+          audio/mp4: {schema: {type: string, format: binary}}
+          audio/wav: {schema: {type: string, format: binary}}
+          audio/ogg: {schema: {type: string, format: binary}}
+          video/mp4: {schema: {type: string, format: binary}}
+          video/webm: {schema: {type: string, format: binary}}
+          video/quicktime: {schema: {type: string, format: binary}}
+      responses:
+        '201': {description: Media file uploaded}
+        '413': {description: File exceeds the configured size limit}
+        '422': {description: Unsupported or empty media file}
+  /learning-card-assets/{file}:
+    get:
+      security: []
+      summary: Read an uploaded image or sandboxed HTML card asset
+      parameters:
+        - name: file
+          in: path
+          required: true
+          schema: {type: string, pattern: '^[a-f0-9-]+\.(jpg|jpeg|png|webp|gif|html)$'}
+      responses:
+        '200': {description: Card asset}
+        '404': {description: Card asset not found}
+  /admin/learning-cards/assets:
+    post:
+      security: [{cookieAuth: []}]
+      summary: Upload one card image or HTML file
+      parameters:
+        - name: x-csrf-token
+          in: header
+          required: true
+          schema: {type: string}
+        - name: x-file-name
+          in: header
+          required: true
+          schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          image/jpeg: {schema: {type: string, format: binary}}
+          image/png: {schema: {type: string, format: binary}}
+          image/webp: {schema: {type: string, format: binary}}
+          image/gif: {schema: {type: string, format: binary}}
+          text/html: {schema: {type: string, format: binary}}
+      responses:
+        '201': {description: Card asset uploaded}
+        '413': {description: File too large}
+        '422': {description: Unsupported file}
+  /admin/learning-cards:
+    get:
+      security: [{cookieAuth: []}]
+      summary: List learning cards
+      responses: {'200': {description: Card list and status counts}}
+    post:
+      security: [{cookieAuth: []}]
+      summary: Create a learning card draft
+      responses: {'201': {description: Card draft created}, '422': {description: Invalid card or assets}}
+  /admin/learning-cards/{id}:
+    patch:
+      security: [{cookieAuth: []}]
+      summary: Edit a card and return it to draft
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Card updated}, '404': {description: Card not found}}
+    delete:
+      security: [{cookieAuth: []}]
+      summary: Delete a card draft
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Draft deleted}, '409': {description: Only drafts can be deleted}}
+  /admin/learning-cards/{id}/publish:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Card published}}
+  /admin/learning-cards/{id}/disable:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Card disabled}}
+  /learning-admin/auth/login:
+    post:
+      security: []
+      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [username, password], properties: {username: {type: string}, password: {type: string}}}}}}
+      responses: {'200': {description: Learning admin session created}, '401': {description: Invalid credentials}}
+  /learning/diagnostic:
+    get:
+      security: [{bearerAuth: []}]
+      responses: {'200': {description: Learning diagnostic access state and published questions}, '401': {description: Authentication required}}
+  /learning/diagnostic/submit:
+    post:
+      security: [{bearerAuth: []}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [startedAt, answers], properties: {startedAt: {type: string, format: date-time}, answers: {type: array, items: {type: object, required: [questionId, optionIds], properties: {questionId: {type: string}, optionIds: {type: array, items: {type: string}}}}}}}}}}
+      responses: {'201': {description: First diagnostic submitted}, '403': {description: Product access required}, '409': {description: Diagnostic already completed}, '422': {description: Invalid answers}}
+  /admin/learning-diagnostic/results:
+    get:
+      security: [{cookieAuth: []}]
+      parameters: [{name: keyword, in: query, required: false, schema: {type: string}}]
+      responses: {'200': {description: Submitted diagnostic results with profile scores and teacher assignment}, '401': {description: Authentication required}, '403': {description: Permission required}}
+  /admin/learning-diagnostic/results/{attemptId}/assignment:
+    patch:
+      security: [{cookieAuth: []}]
+      parameters: [{name: attemptId, in: path, required: true, schema: {type: string}}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, properties: {stageId: {type: string, nullable: true}, teacherId: {type: string, nullable: true}}}}}}
+      responses: {'200': {description: Diagnostic stage and teacher assignment updated}, '401': {description: Authentication required}, '403': {description: Permission required}, '404': {description: Diagnostic result, stage, teacher or assignment not found}, '422': {description: Stage and teacher do not match}}
+  /admin/learning-diagnostic/questions:
+    get:
+      security: [{cookieAuth: []}]
+      parameters: [{name: keyword, in: query, required: false, schema: {type: string}}, {name: status, in: query, required: false, schema: {type: string, enum: [draft, published, disabled]}}]
+      responses: {'200': {description: Diagnostic question list}}
+    post:
+      security: [{cookieAuth: []}]
+      responses: {'201': {description: Diagnostic draft created}, '422': {description: Validation error}}
+  /admin/learning-diagnostic/form:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Diagnostic form configuration}}
+    patch:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Diagnostic form saved as draft}, '422': {description: Validation error}}
+  /admin/learning-diagnostic/form/publish:
+    post:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Diagnostic form published}}
+  /admin/learning-diagnostic/form/disable:
+    post:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Diagnostic form disabled}}
+  /admin/learning-diagnostic/dimensions:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Configurable diagnostic dimensions}}
+    post:
+      security: [{cookieAuth: []}]
+      responses: {'201': {description: Diagnostic dimension created}, '422': {description: Validation error}}
+  /admin/learning-diagnostic/dimensions/{code}:
+    patch:
+      security: [{cookieAuth: []}]
+      parameters: [{name: code, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Diagnostic dimension updated}}
+    delete:
+      security: [{cookieAuth: []}]
+      parameters: [{name: code, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Diagnostic dimension deleted}, '409': {description: Dimension is in use}}
+  /admin/learning-diagnostic/questions/{id}:
+    patch:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Diagnostic question updated as draft}, '404': {description: Not found}}
+    delete:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Draft deleted}, '409': {description: Only drafts can be deleted}}
+  /admin/learning-diagnostic/questions/{id}/publish:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Diagnostic question published}}
+  /admin/learning-diagnostic/questions/{id}/disable:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Diagnostic question disabled}}
+  /admin/learning-coach/stages:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Configurable learning stages}}
+    post:
+      security: [{cookieAuth: []}]
+      responses: {'201': {description: Learning stage created}, '422': {description: Validation error}}
+  /admin/learning-coach/class-types:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Configurable learning class types}}
+    post:
+      security: [{cookieAuth: []}]
+      responses: {'201': {description: Learning class type created}, '422': {description: Validation error}}
+  /admin/learning-coach/class-types/{id}:
+    patch:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Learning class type updated}}
+    delete:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Learning class type deleted}, '409': {description: Class type is in use}}
+  /admin/learning-coach/stages/{id}:
+    patch:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Learning stage updated}}
+    delete:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Learning stage deleted}, '409': {description: Learning stage is in use}}
+  /admin/learning-coach/stages/{id}/teachers:
+    get:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Teachers for one isolated learning stage}}
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'201': {description: Teacher created for one learning stage}}
+  /admin/learning-coach/stages/{id}/plan:
+    get:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Stage learning plan rule and content items}}
+    patch:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Stage learning plan rule updated}, '422': {description: Validation error}}
+  /admin/learning-coach/stages/{id}/plan/preview:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Schedule preview for the stage plan}, '422': {description: Validation error}}
+  /admin/learning-coach/stages/{id}/plan/publish:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Stage learning plan published}, '409': {description: Stage plan has no content}}
+  /admin/learning-coach/stages/{id}/plan/items:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [contentType, title, minutes], properties: {contentType: {type: string, enum: [course, question, card, task], description: "course 表示站外课程，仅保存课程文案，不关联站内视频"}, contentId: {type: string}, title: {type: string}, description: {type: string, description: "站外课程文案或学习内容说明"}, minutes: {type: integer, minimum: 1}, sortOrder: {type: integer}, required: {type: boolean}}}}}}
+      responses: {'201': {description: Stage learning plan content item created}, '422': {description: Validation error}}
+  /admin/learning-coach/stages/{id}/plan/items/{itemId}:
+    patch:
+      security: [{cookieAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - {name: itemId, in: path, required: true, schema: {type: string}}
+      responses: {'200': {description: Stage learning plan content item updated}, '404': {description: Item not found}}
+    delete:
+      security: [{cookieAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - {name: itemId, in: path, required: true, schema: {type: string}}
+      responses: {'200': {description: Stage learning plan content item deleted}, '404': {description: Item not found}}
+  /admin/learning-coach/teachers/{id}:
+    patch:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Teacher updated}}
+    delete:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Teacher deleted}, '409': {description: Teacher is in use}}
+  /grading/papers:
+    get:
+      security: [{bearerAuth: []}]
+      parameters: [{name: subjectId, in: query, required: false, schema: {type: string}}]
+      responses: {'200': {description: Published grading paper list}}
+  /grading/papers/{id}:
+    get:
+      security: [{bearerAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Grading paper with questions}, '404': {description: Paper not found}}
+  /grading/submissions:
+    get:
+      security: [{bearerAuth: []}]
+      responses: {'200': {description: Current user's grading records}}
+    post:
+      security: [{bearerAuth: []}]
+      parameters: [{name: Idempotency-Key, in: header, required: true, schema: {type: string}}]
+      responses: {'201': {description: Grading submission created}, '422': {description: Validation error}}
+  /grading/submissions/{id}/report:
+    get:
+      security: [{bearerAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Published grading report}, '404': {description: Report not published}}
+  /admin/auth/login:
+    post:
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: {type: string, minLength: 1, maxLength: 120}
+                password: {type: string, minLength: 1}
+      responses: {'200': {description: Admin session created}, '401': {description: Invalid admin credentials}, '422': {description: Validation error}}
+  /admin/auth/logout:
+    post:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Admin session revoked}, '401': {description: Admin authentication required}, '403': {description: Invalid CSRF token}}
+  /admin/auth/mfa/verify:
+    post:
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [challengeToken, code]
+              properties:
+                challengeToken: {type: string}
+                code: {type: string, pattern: '^\d{6}$'}
+      responses: {'200': {description: MFA verified and admin session created}, '401': {description: Invalid or expired MFA challenge}}
+  /admin/me/mfa/enroll:
+    post:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: MFA enrollment secret}, '401': {description: Admin authentication required}}
+  /admin/me:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Current administrator}, '401': {description: Admin authentication required}}
+  /admin/navigation:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Permission-filtered navigation}, '401': {description: Admin authentication required}}
+  /admin/admins:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Administrator list}, '401': {description: Admin authentication required}}
+  /admin/admins/{id}/mfa/reset:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [reason, confirmation], properties: {reason: {type: string, minLength: 4}, confirmation: {type: string, enum: [RESET]}}}}}}
+      responses: {'200': {description: MFA reset and sessions revoked}, '403': {description: Forbidden}}
+  /admin/roles:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Role and permission catalog}, '401': {description: Admin authentication required}}
+  /admin/dashboard:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Dashboard metrics}, '401': {description: Admin authentication required}}
+  /admin/users:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Admin user list}, '401': {description: Admin authentication required}}
+    post:
+      security: [{cookieAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, phone, examYear]
+              properties:
+                name: {type: string, minLength: 2, maxLength: 80}
+                phone: {type: string, pattern: '^1\d{10}$'}
+                examYear: {type: string, pattern: '^20\d{2}$'}
+      responses: {'201': {description: User created}, '403': {description: Missing users.write permission}, '409': {description: Phone already exists}, '422': {description: Validation error}}
+  /admin/users/{id}:
+    get:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Admin user detail}, '401': {description: Admin authentication required}, '404': {description: User not found}}
+    delete:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason, confirmation]
+              properties:
+                reason: {type: string, minLength: 4, maxLength: 500}
+                confirmation: {type: string, enum: [DELETE]}
+      responses: {'200': {description: User removed, sessions revoked and business records retained}, '403': {description: Missing users.write permission}, '404': {description: User not found}, '422': {description: Validation error}}
+  /admin/users/{id}/restrictions:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, reason]
+              properties:
+                type: {type: string, enum: [login, community]}
+                reason: {type: string, minLength: 2}
+                expiresAt: {type: string, format: date-time}
+      responses: {'200': {description: Restriction applied}, '401': {description: Admin authentication required}, '422': {description: Validation error}}
+  /admin/users/{id}/sessions/revoke:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Sessions revoked}, '401': {description: Admin authentication required}}
+  /admin/users/{id}/entitlements/adjust:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [courseId, type, reason]
+              properties:
+                courseId: {type: string}
+                type: {type: string, enum: [grant, revoke]}
+                reason: {type: string, minLength: 2}
+                sourceReference: {type: string}
+                expiresAt: {type: string, format: date-time}
+      responses: {'200': {description: Entitlement adjustment}, '401': {description: Admin authentication required}, '404': {description: Course not found}, '422': {description: Validation error}}
+  /admin/content/subjects:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Subject and chapter tree}, '401': {description: Admin authentication required}}
+  /admin/questions:
+    get:
+      security: [{cookieAuth: []}]
+      parameters:
+        - {name: subjectId, in: query, required: false, schema: {type: string}}
+        - {name: chapterId, in: query, required: false, schema: {type: string}}
+        - {name: pointId, in: query, required: false, schema: {type: string}}
+        - {name: questionType, in: query, required: false, schema: {type: string, enum: [true_false, single, multiple, indeterminate]}}
+      responses: {'200': {description: Question list}, '401': {description: Admin authentication required}}
+    post:
+      security: [{cookieAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stem, options, answer, questionType, analysis, subjectId, chapterId, pointId]
+              properties:
+                stem: {type: string, minLength: 5, maxLength: 5000}
+                options: {type: array, minItems: 2, items: {type: string}}
+                answer: {type: integer, minimum: 0}
+                answerIndexes: {type: array, minItems: 1, items: {type: integer, minimum: 0}, description: Complete correct-answer set}
+                questionType: {type: string, enum: [true_false, single, multiple, indeterminate], default: single}
+                analysis: {type: string}
+                subjectId: {type: string, description: Subject identifier}
+                chapterId: {type: string, description: Objective chapter identifier}
+                pointId: {type: string, description: Knowledge-point identifier}
+      responses: {'201': {description: Draft question created}, '401': {description: Admin authentication required}, '422': {description: Validation error}}
+  /admin/questions/{id}/publish:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Question published}, '401': {description: Admin authentication required}, '404': {description: Question not found}}
+  /admin/questions/{id}:
+    patch:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                stem: {type: string}
+                options: {type: array, items: {type: string}}
+                answer: {type: integer}
+                answerIndexes: {type: array, items: {type: integer, minimum: 0}}
+                questionType: {type: string, enum: [true_false, single, multiple, indeterminate]}
+                analysis: {type: string}
+                subjectId: {type: string, nullable: true, description: Subject identifier; null or empty string clears the subject}
+      responses: {'200': {description: Question updated}, '401': {description: Admin authentication required}, '404': {description: Question not found}, '422': {description: Validation error}}
+  /admin/questions/{id}/versions:
+    get:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Immutable question version history}, '401': {description: Admin authentication required}, '404': {description: Question not found}}
+  /admin/courses:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Admin course list}, '401': {description: Admin authentication required}}
+    post:
+      security: [{cookieAuth: []}]
+      responses: {'201': {description: Course draft created}, '401': {description: Admin authentication required}, '422': {description: Validation error}}
+  /admin/courses/{id}/publish:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Course published}, '401': {description: Admin authentication required}, '404': {description: Course not found}}
+  /admin/courses/{id}/sections:
+    get:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Course section and lesson tree}}
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'201': {description: Course section created}}
+  /admin/courses/{id}/lessons:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'201': {description: Course lesson created}}
+  /admin/courses/live-sessions:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Live session list}}
+    post:
+      security: [{cookieAuth: []}]
+      responses: {'201': {description: Live session created}}
+  /admin/courses/live-sessions/{id}/cancel:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Live session cancelled}}
+  /admin/grading:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Grading queue}, '401': {description: Admin authentication required}}
+  /admin/grading/stats:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Grading workflow statistics}}
+  /admin/grader-accounts:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Grader accounts and subject permissions}}
+    post:
+      security: [{cookieAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, displayName, password]
+              properties:
+                username: {type: string}
+                displayName: {type: string}
+                password: {type: string, minLength: 8}
+                subjectIds: {type: array, items: {type: string}}
+      responses: {'201': {description: Grader account created}, '409': {description: Username already exists}}
+  /admin/grader-accounts/{id}:
+    patch:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Grader account updated}, '404': {description: Grader account not found}}
+  /admin/grading/{id}:
+    get:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Grading workflow detail}, '404': {description: Grading submission not found}}
+  /admin/grading/{id}/queue-manual:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'201': {description: Manual assignment created}, '409': {description: Submission is not queueable}}
+  /admin/grading/{id}/assign:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [graderId, reason]
+              properties:
+                graderId: {type: string}
+                dueAt: {type: string, format: date-time}
+                reason: {type: string}
+      responses: {'200': {description: Task assigned to grader}, '403': {description: Subject permission denied}, '409': {description: Submission is not assignable}}
+  /admin/grading/{id}/reassign:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [graderId, reason]
+              properties:
+                graderId: {type: string}
+                dueAt: {type: string, format: date-time}
+                reason: {type: string}
+      responses: {'200': {description: Task reassigned and previous assignment cancelled}, '403': {description: Subject permission denied}, '409': {description: Submission is not assignable}}
+  /admin/grading/{id}/publish:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Manual grading report published}, '409': {description: Manual review required}}
+  /admin/grading/{id}/self-review:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [totalScore, feedback, improvementAdvice]
+              properties:
+                totalScore: {type: number}
+                feedback: {type: string}
+                improvementAdvice: {type: string}
+                pointResults: {type: array, items: {type: object}}
+                answerAnnotations: {type: array, items: {type: object}}
+                missedPointIds: {type: array, items: {type: string}}
+      responses: {'201': {description: Administrator review submitted for publication}, '409': {description: Submission is not available for administrator review}}
+  /admin/grading/{id}/recall:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: {type: string}
+      responses: {'200': {description: Published report recalled into a new manual assignment}, '409': {description: Report is not published}}
+  /admin/content/questions/{id}/grading-rubric:
+    get:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Question grading rubric}}
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'201': {description: Grading rubric created}, '422': {description: Rubric score integrity failed}}
+    patch:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Grading rubric updated}, '422': {description: Rubric score integrity failed}}
+  /admin/grading/{id}/claim:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Grading task claimed}, '409': {description: Already claimed}}
+  /admin/grading/{id}/submit:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Grading result submitted}, '409': {description: Not assigned}}
+  /admin/products:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Admin product list}, '401': {description: Admin authentication required}}
+    post:
+      security: [{cookieAuth: []}]
+      responses: {'201': {description: Product draft created}, '401': {description: Admin authentication required}, '422': {description: Validation error}}
+  /admin/products/{id}:
+    patch:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Product updated}, '409': {description: Stale version}}
+  /admin/products/{id}/price-history:
+    get:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Immutable product price history}, '404': {description: Product not found}}
+  /admin/products/skus:
+    get:
+      security: [{cookieAuth: []}]
+      parameters:
+        - {name: productId, in: query, required: false, schema: {type: string}}
+      responses: {'200': {description: SKU and inventory list}, '401': {description: Admin authentication required}}
+  /admin/products/{id}/skus:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, price, stock]
+              properties:
+                name: {type: string}
+                price: {type: number, minimum: 0}
+                stock: {type: integer, minimum: 0}
+                status: {type: string, enum: [active, disabled]}
+                attributes: {type: object, additionalProperties: {type: string}}
+      responses: {'201': {description: SKU created}, '404': {description: Product not found}, '422': {description: Validation error}}
+  /admin/products/{id}/skus/{skuId}:
+    patch:
+      security: [{cookieAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - {name: skuId, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: {type: string}
+                price: {type: number, minimum: 0}
+                stock: {type: integer, minimum: 0}
+                status: {type: string, enum: [active, disabled]}
+                attributes: {type: object, additionalProperties: {type: string}}
+      responses: {'200': {description: SKU updated}, '404': {description: SKU not found}, '422': {description: Validation error}}
+  /admin/refunds:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Refund queue}, '401': {description: Admin authentication required}}
+  /admin/refunds/{id}/approve:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Refund approved}, '401': {description: Admin authentication required}, '404': {description: Refund not found}, '409': {description: Two distinct reviews are required for high-value refunds}, '503': {description: Payment provider unavailable}}
+  /admin/refunds/{id}/review:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: {type: string, minLength: 2, maxLength: 500}
+      responses: {'200': {description: Review recorded; second review makes the refund ready for approval}, '401': {description: Admin authentication required}, '404': {description: Refund not found}, '409': {description: Duplicate reviewer or review not applicable}, '422': {description: Validation error}}
+  /admin/refunds/{id}/reject:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: {type: string, minLength: 2, maxLength: 500}
+      responses: {'200': {description: Refund rejected}, '401': {description: Admin authentication required}, '404': {description: Refund not found}, '409': {description: Refund already completed}, '422': {description: Validation error}}
+  /admin/community/posts:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Moderated post list}, '401': {description: Admin authentication required}}
+  /admin/community/reports:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Moderation report list}, '401': {description: Admin authentication required}}
+  /admin/community/reports/{id}/resolve:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resolution]
+              properties:
+                resolution: {type: string, minLength: 2, maxLength: 2000}
+                reason: {type: string, minLength: 2, maxLength: 2000}
+                action: {type: string, enum: [none, hide, delete, warn, restrict, ban]}
+                targetType: {type: string, enum: [post, comment, user]}
+                targetId: {type: string}
+                durationSeconds: {type: integer, minimum: 1, maximum: 31536000}
+      responses: {'200': {description: Report resolved and moderation action recorded}, '401': {description: Admin authentication required}, '404': {description: Report or target not found}, '422': {description: Validation error}}
+  /admin/community/moderation-actions:
+    get:
+      security: [{cookieAuth: []}]
+      parameters:
+        - {name: targetType, in: query, required: false, schema: {type: string, enum: [post, comment, user]}}
+        - {name: targetId, in: query, required: false, schema: {type: string}}
+      responses: {'200': {description: Immutable moderation action history}}
+  /admin/announcements:
+    get:
+      security: [{cookieAuth: []}]
+      parameters:
+        - {name: keyword, in: query, required: false, schema: {type: string, maxLength: 160}}
+        - {name: status, in: query, required: false, schema: {type: string, enum: [draft, scheduled, published, expired, withdrawn]}}
+        - {name: audienceType, in: query, required: false, schema: {type: string, enum: [all, exam_year]}}
+        - {name: isPinned, in: query, required: false, schema: {type: boolean}}
+        - {name: page, in: query, required: false, schema: {type: integer, minimum: 1, default: 1}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+        - {name: cursor, in: query, required: false, schema: {type: integer, minimum: 0}}
+      responses:
+        '200':
+          description: Announcement list with effective lifecycle status and reach statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total]
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/AdminAnnouncement'}}
+                  total: {type: integer}
+                  page: {type: integer}
+                  pageSize: {type: integer}
+                  nextCursor: {type: string}
+        '401': {description: Admin authentication required}
+    post:
+      security: [{cookieAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminAnnouncementInput'}
+      responses: {'201': {description: Announcement draft, scheduled delivery, or published announcement created}, '422': {description: Invalid content, audience, link, or delivery window}}
+  /admin/announcements/stats:
+    get:
+      security: [{cookieAuth: []}]
+      responses:
+        '200':
+          description: Unfiltered announcement lifecycle and reach totals
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [total, draft, scheduled, published, expired, withdrawn, reads, audience, readRate]
+                properties:
+                  total: {type: integer, minimum: 0}
+                  draft: {type: integer, minimum: 0}
+                  scheduled: {type: integer, minimum: 0}
+                  published: {type: integer, minimum: 0}
+                  expired: {type: integer, minimum: 0}
+                  withdrawn: {type: integer, minimum: 0}
+                  reads: {type: integer, minimum: 0}
+                  audience: {type: integer, minimum: 0}
+                  readRate: {type: number, minimum: 0, maximum: 100}
+        '401': {description: Admin authentication required}
+  /admin/announcements/{id}:
+    patch:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminAnnouncementInput'}
+      responses: {'200': {description: Draft or scheduled announcement updated}, '409': {description: Published announcement is immutable}, '422': {description: Scheduled announcements must retain a future start time; immediate publishing uses the publish action}}
+    delete:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Draft deleted}, '409': {description: Only drafts can be deleted}}
+  /admin/announcements/{id}/publish:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                publishNow: {type: boolean, default: false, description: Ignore a future start time and publish immediately}
+      responses: {'200': {description: Announcement published immediately or confirmed for scheduled delivery}, '409': {description: Current lifecycle status cannot be published}}
+  /admin/announcements/{id}/withdraw:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: {type: string, minLength: 2, maxLength: 500}
+      responses: {'200': {description: Scheduled or published announcement withdrawn and audit reason recorded}, '409': {description: Current lifecycle status cannot be withdrawn}}
+  /admin/ai/providers:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: AI provider health}, '401': {description: Admin authentication required}}
+  /admin/ai/quotas:
+    get:
+      security: [{cookieAuth: []}]
+      parameters:
+        - {name: keyword, in: query, required: false, schema: {type: string}}
+        - {name: page, in: query, required: false, schema: {type: integer, minimum: 1}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 200}}
+      responses: {'200': {description: AI quota list with current usage}, '401': {description: Admin authentication required}}
+  /admin/ai/quotas/{id}:
+    patch:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: AI quota updated}}
+  /admin/analytics/overview:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Analytics overview}, '401': {description: Admin authentication required}}
+  /admin/exports:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Export task list}}
+    post:
+      security: [{cookieAuth: []}]
+      responses: {'202': {description: Export task queued}}
+  /admin/exports/{id}:
+    get:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses: {'200': {description: Export task status}, '404': {description: Export task not found}}
+  /admin/exports/{id}/retry:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses: {'202': {description: Export task requeued}, '409': {description: Export task is not retryable}}
+  /admin/exports/{id}/download:
+    get:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses: {'200': {description: CSV export download, content: {text/csv: {schema: {type: string, format: binary}}}}, '404': {description: Export task not found}, '410': {description: Export expired}}
   /health:
     get:
       security: []
@@ -15,61 +963,308 @@ paths:
         '200': {description: Service health}
   /me:
     get: {responses: {'200': {description: Current profile}, '401': {description: Unauthorized}}}
-    patch: {responses: {'200': {description: Updated profile}, '422': {description: Validation error}}}
+    patch:
+      requestBody: {$ref: '#/components/requestBodies/UpdateProfile'}
+      responses: {'200': {description: Updated profile}, '422': {description: Validation error}}
+  /me/settings:
+    get:
+      responses: {'200': {description: Current notification preferences}, '401': {description: Unauthorized}}
+    patch:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                learningReminders: {type: boolean}
+                courseUpdates: {type: boolean}
+                orderNotifications: {type: boolean}
+      responses: {'200': {description: Updated notification preferences}, '401': {description: Unauthorized}, '422': {description: Validation error}}
+  /me/identities:
+    get: {responses: {'200': {description: Bound sign-in identities}}}
+  /me/identities/wechat:
+    post:
+      requestBody: {$ref: '#/components/requestBodies/BindCurrentWechat'}
+      responses: {'201': {description: WeChat identity linked}, '401': {description: Invalid or consumed SMS code}, '409': {description: Identity already bound}}
+    delete:
+      requestBody: {$ref: '#/components/requestBodies/SmsCode'}
+      responses: {'200': {description: WeChat identity removed}, '401': {description: Invalid or consumed SMS code}, '404': {description: Identity not found}}
   /auth/logout:
     post: {responses: {'200': {description: Session revoked}}}
   /auth/send-code:
-    post: {security: [], responses: {'200': {description: SMS adapter accepted}, '422': {description: Invalid phone}}}
+    post:
+      security: []
+      requestBody: {$ref: '#/components/requestBodies/SendCode'}
+      responses: {'200': {description: SMS challenge created for five minutes}, '429': {description: Send rate limited}, '422': {description: Invalid phone or purpose}, '503': {$ref: '#/components/responses/AdapterUnavailable'}}
   /auth/login:
-    post: {security: [], responses: {'200': {description: Access and refresh tokens}, '401': {description: Invalid code}}}
+    post:
+      security: []
+      requestBody: {$ref: '#/components/requestBodies/Login'}
+      responses: {'200': {description: Access and refresh tokens}, '401': {description: 'Code missing, invalid, expired or consumed'}, '429': {description: Verification attempts exceeded}}
+  /auth/providers:
+    get:
+      security: []
+      responses: {'200': {description: Server-side authentication provider availability}}
+  /auth/wechat:
+    post:
+      security: []
+      requestBody: {$ref: '#/components/requestBodies/WechatLogin'}
+      responses: {'200': {description: Session or phone-binding challenge}, '503': {$ref: '#/components/responses/AdapterUnavailable'}}
+  /auth/one-click:
+    post:
+      security: []
+      requestBody: {$ref: '#/components/requestBodies/OneClickLogin'}
+      responses: {'200': {description: Authenticated session}, '401': {description: Invalid binding ticket}, '503': {$ref: '#/components/responses/AdapterUnavailable'}}
+  /auth/wechat/bind-phone:
+    post:
+      security: []
+      requestBody: {$ref: '#/components/requestBodies/BindWechatPhone'}
+      responses: {'200': {description: Bound and authenticated session}, '401': {description: Invalid code or binding ticket}}
   /auth/refresh:
-    post: {security: [], responses: {'200': {description: Refreshed access token}, '401': {description: Invalid refresh token}}}
+    post:
+      security: []
+      requestBody: {$ref: '#/components/requestBodies/RefreshSession'}
+      responses: {'200': {description: Rotated access and refresh tokens}, '401': {description: Invalid or replayed refresh token}}
+  /account/identity/link-code:
+    post: {responses: {'200': {description: Current-phone verification challenge for linking}, '409': {description: WeChat already linked}}}
+  /account/identity/code:
+    post: {responses: {'200': {description: Current-phone verification challenge for unlinking}, '404': {description: WeChat not linked}}}
+  /account/phone/code:
+    post:
+      requestBody: {$ref: '#/components/requestBodies/PhoneChangeCode'}
+      responses: {'200': {description: Current or new phone challenge created}, '409': {description: New phone already bound}, '429': {description: Send rate limited}}
+  /account/phone/change:
+    post:
+      requestBody: {$ref: '#/components/requestBodies/PhoneChange'}
+      responses: {'200': {description: Phone changed after both challenges are verified}, '401': {description: Either code is invalid}, '409': {description: New phone already bound}}
   /account/deletion:
-    post: {responses: {'200': {description: Account deletion scheduled}}}
+    get: {responses: {'200': {description: Current deletion status and cooling-off deadline}}}
+    post:
+      requestBody: {$ref: '#/components/requestBodies/SmsCode'}
+      responses: {'200': {description: Account deletion scheduled with a seven-day cooling-off period}, '409': {description: Deletion already scheduled}}
+  /account/deletion/code:
+    post: {responses: {'200': {description: Current-phone verification challenge for deletion}}}
+  /account/deletion/cancel:
+    post: {responses: {'200': {description: Pending deletion cancelled}, '409': {description: No pending deletion}}}
   /devices:
-    get: {responses: {'200': {description: User devices}}}
-    post: {responses: {'201': {description: Device registered}}}
+    get: {responses: {'200': {description: User devices with current-device marker}}}
+    post:
+      requestBody: {$ref: '#/components/requestBodies/RegisterDevice'}
+      responses: {'201': {description: Device registered}, '409': {description: Device belongs to another user}}
   /devices/{id}:
     delete:
       parameters: [{name: id, in: path, required: true, schema: {type: string}}]
-      responses: {'200': {description: Device removed}}
+      responses: {'200': {description: Device removed and all matching sessions revoked}, '404': {description: Device not found}}
   /question-subjects:
     get: {responses: {'200': {description: Subject list}}}
-  /question-drafts/{id}:
+  /question-sessions:
+    get:
+      parameters:
+        - {name: status, in: query, required: false, schema: {type: string, enum: [in_progress, submitted, expired]}}
+      responses:
+        '200': {description: Current user's objective quiz sessions}
+        '401': {description: Unauthorized}
+        '422': {description: Invalid session status}
+    post:
+      parameters:
+        - {name: Idempotency-Key, in: header, required: false, schema: {type: string, minLength: 8, maxLength: 120}}
+      requestBody: {$ref: '#/components/requestBodies/CreateQuestionSession'}
+      responses:
+        '201': {description: Objective quiz session created}
+        '200': {description: Existing session returned for a reused idempotency key}
+        '401': {description: Unauthorized}
+        '404': {description: No published questions or paper not found}
+        '422': {description: Invalid session parameters}
+  /question-sessions/{id}:
+    get:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses:
+        '200': {description: Objective quiz session detail}
+        '401': {description: Unauthorized}
+        '404': {description: Session not found}
+  /question-sessions/{id}/answers:
     put:
       parameters: [{name: id, in: path, required: true, schema: {type: string}}]
-      responses: {'200': {description: Draft saved}}
+      requestBody: {$ref: '#/components/requestBodies/SaveQuestionAnswer'}
+      responses:
+        '200': {description: Answer draft saved}
+        '401': {description: Unauthorized}
+        '404': {description: Session or question not found}
+        '409': {description: Session closed or expired}
+        '422': {description: Invalid answer}
+    patch:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody: {$ref: '#/components/requestBodies/SaveQuestionAnswer'}
+      responses:
+        '200': {description: Answer draft saved}
+        '401': {description: Unauthorized}
+        '404': {description: Session or question not found}
+        '409': {description: Session closed or expired}
+        '422': {description: Invalid answer}
+  /question-sessions/{id}/answers/{questionId}:
+    put:
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - {name: questionId, in: path, required: true, schema: {type: string}}
+      requestBody: {$ref: '#/components/requestBodies/SaveQuestionAnswer'}
+      responses:
+        '200': {description: Answer draft saved}
+        '401': {description: Unauthorized}
+        '404': {description: Session or question not found}
+        '409': {description: Session closed or expired}
+        '422': {description: Invalid answer}
+    patch:
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - {name: questionId, in: path, required: true, schema: {type: string}}
+      requestBody: {$ref: '#/components/requestBodies/SaveQuestionAnswer'}
+      responses:
+        '200': {description: Answer draft saved}
+        '401': {description: Unauthorized}
+        '404': {description: Session or question not found}
+        '409': {description: Session closed or expired}
+        '422': {description: Invalid answer}
+  /question-sessions/{id}/submit:
+    post:
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - {name: Idempotency-Key, in: header, required: true, schema: {type: string, minLength: 8, maxLength: 120}}
+      requestBody: {$ref: '#/components/requestBodies/SubmitQuestionSession'}
+      responses:
+        '201': {description: Objective report generated}
+        '200': {description: Existing report returned for an idempotent retry}
+        '401': {description: Unauthorized}
+        '404': {description: Session not found}
+        '409': {description: Session expired or idempotency conflict}
+        '422': {description: Missing or invalid idempotency key}
+  /question-sessions/{id}/report:
+    get:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses:
+        '200': {description: Objective report}
+        '401': {description: Unauthorized}
+        '404': {description: Report not ready or session not found}
+  /question-drafts/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      security: [{bearerAuth: []}]
+      description: Returns the current user's saved answer draft. A missing draft is represented by an empty answer array.
+      responses:
+        '200': {description: Draft state, content: {application/json: {schema: {$ref: '#/components/schemas/QuestionDraftEnvelope'}}}}
+        '401': {description: Unauthorized}
+        '404': {description: Question is unavailable or not published}
+    put:
+      security: [{bearerAuth: []}]
+      requestBody: {$ref: '#/components/requestBodies/SaveQuestionDraft'}
+      responses:
+        '200': {description: Draft saved, content: {application/json: {schema: {$ref: '#/components/schemas/QuestionDraftSavedEnvelope'}}}}
+        '401': {description: Unauthorized}
+        '404': {description: Question is unavailable or not published}
+        '422': {description: Path and body questionId must match and answers must be an array}
   /question-submissions:
-    post: {responses: {'200': {description: Submission accepted}, '422': {description: Invalid answer}}}
+    post:
+      requestBody: {$ref: '#/components/requestBodies/QuestionSubmission'}
+      parameters:
+        - {name: Idempotency-Key, in: header, required: false, schema: {type: string, minLength: 8, maxLength: 120}, description: Retries with the same key return the original submission}
+      responses: {'200': {description: Submission accepted or idempotent replay}, '409': {description: Idempotency key was reused with a different submission}, '422': {description: Invalid answer}}
   /questions:
-    get: {responses: {'200': {description: Paginated questions}}}
+    get:
+      parameters:
+        - {name: subjectId, in: query, required: false, schema: {type: string}}
+        - {name: page, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 1000000, pattern: '^(?:0|[1-9]\\d*)$'}, description: Strict positive integer page number}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 50, pattern: '^(?:0|[1-9]\\d*)$'}, description: Strict integer page size}
+      responses:
+        '200': {description: Paginated published questions}
+        '401': {description: Unauthorized}
+        '422': {description: Invalid pagination parameter}
   /questions/{id}:
     get:
       parameters: [{name: id, in: path, required: true, schema: {type: string}}]
       responses: {'200': {description: Question detail}}
   /question-records:
-    get: {responses: {'200': {description: Answer records}}}
+    get:
+      parameters:
+        - {name: page, in: query, required: false, schema: {type: integer, minimum: 1}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 50}}
+        - {name: subjectId, in: query, required: false, schema: {type: string}}
+        - {name: mode, in: query, required: false, schema: {type: string, enum: [objective, subjective]}}
+      responses:
+        '200':
+          description: Paginated answer records with filtered cumulative answered and correct totals
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/ApiEnvelope'}
+                  - type: object
+                    properties:
+                      data: {$ref: '#/components/schemas/QuestionRecordPage'}
   /question-submissions/{id}/report:
     get:
       parameters: [{name: id, in: path, required: true, schema: {type: string}}]
-      responses: {'200': {description: Submission report}}
+      responses:
+        '200': {description: Submission report including the immutable question snapshot used at submission time}
+        '401': {description: Unauthorized}
+        '404': {description: Submission not found}
   /courses:
-    get: {responses: {'200': {description: Course list}}}
+    get:
+      responses:
+        '200':
+          description: Authenticated course list with learner progress
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/ApiEnvelope'}
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: {$ref: '#/components/schemas/Course'}
   /courses/{id}:
     get:
       parameters: [{name: id, in: path, required: true, schema: {type: string}}]
-      responses: {'200': {description: Course detail}}
+      responses:
+        '200':
+          description: Course detail with learner progress; data may be null for a missing course
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/ApiEnvelope'}
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        nullable: true
+                        allOf:
+                          - {$ref: '#/components/schemas/Course'}
+        '404': {description: Course not found}
   /courses/{id}/entitlement:
     get:
       parameters: [{name: id, in: path, required: true, schema: {type: string}}]
-      responses: {'200': {description: Course entitlement}}
+      responses:
+        '200':
+          description: Current user's course entitlement
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/ApiEnvelope'}
+                  - type: object
+                    properties:
+                      data: {$ref: '#/components/schemas/CourseEntitlement'}
   /courses/{id}/progress:
     post:
       parameters: [{name: id, in: path, required: true, schema: {type: string}}]
-      responses: {'200': {description: Progress updated}}
+      responses: {'200': {description: Progress updated}, '404': {description: Course is unavailable}, '422': {description: Progress must be between 0 and 100}}
   /orders:
     get: {responses: {'200': {description: Order list}}}
-    post: {responses: {'201': {description: Order created}, '422': {description: Invalid product}}}
+    post:
+      requestBody: {$ref: '#/components/requestBodies/CreateOrder'}
+      responses: {'201': {description: Order created}, '200': {description: Idempotent replay}, '409': {description: clientRequestId conflicts with another account or product}, '422': {description: Invalid product}}
   /orders/{id}:
     get:
       parameters: [{name: id, in: path, required: true, schema: {type: string}}]
@@ -78,24 +1273,109 @@ paths:
     post:
       parameters: [{name: id, in: path, required: true, schema: {type: string}}]
       responses: {'200': {description: Payment adapter result}}
+  /orders/{id}/events:
+    get:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Immutable order event timeline}, '404': {description: Order not found}}
+  /orders/{id}/cancel:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Pending order cancelled}, '409': {description: Order is not cancellable}}
+  /orders/{id}/refund:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [reason], properties: {reason: {type: string, minLength: 2, maxLength: 500}}}
+      responses: {'201': {description: Refund request created}, '200': {description: Existing refund request}, '409': {description: Order is not refundable}}
+  /refunds:
+    get: {responses: {'200': {description: Current user's refund requests}}}
   /notifications:
     get: {responses: {'200': {description: Notification list}}}
+  /notifications/{id}/read:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Notification marked read}}
+  /notifications/read-all:
+    post: {responses: {'200': {description: All current user's notifications marked read}}}
   /notifications/permission:
     post: {responses: {'200': {description: Native permission result}}}
   /ai/reply:
-    post: {responses: {'200': {description: Local AI adapter reply}}}
+    post:
+      requestBody: {$ref: '#/components/requestBodies/AIReply'}
+      responses:
+        '200':
+          description: AI provider reply
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/ApiEnvelope'}
+                  - type: object
+                    properties:
+                      data: {$ref: '#/components/schemas/AIReply'}
+        '503': {$ref: '#/components/responses/AdapterUnavailable'}
+  /ai/conversations:
+    get:
+      parameters:
+        - {name: cursor, in: query, required: false, schema: {type: string}}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+      responses: {'200': {description: User conversation page}}
+    post:
+      parameters: [{name: Idempotency-Key, in: header, required: false, schema: {type: string, minLength: 8, maxLength: 160}}]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {type: object, properties: {title: {type: string, maxLength: 160}, clientRequestId: {type: string, minLength: 8, maxLength: 160}}}
+      responses: {'201': {description: Conversation created}, '200': {description: Idempotent replay}}
+  /ai/conversations/{id}:
+    get:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Conversation detail}, '404': {description: Conversation not found}}
+    patch:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [title], properties: {title: {type: string, maxLength: 160}}}}}}
+      responses: {'200': {description: Conversation renamed}}
+    delete:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Conversation soft-deleted}}
+  /ai/conversations/{id}/messages:
+    get:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Conversation message history}}
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}, {name: Idempotency-Key, in: header, required: false, schema: {type: string, minLength: 8, maxLength: 160}}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [content], properties: {content: {type: string, minLength: 1, maxLength: 12000}, clientRequestId: {type: string}}}}}}
+      responses: {'201': {description: User and assistant messages}, '200': {description: Idempotent replay}, '503': {$ref: '#/components/responses/AdapterUnavailable'}}
   /media/prepare:
-    post: {responses: {'200': {description: Media authorization result}}}
+    post:
+      requestBody: {$ref: '#/components/requestBodies/MediaPrepare'}
+      responses: {'200': {description: Media authorization result, content: {application/json: {schema: {$ref: '#/components/schemas/ApiEnvelope'}}}}, '503': {$ref: '#/components/responses/AdapterUnavailable'}}
   /learning/plans:
-    get: {responses: {'200': {description: Learning plans}}}
-    post: {responses: {'201': {description: Learning plan created}}}
+    get:
+      responses: {'200': {description: Learning plans}}
+    post:
+      requestBody: {$ref: '#/components/requestBodies/CreateLearningPlan'}
+      responses: {'201': {description: Learning plan created}, '422': {description: Validation error}}
   /learning/plans/{id}:
     patch:
       parameters: [{name: id, in: path, required: true, schema: {type: string}}]
-      responses: {'200': {description: Plan updated}}
+      requestBody: {$ref: '#/components/requestBodies/UpdateLearningPlan'}
+      responses: {'200': {description: Plan updated}, '404': {description: Plan not found}, '422': {description: Validation error}}
     delete:
       parameters: [{name: id, in: path, required: true, schema: {type: string}}]
-      responses: {'200': {description: Plan deleted}}
+      responses: {'200': {description: Plan deleted}, '404': {description: Plan not found}}
+  /learning/plans/{id}/pause:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Learning plan paused}, '422': {description: Invalid pause request}}
+  /learning/plans/{id}/resume:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Learning plan resumed}, '409': {description: Plan is not paused}}
   /learning/tasks:
     get: {responses: {'200': {description: Learning tasks}}}
   /learning/tasks/{id}/complete:
@@ -103,7 +1383,57 @@ paths:
       parameters: [{name: id, in: path, required: true, schema: {type: string}}]
       responses: {'200': {description: Task completed}}
   /learning/report:
-    get: {responses: {'200': {description: Learning report}}}
+    get:
+      parameters: [{name: period, in: query, required: false, schema: {type: string, enum: [day, week, month], default: week}}]
+      responses: {'200': {description: Learning report for the requested UTC period}, '422': {description: Invalid period}}
+  /learning/activities:
+    get:
+      parameters:
+        - {name: period, in: query, required: false, schema: {type: string, enum: [day, week, month], default: week}}
+        - {name: kind, in: query, required: false, schema: {type: string, enum: [question, course, task, reading]}}
+        - {name: cursor, in: query, required: false, schema: {type: string}}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 200, default: 50}}
+      responses: {'200': {description: Paginated learning activities}}
+    post:
+      parameters: [{name: Idempotency-Key, in: header, required: false, schema: {type: string, minLength: 8, maxLength: 160}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind]
+              properties:
+                kind: {type: string, enum: [question, course, task, reading]}
+                subjectId: {type: string}
+                questionId: {type: string}
+                courseId: {type: string}
+                taskId: {type: string}
+                durationSeconds: {type: integer, minimum: 0, maximum: 86400}
+                quantity: {type: integer, minimum: 0, maximum: 100000}
+                occurredAt: {type: string, format: date-time}
+                idempotencyKey: {type: string}
+      responses: {'201': {description: Learning activity recorded}, '200': {description: Idempotent replay}, '422': {description: Validation error}}
+  /attachments/preflight:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [filename, contentType, sizeBytes], properties: {filename: {type: string, maxLength: 255}, contentType: {type: string, enum: [image/jpeg, image/png, application/pdf]}, sizeBytes: {type: integer, minimum: 1, maximum: 15728640}, sha256: {type: string}}}
+      responses: {'201': {description: Upload preflight and token}, '422': {description: Invalid attachment metadata}}
+  /attachments/{id}:
+    get:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Attachment state}, '404': {description: Attachment not found}}
+    delete:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Attachment deleted}, '409': {description: Attachment is already in use}}
+  /attachments/{id}/complete:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}, {name: x-upload-token, in: header, required: false, schema: {type: string}}]
+      requestBody: {required: false, content: {application/json: {schema: {type: object, properties: {uploadToken: {type: string}, sha256: {type: string}}}}}}
+      responses: {'200': {description: Attachment completed}, '403': {description: Invalid upload token}, '409': {description: Attachment unavailable}}
   /mistakes:
     get: {responses: {'200': {description: Mistake list}}}
   /mistakes/{id}:
@@ -117,9 +1447,39 @@ paths:
     delete:
       parameters: [{name: id, in: path, required: true, schema: {type: string}}]
       responses: {'200': {description: Favorite removed}}
-  /grading/submissions:
-    get: {responses: {'200': {description: Grading submissions}}}
-    post: {responses: {'201': {description: Grading job queued}}}
+  /legal-favorites:
+    get:
+      responses:
+        '200': {description: Current user's legal article favorites}
+        '401': {description: Unauthorized}
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [documentId]
+              properties:
+                documentId: {type: string}
+      responses:
+        '201': {description: Legal favorite created}
+        '200': {description: Existing legal favorite returned idempotently}
+        '404': {description: Legal document not found}
+  /legal-favorites/{id}:
+    delete:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses:
+        '200': {description: Legal favorite removed}
+        '401': {description: Unauthorized}
+  /grading/questions:
+    get:
+      parameters: [{name: subjectId, in: query, schema: {type: string}}]
+      responses: {'200': {description: Published gradable questions}}
+  /grading/questions/{id}:
+    get:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Published gradable question detail}, '404': {description: Question not available}}
   /grading/submissions/{id}:
     get:
       parameters: [{name: id, in: path, required: true, schema: {type: string}}]
@@ -128,31 +1488,1230 @@ paths:
     post:
       parameters: [{name: id, in: path, required: true, schema: {type: string}}]
       responses: {'200': {description: Grading job requeued}}
+  /grading/submissions/v2:
+    get:
+      responses:
+        '200': {description: Current user's typed grading submission records}
+        '401': {description: Unauthorized}
+  /grader/auth/login:
+    post:
+      security: []
+      responses: {'200': {description: Independent grader session created}, '401': {description: Invalid grader credentials}}
+  /grader/auth/logout:
+    post: {responses: {'200': {description: Grader session revoked}}}
+  /grader/me:
+    get: {responses: {'200': {description: Current grader profile without provider secrets}}}
+  /grader/tasks:
+    get:
+      parameters: [{name: mine, in: query, schema: {type: boolean}}]
+      responses: {'200': {description: Available or assigned grading tasks}}
+  /grader/tasks/{id}:
+    get:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Assigned grading task and rubric}}
+  /grader/tasks/{id}/claim:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Task claimed atomically}, '409': {description: Already claimed}}
+  /grader/tasks/{id}/return:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Task returned with reason}}
+  /grader/tasks/{id}/review:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'201': {description: Manual review submitted}}
+  /grader/stats:
+    get: {responses: {'200': {description: Current grader hourly and daily counters}}}
   /announcements:
-    get: {responses: {'200': {description: Published announcements}}}
+    get: {responses: {'200': {description: Active announcements visible to the authenticated user, ordered by pinned status and delivery time}}}
+  /announcements/{id}:
+    get:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Announcement detail with read and closed state}, '404': {description: Announcement not found}}
+  /announcements/{id}/read:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Announcement marked read}}
+  /announcements/{id}/close:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Announcement closed for current user}}
   /home:
-    get: {responses: {'200': {description: Home content and exam countdown}}}
+    get:
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Home content, personalized highlights, and exam countdown
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/ApiEnvelope'}
+                  - type: object
+                    properties:
+                      data: {$ref: '#/components/schemas/HomeData'}
+        '401': {description: Authentication required}
   /products:
-    get: {responses: {'200': {description: Product catalog}}}
+    get:
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Product catalog
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/ApiEnvelope'}
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: {$ref: '#/components/schemas/Product'}
   /products/{id}:
     get:
       parameters: [{name: id, in: path, required: true, schema: {type: string}}]
-      responses: {'200': {description: Product detail}}
+      responses:
+        '200':
+          description: Product detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/ApiEnvelope'}
+                  - type: object
+                    properties:
+                      data: {$ref: '#/components/schemas/Product'}
+        '404': {description: Product not found}
   /law/search:
-    get: {responses: {'200': {description: Legal search results}}}
+    get:
+      parameters:
+        - {name: q, in: query, required: true, schema: {type: string}}
+        - {name: subjectId, in: query, required: false, schema: {type: string}}
+      responses: {'200': {description: Legal search results}}
+  /legal-documents/{key}:
+    get:
+      security: []
+      parameters:
+        - {name: key, in: path, required: true, schema: {type: string, enum: [terms, privacy, sdk-list, account-deletion]}}
+      responses:
+        '200': {description: Published versioned application legal document}
+        '404': {description: Legal document not found or unavailable}
   /forum/posts:
-    get: {responses: {'200': {description: Forum posts}}}
-    post: {responses: {'201': {description: Forum post created}}}
+    get:
+      parameters:
+        - {name: category, in: query, schema: {$ref: '#/components/schemas/ForumCategory'}}
+        - {name: scope, in: query, schema: {type: string, enum: [all, mine, favorites], default: all}}
+        - {name: cursor, in: query, schema: {type: string}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 50, default: 20}}
+      responses:
+        '200': {description: Cursor-paginated forum posts, content: {application/json: {schema: {$ref: '#/components/schemas/ForumPostPageEnvelope'}}}}
+        '422': {description: 'Invalid category, scope, cursor or limit'}
+    post:
+      requestBody: {$ref: '#/components/requestBodies/CreateForumPost'}
+      responses:
+        '201': {description: Forum post created, content: {application/json: {schema: {$ref: '#/components/schemas/ForumPostEnvelope'}}}}
+        '422': {description: 'Invalid category, title or body'}
+        '429': {description: Five posts per user per hour exceeded}
+  /forum/posts/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      responses:
+        '200': {description: Forum post detail, content: {application/json: {schema: {$ref: '#/components/schemas/ForumPostEnvelope'}}}}
+        '404': {description: Post not found or deleted}
+    delete:
+      responses:
+        '200': {description: Post soft-deleted by its author}
+        '403': {description: Only the author can delete the post}
+        '404': {description: Post not found or deleted}
+  /forum/posts/{id}/like:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses:
+        '200': {description: Current user's like toggled, content: {application/json: {schema: {$ref: '#/components/schemas/ForumPostEnvelope'}}}}
+        '404': {description: Post not found or deleted}
+  /forum/posts/{id}/favorite:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses:
+        '200': {description: Current user's favorite toggled, content: {application/json: {schema: {$ref: '#/components/schemas/ForumPostEnvelope'}}}}
+        '404': {description: Post not found or deleted}
+  /forum/posts/{id}/report:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody: {$ref: '#/components/requestBodies/CreateForumReport'}
+      responses:
+        '201': {description: Report accepted into the pending moderation queue, content: {application/json: {schema: {$ref: '#/components/schemas/ForumReportEnvelope'}}}}
+        '200': {description: Existing pending report returned idempotently, content: {application/json: {schema: {$ref: '#/components/schemas/ForumReportEnvelope'}}}}
+        '404': {description: Post not found or deleted}
+        '422': {description: Report reason must contain 2 to 200 characters}
+  /forum/posts/{id}/comments:
+    get:
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - {name: cursor, in: query, schema: {type: string}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 50, default: 20}}
+      responses:
+        '200': {description: Cursor-paginated post comments, content: {application/json: {schema: {$ref: '#/components/schemas/ForumCommentPageEnvelope'}}}}
+        '404': {description: Post not found or deleted}
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody: {$ref: '#/components/requestBodies/CreateForumComment'}
+      responses:
+        '201': {description: Comment created, content: {application/json: {schema: {$ref: '#/components/schemas/ForumCommentEnvelope'}}}}
+        '422': {description: Invalid comment body}
+        '429': {description: Twenty comments per user per hour exceeded}
+  /forum/comments/{id}:
+    delete:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses:
+        '200': {description: Comment soft-deleted by its author}
+        '403': {description: Only the author can delete the comment}
+        '404': {description: Comment or parent post not found}
   /admin/overview:
     get: {responses: {'200': {description: Operations dashboard}}}
   /admin/orders:
     get: {responses: {'200': {description: All orders}}}
-  /admin/announcements:
-    post: {responses: {'201': {description: Announcement created}}}
+  /admin/orders/{id}:
+    get:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Order detail with immutable timeline}, '404': {description: Order not found}}
   /admin/push/test:
     post: {responses: {'200': {description: Push adapter result}}}
+  /admin/content/papers:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Paper list}, '401': {description: Admin authentication required}}
+    post:
+      security: [{cookieAuth: []}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [name, year, questionKind, totalScore], properties: {name: {type: string}, year: {type: string}, questionKind: {type: string, enum: [objective, subjective]}, subjectId: {type: string}, volume: {type: string}, mode: {type: string, enum: [real, mock, chapter]}, durationMinutes: {type: integer}, totalScore: {type: integer}, questionIds: {type: array, items: {type: string}}}}}}}
+      responses: {'201': {description: Draft paper created}, '401': {description: Admin authentication required}, '403': {description: Forbidden}}
+  /admin/content/papers/{id}:
+    patch:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Draft paper updated}, '409': {description: Stale version}}
+  /admin/content/papers/{id}/publish:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Paper published}, '422': {description: Paper has no questions}}
+  /admin/content/imports:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Import jobs}, '401': {description: Admin authentication required}}
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: Idempotency-Key, in: header, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filename, format, questionKind, subjectId, chapterId, pointId, records]
+              properties:
+                filename: {type: string}
+                format: {type: string, enum: [xlsx, csv, json]}
+                questionKind: {type: string, enum: [objective, subjective]}
+                subjectId: {type: string}
+                chapterId: {type: string}
+                pointId: {type: string}
+                records: {type: array, items: {type: object}}
+      responses: {'201': {description: Preflight result}, '422': {description: Validation error}}
+  /admin/content/imports/{id}/confirm:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Import committed}}
+  /admin/content/laws:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Legal document versions}, '401': {description: Admin authentication required}}
+    post:
+      security: [{cookieAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, article, content, effectiveFrom]
+              properties:
+                title: {type: string}
+                article: {type: string}
+                content: {type: string}
+                effectiveFrom: {type: string, format: date}
+                documentCode: {type: string}
+                sourceUrl: {type: string, format: uri}
+      responses: {'201': {description: Draft legal document created}}
+  /admin/content/laws/{id}/publish:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Legal document published}}
+  /admin/content/laws/{id}/disable:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Legal document disabled}, '422': {description: Confirmation required}}
+  /admin/learning/records:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Learning records}, '401': {description: Admin authentication required}}
+  /admin/learning/plans:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Learning plans}, '401': {description: Admin authentication required}}
+  /admin/learning/plans/{id}:
+    get:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Learning plan detail}, '404': {description: Plan not found}}
+    patch:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Learning plan adjusted}, '422': {description: Validation error}}
+  /admin/learning/plans/{id}/tasks/{taskId}:
+    patch:
+      security: [{cookieAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - {name: taskId, in: path, required: true, schema: {type: string}}
+      responses: {'200': {description: Learning task adjusted}, '422': {description: Validation error}}
+  /admin/entitlements:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Entitlements}, '401': {description: Admin authentication required}}
+  /admin/community/comments:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Community comments}, '401': {description: Admin authentication required}}
+  /admin/community/comments/{id}/hide:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Comment hidden}}
+  /admin/community/rules:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Community rules}, '401': {description: Admin authentication required}}
+    post:
+      security: [{cookieAuth: []}]
+      responses: {'201': {description: Community rule created}}
+  /admin/community/rules/{id}:
+    patch:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Community rule updated}}
+  /admin/community/posts/{id}/hide:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Post hidden}, '401': {description: Admin authentication required}, '403': {description: Forbidden}}
+  /admin/banners:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Banner list}, '401': {description: Admin authentication required}}
+    post:
+      security: [{cookieAuth: []}]
+      responses: {'201': {description: Banner created}}
+  /admin/banners/{id}:
+    patch:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Banner updated}}
+  /admin/templates:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Message templates}, '401': {description: Admin authentication required}}
+    post:
+      security: [{cookieAuth: []}]
+      responses: {'201': {description: Message template created}}
+  /admin/push-jobs:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Push jobs}, '401': {description: Admin authentication required}}
+    post:
+      security: [{cookieAuth: []}]
+      responses: {'201': {description: Push job created}}
+  /admin/push-jobs/{id}:
+    get:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses: {'200': {description: Push job status}, '404': {description: Push job not found}}
+  /admin/push-jobs/{id}/cancel:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Push job cancelled}}
+  /admin/push-jobs/{id}/retry:
+    post:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses: {'202': {description: Push job requeued}, '409': {description: Push job is not retryable}}
+  /admin/ai/flags:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: AI risk flags}, '401': {description: Admin authentication required}}
+  /admin/ai/flags/{id}:
+    patch:
+      security: [{cookieAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: {type: string, enum: [open, reviewing, resolved, dismissed]}
+                reason: {type: string}
+      responses: {'200': {description: AI risk flag reviewed}, '404': {description: Risk flag not found}, '422': {description: Validation error}}
+  /admin/ai/usage:
+    get:
+      security: [{cookieAuth: []}]
+      parameters:
+        - {name: userId, in: query, required: false, schema: {type: string}}
+        - {name: provider, in: query, required: false, schema: {type: string}}
+        - {name: feature, in: query, required: false, schema: {type: string}}
+        - {name: status, in: query, required: false, schema: {type: string, enum: [completed, failed, blocked_quota]}}
+        - {name: date, in: query, required: false, schema: {type: string, format: date}}
+        - {name: from, in: query, required: false, schema: {type: string, format: date-time}}
+        - {name: to, in: query, required: false, schema: {type: string, format: date-time}}
+        - {name: groupBy, in: query, required: false, schema: {type: string, example: user,provider,feature,date}}
+      responses: {'200': {description: AI usage aggregation}, '401': {description: Admin authentication required}}
+  /admin/audit-logs:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Immutable audit logs}, '401': {description: Admin authentication required}}
+  /admin/settings:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Non-secret system settings}, '401': {description: Admin authentication required}}
+    patch:
+      security: [{cookieAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refundReviewThreshold]
+              properties:
+                refundReviewThreshold: {type: number, minimum: 0, maximum: 1000000000}
+      responses: {'200': {description: Updated non-secret system settings}, '401': {description: Admin authentication required}, '403': {description: Settings write permission required}, '422': {description: Validation error}}
+  /admin/health:
+    get:
+      security: [{cookieAuth: []}]
+      responses: {'200': {description: Service health}, '401': {description: Admin authentication required}}
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: debao_admin_session
+  schemas:
+    AdminAnnouncementInput:
+      type: object
+      required: [title, body, isPinned, audienceType]
+      properties:
+        title: {type: string, minLength: 2, maxLength: 160}
+        body: {type: string, minLength: 2, maxLength: 10000}
+        status: {type: string, enum: [draft, published], description: Future startsAt is normalized to scheduled}
+        startsAt: {type: string, format: date-time, maximum: '2099-12-31T15:59:59.000Z'}
+        endsAt: {type: string, format: date-time, nullable: true, maximum: '2099-12-31T15:59:59.000Z'}
+        isPinned: {type: boolean}
+        audienceType: {type: string, enum: [all, exam_year]}
+        audienceValue: {type: string, pattern: '^20\d{2}$'}
+        deepLink: {type: string, nullable: true, description: App path beginning with / or an https H5 URL}
+    AdminAnnouncement:
+      allOf:
+        - {$ref: '#/components/schemas/AdminAnnouncementInput'}
+        - type: object
+          required: [id, status, persistedStatus, audienceCount, readCount, closedCount, readRate, createdAt]
+          properties:
+            id: {type: string}
+            status: {type: string, enum: [draft, scheduled, published, expired, withdrawn]}
+            persistedStatus: {type: string, enum: [draft, scheduled, published, withdrawn]}
+            audienceCount: {type: integer, minimum: 0}
+            readCount: {type: integer, minimum: 0}
+            closedCount: {type: integer, minimum: 0}
+            readRate: {type: number, minimum: 0, maximum: 100, description: Read percentage among the estimated audience}
+            publishedAt: {type: string, format: date-time}
+            withdrawnAt: {type: string, format: date-time}
+            withdrawalReason: {type: string}
+            updatedAt: {type: string, format: date-time}
+            createdAt: {type: string, format: date-time}
+    Announcement:
+      type: object
+      required: [id, title, body, status, isPinned, audienceType, deepLink, read, closed, createdAt]
+      properties:
+        id: {type: string}
+        title: {type: string}
+        body: {type: string}
+        status: {type: string, enum: [published]}
+        startsAt: {type: string, format: date-time}
+        endsAt: {type: string, format: date-time}
+        isPinned: {type: boolean}
+        audienceType: {type: string, enum: [all, exam_year]}
+        deepLink: {type: string}
+        read: {type: boolean}
+        closed: {type: boolean}
+        publishedAt: {type: string, format: date-time}
+        createdAt: {type: string, format: date-time}
+    ApiEnvelope:
+      type: object
+      required: [data, requestId]
+      properties:
+        data: {}
+        requestId: {type: string, format: uuid}
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId]
+          properties:
+            code: {type: string, example: ADAPTER_UNAVAILABLE}
+            message: {type: string}
+            requestId: {type: string, format: uuid}
+            details: {type: object, additionalProperties: true}
+    UserProfile:
+      type: object
+      required: [id, name, phone, examYear, studyDays]
+      properties:
+        id: {type: string}
+        name: {type: string}
+        phone: {type: string}
+        examYear: {type: string, pattern: '^20\\d{2}$'}
+        studyDays: {type: integer, minimum: 0}
+        avatarColor: {type: string, pattern: '^#[0-9A-Fa-f]{6}$'}
+        avatarUrl: {type: string, format: uri}
+    UserSettings:
+      type: object
+      required: [userId, learningReminders, courseUpdates, orderNotifications, updatedAt]
+      properties:
+        userId: {type: string}
+        learningReminders: {type: boolean}
+        courseUpdates: {type: boolean}
+        orderNotifications: {type: boolean}
+        updatedAt: {type: string, format: date-time}
+    QuestionRecord:
+      type: object
+      required: [id, questionId, answers, correct, createdAt, total, correctCount]
+      properties:
+        id: {type: string}
+        questionId: {type: string}
+        answers: {type: array, items: {type: string}}
+        correct: {type: boolean}
+        createdAt: {type: string, format: date-time}
+        subjectId: {type: string}
+        mode: {type: string, enum: [objective, subjective]}
+        title: {type: string}
+        analysis: {type: string}
+        total: {type: integer, minimum: 0}
+        correctCount: {type: integer, minimum: 0}
+        questionSnapshot:
+          {$ref: '#/components/schemas/QuestionSubmissionSnapshot'}
+    QuestionDraft:
+      type: object
+      required: [questionId, answers]
+      properties:
+        questionId: {type: string}
+        answers: {type: array, items: {type: string}}
+        updatedAt: {type: string, format: date-time, nullable: true}
+    QuestionDraftEnvelope:
+      allOf:
+        - {$ref: '#/components/schemas/ApiEnvelope'}
+        - type: object
+          properties:
+            data: {$ref: '#/components/schemas/QuestionDraft'}
+    QuestionDraftSaved:
+      allOf:
+        - {$ref: '#/components/schemas/QuestionDraft'}
+        - type: object
+          required: [saved]
+          properties:
+            saved: {type: boolean}
+    QuestionDraftSavedEnvelope:
+      allOf:
+        - {$ref: '#/components/schemas/ApiEnvelope'}
+        - type: object
+          properties:
+            data: {$ref: '#/components/schemas/QuestionDraftSaved'}
+    QuestionRecordPage:
+      type: object
+      required: [items, page, pageSize, total, answered, correct]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/QuestionRecord'}}
+        page: {type: integer, minimum: 1}
+        pageSize: {type: integer, minimum: 1, maximum: 50}
+        total: {type: integer, minimum: 0}
+        answered: {type: integer, minimum: 0, description: Cumulative answered question count within the applied filters}
+        correct: {type: integer, minimum: 0, description: Cumulative correct answer count within the applied filters}
+    AppLegalDocument:
+      type: object
+      required: [key, title, version, status, sections, updatedAt]
+      properties:
+        key: {type: string, enum: [terms, privacy, sdk-list, account-deletion]}
+        title: {type: string}
+        version: {type: integer, minimum: 1}
+        status: {type: string, enum: [published]}
+        updatedAt: {type: string, format: date-time}
+        sections:
+          type: array
+          items:
+            type: object
+            required: [title, body]
+            properties:
+              title: {type: string}
+              body: {type: string}
+    VerificationCodeResult:
+      type: object
+      required: [accepted, expiresIn]
+      properties:
+        accepted: {type: boolean}
+        expiresIn: {type: integer, example: 300}
+        developmentCode: {type: string, description: Present only for the explicit local adapter}
+    Identity:
+      type: object
+      required: [provider, boundAt]
+      properties:
+        provider: {type: string, enum: [wechat]}
+        nickname: {type: string}
+        boundAt: {type: string, format: date-time}
+    Device:
+      type: object
+      required: [id, platform, name, lastSeenAt, current]
+      properties:
+        id: {type: string}
+        platform: {type: string, enum: [android, ios, harmony]}
+        name: {type: string}
+        lastSeenAt: {type: string, format: date-time}
+        current: {type: boolean}
+    DeletionStatus:
+      oneOf:
+        - type: object
+          required: [status]
+          properties: {status: {type: string, enum: [none]}}
+        - type: object
+          required: [status, requestedAt, executeAfter, coolingOffDays]
+          properties:
+            status: {type: string, enum: [scheduled]}
+            requestedAt: {type: string, format: date-time}
+            executeAfter: {type: string, format: date-time}
+            coolingOffDays: {type: integer, example: 7}
+    AuthSession:
+      type: object
+      required: [accessToken, refreshToken, expiresIn, profile]
+      properties:
+        accessToken: {type: string}
+        refreshToken: {type: string}
+        expiresIn: {type: integer, example: 604800}
+        profile: {$ref: '#/components/schemas/UserProfile'}
+    WechatLoginResult:
+      oneOf:
+        - type: object
+          required: [status, session]
+          properties:
+            status: {type: string, enum: [authenticated]}
+            session: {$ref: '#/components/schemas/AuthSession'}
+        - type: object
+          required: [status, bindingToken, expiresIn]
+          properties:
+            status: {type: string, enum: [binding_required]}
+            bindingToken: {type: string}
+            expiresIn: {type: integer, example: 600}
+            wechatProfile:
+              type: object
+              properties:
+                nickname: {type: string}
+    HomeBanner:
+      type: object
+      required: [id, title, imageUrl, target]
+      properties:
+        id: {type: string}
+        title: {type: string}
+        imageUrl: {type: string}
+        target: {type: string}
+        startsAt: {type: string, format: date-time}
+        endsAt: {type: string, format: date-time}
+    HomeAnnouncement:
+      type: object
+      required: [id, title, body, status, isPinned, deepLink, read]
+      properties:
+        id: {type: string}
+        title: {type: string}
+        body: {type: string}
+        status: {type: string, enum: [published]}
+        isPinned: {type: boolean}
+        deepLink: {type: string}
+        read: {type: boolean}
+        startsAt: {type: string, format: date-time}
+        endsAt: {type: string, format: date-time}
+    HomeHotPost:
+      type: object
+      required: [id, title, body, author, createdAt, likeCount]
+      properties:
+        id: {type: string}
+        title: {type: string}
+        body: {type: string}
+        author: {type: string}
+        createdAt: {type: string, format: date-time}
+        likeCount: {type: integer, minimum: 0}
+    HomeData:
+      type: object
+      required: [banners, announcements, hotCourses, hotPosts, featuredProduct, exam]
+      properties:
+        banners:
+          type: array
+          items: {$ref: '#/components/schemas/HomeBanner'}
+        announcements:
+          type: array
+          items: {$ref: '#/components/schemas/HomeAnnouncement'}
+        hotCourses:
+          type: array
+          items: {$ref: '#/components/schemas/Course'}
+        hotPosts:
+          type: array
+          items: {$ref: '#/components/schemas/HomeHotPost'}
+        featuredProduct:
+          type: object
+          nullable: true
+          allOf:
+            - {$ref: '#/components/schemas/Product'}
+        exam:
+          type: object
+          required: [year, daysRemaining]
+          properties:
+            year: {type: string}
+            daysRemaining: {type: integer, minimum: 0}
+    Course:
+      type: object
+      required: [id, title, teacher, type, progress, lessons, accent]
+      properties:
+        id: {type: string}
+        title: {type: string}
+        teacher: {type: string}
+        type: {type: string, enum: [video, audio, live]}
+        progress: {type: number, minimum: 0, maximum: 100}
+        lessons: {type: integer, minimum: 0}
+        accent: {type: string}
+        productId: {type: string}
+        price: {type: number, minimum: 0}
+        originalPrice: {type: number, minimum: 0}
+        hasAccess: {type: boolean, description: Personalized access state for the authenticated learner}
+        sourceOrderId: {type: string}
+        expiresAt: {type: string, format: date-time}
+        status: {type: string, enum: [draft, scheduled, published, offline, archived]}
+        updatedAt: {type: string, format: date-time}
+    CourseEntitlement:
+      type: object
+      required: [hasAccess]
+      properties:
+        hasAccess: {type: boolean}
+        userId: {type: string}
+        courseId: {type: string}
+        sourceOrderId: {type: string}
+        expiresAt: {type: string, format: date-time}
+    LearningPlan:
+      type: object
+      required: [id, userId, title, dailyMinutes, startDate, endDate, status]
+      properties:
+        id: {type: string}
+        userId: {type: string}
+        title: {type: string, minLength: 1, maxLength: 160}
+        dailyMinutes: {type: integer, minimum: 1, maximum: 1440}
+        startDate: {type: string, format: date}
+        endDate: {type: string, format: date}
+        status: {type: string, enum: [active, completed, archived]}
+    Product:
+      type: object
+      required: [id, name, category, price, originalPrice, sold, accent, benefits]
+      properties:
+        id: {type: string}
+        name: {type: string}
+        category: {type: string}
+        price: {type: number, minimum: 0}
+        originalPrice: {type: number, minimum: 0}
+        sold: {type: integer, minimum: 0}
+        accent: {type: string}
+        benefits: {type: array, items: {type: string}}
+        status: {type: string, enum: [draft, on_sale, off_sale, archived], description: Only on_sale products are exposed to the learner catalog or order creation}
+        updatedAt: {type: string, format: date-time}
+    Order:
+      type: object
+      required: [id, productId, productName, amount, status, createdAt]
+      properties:
+        id: {type: string}
+        productId: {type: string}
+        productName: {type: string}
+        amount: {type: number, minimum: 0}
+        status: {type: string, enum: [paid, pending, closed]}
+        createdAt: {type: string, format: date-time}
+        clientRequestId: {type: string}
+    MediaPrepareResult:
+      type: object
+      required: [available]
+      properties:
+        available: {type: boolean}
+        reason: {type: string}
+        url: {type: string, format: uri}
+        expiresAt: {type: string, format: date-time}
+    AIReply:
+      type: object
+      required: [reply]
+      properties:
+        reply: {type: string}
+    ForumCategory:
+      type: string
+      enum: [经验分享, 答疑求助, 知识整理, 技巧方法]
+    ForumPost:
+      type: object
+      required: [id, authorId, userName, category, title, body, likes, comments, liked, favorited, canDelete, createdAt, updatedAt]
+      properties:
+        id: {type: string}
+        authorId: {type: string}
+        userName: {type: string}
+        category: {$ref: '#/components/schemas/ForumCategory'}
+        title: {type: string, minLength: 4, maxLength: 80}
+        body: {type: string, minLength: 10, maxLength: 5000}
+        likes: {type: integer, minimum: 0}
+        comments: {type: integer, minimum: 0}
+        liked: {type: boolean}
+        favorited: {type: boolean}
+        canDelete: {type: boolean}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    ForumComment:
+      type: object
+      required: [id, postId, authorId, userName, body, canDelete, createdAt]
+      properties:
+        id: {type: string}
+        postId: {type: string}
+        authorId: {type: string}
+        userName: {type: string}
+        body: {type: string, minLength: 1, maxLength: 1000}
+        canDelete: {type: boolean}
+        createdAt: {type: string, format: date-time}
+    ForumReport:
+      type: object
+      required: [id, postId, reason, status, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        postId: {type: string}
+        reason: {type: string, minLength: 2, maxLength: 200}
+        status: {type: string, enum: [pending, processing, resolved, rejected]}
+        createdAt: {type: string, format: date-time}
+    ForumPostEnvelope:
+      allOf:
+        - {$ref: '#/components/schemas/ApiEnvelope'}
+        - {type: object, properties: {data: {$ref: '#/components/schemas/ForumPost'}}}
+    ForumCommentEnvelope:
+      allOf:
+        - {$ref: '#/components/schemas/ApiEnvelope'}
+        - {type: object, properties: {data: {$ref: '#/components/schemas/ForumComment'}}}
+    ForumReportEnvelope:
+      allOf:
+        - {$ref: '#/components/schemas/ApiEnvelope'}
+        - {type: object, properties: {data: {$ref: '#/components/schemas/ForumReport'}}}
+    ForumPostPageEnvelope:
+      allOf:
+        - {$ref: '#/components/schemas/ApiEnvelope'}
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [items]
+              properties:
+                items: {type: array, items: {$ref: '#/components/schemas/ForumPost'}}
+                nextCursor: {type: string}
+    ForumCommentPageEnvelope:
+      allOf:
+        - {$ref: '#/components/schemas/ApiEnvelope'}
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [items]
+              properties:
+                items: {type: array, items: {$ref: '#/components/schemas/ForumComment'}}
+                nextCursor: {type: string}
+    ObjectiveQuestion:
+      type: object
+      required: [id, stem, options, version]
+      properties:
+        id: {type: string}
+        subjectId: {type: string}
+        stem: {type: string}
+        options: {type: array, items: {type: string}}
+        questionType: {type: string, enum: [true_false, single, multiple, indeterminate]}
+        version: {type: integer, minimum: 1}
+        source: {type: string}
+        answer: {type: integer, minimum: 0, description: Included only in a submitted session snapshot}
+        answerIndexes: {type: array, items: {type: integer, minimum: 0}, description: Included only in a submitted session snapshot}
+        analysis: {type: string, description: Included only in a submitted session snapshot}
+    QuestionSubmissionSnapshot:
+      type: object
+      description: Immutable question metadata captured when the answer was submitted; historical reports use this snapshot after later question edits.
+      required: [id, stem, options, answer, analysis, version]
+      properties:
+        id: {type: string}
+        subjectId: {type: string}
+        stem: {type: string}
+        options: {type: array, items: {type: string}}
+        answer: {type: integer, minimum: 0}
+        answerIndexes: {type: array, items: {type: integer, minimum: 0}}
+        questionType: {type: string, enum: [true_false, single, multiple, indeterminate]}
+        analysis: {type: string}
+        version: {type: integer, minimum: 1}
+        source: {type: string}
+    ObjectiveSessionAnswer:
+      type: object
+      required: [questionId, answers, updatedAt]
+      properties:
+        questionId: {type: string}
+        answers: {type: array, items: {type: string}}
+        updatedAt: {type: string, format: date-time}
+    ObjectiveSession:
+      type: object
+      required: [id, mode, title, questionIds, questions, answers, durationSeconds, startedAt, expiresAt, status]
+      properties:
+        id: {type: string}
+        mode: {type: string, enum: [chapter, year, random, exam]}
+        title: {type: string}
+        subjectId: {type: string}
+        paperId: {type: string}
+        questionIds: {type: array, items: {type: string}}
+        questions: {type: array, items: {$ref: '#/components/schemas/ObjectiveQuestion'}}
+        answers: {type: array, items: {$ref: '#/components/schemas/ObjectiveSessionAnswer'}}
+        durationSeconds: {type: integer, minimum: 60}
+        startedAt: {type: string, format: date-time}
+        expiresAt: {type: string, format: date-time}
+        status: {type: string, enum: [in_progress, submitted, expired]}
+        reportId: {type: string}
+        submittedAt: {type: string, format: date-time}
+    ObjectiveReportResult:
+      type: object
+      required: [questionId, stem, options, version, answers, correctAnswers, correct, analysis]
+      properties:
+        questionId: {type: string}
+        subjectId: {type: string}
+        stem: {type: string}
+        options: {type: array, items: {type: string}}
+        questionType: {type: string, enum: [true_false, single, multiple, indeterminate]}
+        version: {type: integer, minimum: 1}
+        answers: {type: array, items: {type: string}}
+        correctAnswers: {type: array, items: {type: string}}
+        correct: {type: boolean}
+        analysis: {type: string}
+    ObjectiveReport:
+      type: object
+      required: [id, sessionId, mode, title, total, answered, correct, score, maxScore, results, subjectStats, submittedAt]
+      properties:
+        id: {type: string}
+        sessionId: {type: string}
+        mode: {type: string, enum: [chapter, year, random, exam]}
+        title: {type: string}
+        total: {type: integer, minimum: 0}
+        answered: {type: integer, minimum: 0}
+        correct: {type: integer, minimum: 0}
+        score: {type: number, minimum: 0}
+        maxScore: {type: number, minimum: 0}
+        results: {type: array, items: {$ref: '#/components/schemas/ObjectiveReportResult'}}
+        subjectStats: {type: array, items: {type: object, required: [subjectId, total, correct, correctRate], properties: {subjectId: {type: string}, total: {type: integer}, correct: {type: integer}, correctRate: {type: integer, minimum: 0, maximum: 100}}}}
+        submittedAt: {type: string, format: date-time}
+    ErrorResponse:
+      $ref: '#/components/schemas/ApiError'
+  requestBodies:
+    CreateLearningPlan:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [title]
+            properties:
+              title: {type: string, minLength: 1, maxLength: 160}
+              dailyMinutes: {type: integer, minimum: 1, maximum: 1440, default: 60}
+              startDate: {type: string, format: date}
+              endDate: {type: string, format: date}
+    UpdateLearningPlan:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            minProperties: 1
+            properties:
+              title: {type: string, minLength: 1, maxLength: 160}
+              dailyMinutes: {type: integer, minimum: 1, maximum: 1440}
+              startDate: {type: string, format: date}
+              endDate: {type: string, format: date}
+              status: {type: string, enum: [active, completed, archived]}
+    UpdateProfile:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name: {type: string, maxLength: 80}
+              examYear: {type: string, pattern: '^20\d{2}$'}
+              avatarColor: {type: string, pattern: '^#[0-9A-Fa-f]{6}$'}
+              avatarUrl: {type: string, format: uri, maxLength: 2000}
+    SendCode:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [phone]
+            properties:
+              phone:
+                type: string
+                pattern: '^1\\d{10}$'
+              purpose:
+                type: string
+                enum: [login, bind_phone]
+    Login:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [phone, code]
+            properties:
+              phone:
+                type: string
+              code:
+                type: string
+                minLength: 6
+                maxLength: 6
+              deviceId:
+                type: string
+    WechatLogin:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [code]
+            properties:
+              code: {type: string}
+              deviceId: {type: string}
+    OneClickLogin:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [providerToken]
+            properties:
+              providerToken: {type: string}
+              deviceId: {type: string}
+              bindingToken: {type: string}
+    BindWechatPhone:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [bindingToken, phone, code]
+            properties:
+              bindingToken: {type: string}
+              phone: {type: string, pattern: '^1\\d{10}$'}
+              code: {type: string, minLength: 6, maxLength: 6}
+              deviceId: {type: string}
+    RefreshSession:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [refreshToken]
+            properties: {refreshToken: {type: string}}
+    SmsCode:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [code]
+            properties: {code: {type: string, pattern: '^\d{6}$'}}
+    BindCurrentWechat:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [code, smsCode]
+            properties:
+              code: {type: string, description: One-time native WeChat authorization code}
+              smsCode: {type: string, pattern: '^\d{6}$'}
+    PhoneChangeCode:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [stage]
+            properties:
+              stage: {type: string, enum: [current, new]}
+              phone: {type: string, pattern: '^1\d{10}$', description: Required when stage is new}
+    PhoneChange:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [newPhone, oldCode, newCode]
+            properties:
+              newPhone: {type: string, pattern: '^1\d{10}$'}
+              oldCode: {type: string, pattern: '^\d{6}$'}
+              newCode: {type: string, pattern: '^\d{6}$'}
+    RegisterDevice:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [deviceId, platform, name]
+            properties:
+              deviceId: {type: string}
+              platform: {type: string, enum: [android, ios, harmony]}
+              name: {type: string, maxLength: 120}
+              pushToken: {type: string}
+    QuestionSubmission:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [questionId, answers]
+            properties:
+              questionId:
+                type: string
+              answers:
+                type: array
+                minItems: 1
+                items:
+                  type: string
+                description: Option indexes encoded as strings; multiple-choice answers may contain more than one index.
+    SaveQuestionDraft:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [questionId, answers]
+            properties:
+              questionId: {type: string, description: Must equal the path parameter}
+              answers: {type: array, items: {type: string}}
+    CreateOrder:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [productId, clientRequestId]
+            properties:
+              productId:
+                type: string
+              clientRequestId:
+                type: string
+    MediaPrepare:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [courseId, kind]
+            properties:
+              courseId:
+                type: string
+              kind:
+                type: string
+                enum: [video, audio, live]
+    AIReply:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [prompt]
+            properties:
+              prompt: {type: string, minLength: 1, maxLength: 4000}
+    CreateForumPost:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [category, title, body]
+            properties:
+              category: {$ref: '#/components/schemas/ForumCategory'}
+              title: {type: string, minLength: 4, maxLength: 80}
+              body: {type: string, minLength: 10, maxLength: 5000}
+    CreateForumComment:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [body]
+            properties:
+              body: {type: string, minLength: 1, maxLength: 1000}
+    CreateForumReport:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [reason]
+            properties:
+              reason: {type: string, minLength: 2, maxLength: 200}
+    CreateQuestionSession:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              mode: {type: string, enum: [chapter, year, random, exam], default: chapter}
+              title: {type: string, maxLength: 200}
+              subjectId: {type: string}
+              paperId: {type: string}
+              questionIds: {type: array, minItems: 1, maxItems: 100, items: {type: string}}
+              limit: {type: integer, minimum: 1, maximum: 100}
+              durationSeconds: {type: integer, minimum: 60, maximum: 28800}
+              idempotencyKey: {type: string, minLength: 8, maxLength: 120}
+    SaveQuestionAnswer:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [answers]
+            properties:
+              questionId: {type: string, description: Required when using the collection endpoint}
+              answers: {type: array, items: {type: string}}
+    SubmitQuestionSession:
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              idempotencyKey: {type: string, minLength: 8, maxLength: 120, description: Header is preferred; body alias is retained for legacy clients}
+  responses:
+    AdapterUnavailable:
+      description: Provider adapter is unavailable or not configured
+      content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}

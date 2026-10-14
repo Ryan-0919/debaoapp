@@ -1,0 +1,22 @@
+[Unit]
+Description=Debao API
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=debao
+Group=debao
+WorkingDirectory=/opt/debao/current/debao-server
+EnvironmentFile=/etc/debao/api.env
+ExecStart=/usr/local/bin/node dist/server.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

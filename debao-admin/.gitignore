@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.umi/
+.umi-*/
+src/.umi/
+src/.umi-*/
+.env
+.env.*
+!.env.example
+*.log
+playwright-report/
+test-results/
+e2e-artifacts/

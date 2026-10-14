@@ -158,6 +158,7 @@ export default function QuestionBankScreen() {
                     <Pressable
                       accessibilityRole="button"
                       accessibilityState={{expanded}}
+                      testID={`question-bank-subject-${subjectInfo?.id ?? subject}`}
                       onPress={() => setExpandedSubject(expanded ? null : subject)}
                       style={({pressed}) => [styles.subjectRow, pressed && styles.rowPressed]}>
                       <View style={[styles.subjectMark, {backgroundColor: subjectInfo?.color ?? colors.page}]}>
@@ -175,9 +176,11 @@ export default function QuestionBankScreen() {
                       <Pressable
                         accessibilityRole="button"
                         key={chapter}
+                        testID={`question-bank-chapter-${subjectInfo?.id ?? subject}-${index}`}
                         onPress={() => navigation.navigate('ObjectiveAnswer', {
                           mode: 'chapter',
                           title: chapter,
+                          subjectId: subjectInfo?.id,
                         })}
                         style={({pressed}) => [styles.chapterRow, pressed && styles.rowPressed]}>
                         <Text style={styles.chapterName}>{chapter}</Text>

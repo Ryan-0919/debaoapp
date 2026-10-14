@@ -2,8 +2,8 @@ import type {ImageSourcePropType} from 'react-native';
 import {colors} from '@/theme';
 import type {Product} from '@/types/domain';
 
-export type ProductCategory = '主客一体' | '客观题' | '主观题';
-export type ProductType = '视频课程' | '直播课程' | '音频课程';
+export type ProductCategory = '主客一体' | '客观题' | '主观题' | '个性化学习';
+export type ProductType = '视频课程' | '直播课程' | '音频课程' | '学习服务';
 
 export interface CatalogProduct extends Product {
   category: ProductCategory;
@@ -19,6 +19,7 @@ export interface CatalogProduct extends Product {
 }
 
 export const PRODUCT_IMAGES: Record<string, ImageSourcePropType> = {
+  'deen-private-coach': require('@/assets/images/home-library.png'),
   p1: require('@/assets/images/home-library.png'),
   p2: require('@/assets/images/home-office.png'),
   p3: require('@/assets/images/course-subjective.png'),
@@ -28,6 +29,15 @@ export const PRODUCT_IMAGES: Record<string, ImageSourcePropType> = {
 };
 
 export const catalogProducts: CatalogProduct[] = [
+  {
+    id: 'deen-private-coach', name: '得恩私教', category: '个性化学习', type: '学习服务', teacher: '得恩教研团队',
+    price: 1999, originalPrice: 2699, sold: 0, accent: colors.brand,
+    image: PRODUCT_IMAGES['deen-private-coach'], detailImage: PRODUCT_IMAGES['deen-private-coach'],
+    brief: '从首次学习诊断开始，结合你的基础、时间和学习习惯，逐步形成专属学习画像和学习计划。', stage: '全程个性化学习', autoStart: true,
+    includes: ['首次学习诊断', '专属学习画像', '个性化学习计划', '阶段复测与动态调整'],
+    benefits: ['首次学习诊断', '专属学习画像', '个性化学习计划', '阶段复测与动态调整'],
+    delivery: '购买后立即开通得恩私教，先完成首次学习诊断，再进入专属学习方案。',
+  },
   {
     id: 'p1',
     name: '2024法考全程班（主客一体·视频精讲）',

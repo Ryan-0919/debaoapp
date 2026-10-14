@@ -10,6 +10,8 @@ interface Props {
   description?: string;
   children?: ReactNode;
   confirmLabel: string;
+  /** Optional semantic hook for flows that need to target the confirm action. */
+  confirmTestID?: string;
   loading?: boolean;
   onClose: () => void;
   onConfirm: () => void;
@@ -21,6 +23,7 @@ export function ConfirmSheet({
   description,
   children,
   confirmLabel,
+  confirmTestID,
   loading,
   onClose,
   onConfirm,
@@ -38,7 +41,7 @@ export function ConfirmSheet({
           </View>
           {description ? <Text style={styles.description}>{description}</Text> : null}
           {children}
-          <AppButton label={confirmLabel} loading={loading} onPress={onConfirm} />
+          <AppButton label={confirmLabel} testID={confirmTestID} loading={loading} onPress={onConfirm} />
         </View>
       </View>
     </Modal>

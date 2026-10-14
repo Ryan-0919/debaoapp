@@ -1,8 +1,14 @@
 # 28 页 1:1 核验矩阵
 
-更新时间：2026-08-28
+更新时间：2026-09-02
 
 `E:\code\得宝APP开发\得宝APP (1)` 是唯一的视觉、内容和交互基准。React Native 中存在页面文件或路由，只代表技术骨架存在，不代表完成 1:1 复刻。
+
+本矩阵的原型截图和 Mock fixture 用于锁定 1:1 的视觉/交互基线；“已完成”不表示正式供应商或生产数据已经接入。各页的“已知差异”同时标注 `DEBAO_USE_MOCKS=false` 的 API 覆盖范围，以及仍待完成的生产能力。
+
+2026-09-02 本机收口说明：早期页面条目中涉及“统计、导出、治理、批改 Worker 未完成”的文字属于当时的计划快照，已由 `docs/PROGRESS.md` 的本机最终收口段 supersede。当前仍列出的差异仅代表生产 Provider、独立队列/监控、真实媒体或跨端真机视觉验收；不代表本地代码、数据层或 API 缺失。
+
+`src/screens/auth/LoginScreen.tsx` 是为真实账号体系新增的产品化登录页，原 Figma Make 项目没有对应页面，因此不计入下方 28 页 1:1 验收数量。登录、一键认证、微信首次绑定手机号及短信回退流程单独按 `AUTH_INTEGRATION.md` 验收，不改变原型页面的 1:1 完成口径。
 
 ## 状态定义
 
@@ -21,7 +27,7 @@
 | 4 | `src/pages/Courses.tsx` | `src/screens/tabs/CoursesScreen.tsx` | 日历/全部课程、周/月切换、快捷筛选、补课日期、加入安排三个 Bottom Sheet、课程/直播/音频跳转 | 已完成 |
 | 5 | `src/pages/Profile.tsx` | `src/screens/tabs/ProfileScreen.tsx` | 用户信息、学习数据、功能分组、全部入口跳转 | 已完成 |
 | 6 | `src/pages/SubjectiveSelect.tsx` | `src/screens/questions/SubjectiveSelectScreen.tsx` | 默认列表、科目参数、年份/难度筛选 Bottom Sheet、筛选结果、答题跳转 | 已完成 |
-| 7 | `src/pages/SubjectiveAnswer.tsx` | `src/screens/questions/SubjectiveAnswerScreen.tsx` | 题目/小题切换、答题输入、保存时间、法条检索跳转、提交 Dialog | 已完成 |
+| 7 | `src/pages/SubjectiveAnswer.tsx` | `src/screens/questions/SubjectiveAnswerScreen.tsx` | 题目/小题切换、答题输入、保存时间、带科目上下文和草稿保护的法条检索、返回续答、提交 Dialog | 已完成 |
 | 8 | `src/pages/ObjectiveAnswer.tsx` | `src/screens/questions/ObjectiveAnswerScreen.tsx` | 章节/考试模式、单选作答、上下题、答题卡 Bottom Sheet、交卷 Dialog | 已完成 |
 | 9 | `src/pages/ObjectiveReport.tsx` | `src/screens/questions/ObjectiveReportScreen.tsx` | 成绩概览、题目结果、错题本跳转、返回路径 | 已完成 |
 | 10 | `src/pages/ProductDetail.tsx` | `src/screens/commerce/ProductDetailScreen.tsx` | 各商品内容、课程大纲展开/收起、底部购买栏、确认购买 Bottom Sheet、购买跳转 | 已完成 |
@@ -34,7 +40,7 @@
 | 17 | `src/pages/LearningPlan.tsx` | `src/screens/tools/LearningPlanScreen.tsx` | 周进度、两周计划、任务时长和完成态 | 已完成 |
 | 18 | `src/pages/MistakeBook.tsx` | `src/screens/tools/MistakeBookScreen.tsx` | 科目筛选、错题列表、复习跳转 | 已完成 |
 | 19 | `src/pages/Favorites.tsx` | `src/screens/tools/FavoritesScreen.tsx` | 收藏列表、题目/法条标签、收藏题目跳转 | 已完成 |
-| 20 | `src/pages/LawSearch.tsx` | `src/screens/tools/LawSearchScreen.tsx` | 法条/论坛/公告 Tab、搜索前后、科目筛选、列表展开、收藏、法条全文 Bottom Sheet、关联练习 | 已完成 |
+| 20 | `src/pages/LawSearch.tsx` | `src/screens/tools/LawSearchScreen.tsx` | 法条/论坛双 Tab、搜索前后、科目筛选、列表展开、收藏、法条全文 Bottom Sheet、关联练习 | 已完成 |
 | 21 | `src/pages/AIChat.tsx` | `src/screens/ai/AIChatScreen.tsx` | 初始消息、输入、发送、加载、连续对话、键盘和滚动 | 已完成 |
 | 22 | `src/pages/OrderList.tsx` | `src/screens/commerce/OrderListScreen.tsx` | 订单列表、状态/金额/商品信息、详情跳转 | 已完成 |
 | 23 | `src/pages/OrderDetail.tsx` | `src/screens/commerce/OrderDetailScreen.tsx` | 订单信息、商品跳转、课程跳转和不同订单参数 | 已完成 |
@@ -116,7 +122,7 @@
 - 原型截图：`docs/screenshots/figma-subjective-answer.png`，390x844。
 - Android 截图：`docs/screenshots/android-subjective-answer.png`、`android-subjective-answer-saved.png`、`android-subjective-answer-submit-dialog.png`。
 - 关键交互：UIAutomator 已验证从首页/题库进入真实答题页、五道题导航、四个小问、文本输入、12 字计数、24 小时制保存时间、最终提交 Dialog 和法条检索；Jest 覆盖指定题目索引、独立小问答案、保存、上一问、题目切换、取消/确认提交和导航。
-- 导航：法条按钮连接 `LawSearch`；最终确认提交后返回上一页；题目、小问及上一题/下一问/下一题均保持原型状态机。
+- 导航：法条按钮携带当前科目和作答来源连接 `LawSearch`，跳转前保存非空本地草稿；法条页可返回继续作答。最终确认提交后返回上一页；题目、小问及上一题/下一问/下一题均保持原型状态机。
 - 已知差异：仅真实 Android 状态栏、底部手势区、Safe Area 和字体栅格化差异；无已知产品内容或交互差异。
 
 ### 8. 客观题作答
@@ -198,7 +204,7 @@
 - Android 截图：`docs/screenshots/android-learning-report.png`；API 36 设备纵向空间可在一屏显示原型两张截图覆盖的全部内容。
 - 关键交互：UIAutomator 已确认 `learning-report-screen`、`4.2 小时`、六个 `learning-subject-*` 节点和专项练习按钮；点击后实际进入 `ObjectiveAnswer`，标题为“民事诉讼法专项”。Jest 固定验证周柱图、民诉 53%、`2,847 / 68% / 28` 三项统计和完整路由参数。
 - 数据与导航：六科正确率均按原型 `correct / total` 四舍五入计算；不同阈值使用原型绿/紫/橙色和等级标签，专项练习携带 `{mode: chapter, title: 民事诉讼法专项}`。
-- 已知差异：当前学习时长、正确率、排名和做题统计仍是原型 Mock，尚未接入服务端统计口径。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+- 已知差异：Mock 模式继续使用原型学习时长、周柱图、薄弱项和排名 fixture；真实模式已读取 `/learning/report` 的时长、做题数、正确率、科目统计、日/周/月聚合和趋势字段，但页面周柱图/提示文案仍按原型展示。跨设备冲突、提醒投递、生产监控和更复杂排名算法仍待生产增强。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
 
 ### 17. 学习计划
 
@@ -207,7 +213,7 @@
 - Android 截图：`docs/screenshots/android-learning-plan.png`；API 36 设备可在一屏展示完整两周计划。
 - 关键交互：UIAutomator 已确认 `learning-plan-screen`、`1 / 4`、3.5/0.9 小时、两个周标题和 6 个任务文本全部存在；Jest 固定验证 25% 进度、原型文案、6 个唯一任务节点均无 `onPress`，并验证返回操作。
 - 数据与导航：从“我的 → 学习计划”实际进入独立 `LearningPlanScreen`；本周 4 项中仅“观看刑法第8讲”为已完成，下周 2 项均为未完成。
-- 已知差异：当前计划和进度仍是原型 Mock，尚未接入云端日程、提醒或跨设备同步。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+- 已知差异：Mock 模式继续使用原型两周计划 fixture；真实模式已读取 `/learning/plans` 和 `/learning/tasks`，服务端已提供计划 CRUD 与任务完成接口，但当前页面仅展示读取结果，提醒、自动生成、逾期/补做规则和跨设备冲突策略尚未接入。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
 
 ### 18. 错题本
 
@@ -216,7 +222,7 @@
 - Android 截图：`docs/screenshots/android-mistake-book.png`、`android-mistake-book-filter.png`。
 - 关键交互：UIAutomator 已确认 6 个科目筛选项、`共 3 道错题待复习`、`一键重做`、3 张题卡和答错次数；点击“民法”只改变选中态，点击首张题卡进入“错题复习”。Jest 固定验证 3 个唯一题卡、筛选状态、只读一键重做和 `{mode: chapter, title: 错题复习}` 路由参数。
 - 数据与导航：错题数据复用 `src/data/objectiveQuestions.ts` 前三题，保留原型中的用户答案 `B/C/B`、正确答案 `D/A/A` 和 `2/1/3` 次答错标记。
-- 已知差异：筛选和错题列表仍使用原型 Mock，尚未接入真实错题归档、筛选服务和同步；原型“一键重做”无事件，RN 严格保留只读状态。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+- 已知差异：Mock 模式继续使用原型错题 fixture；真实模式已读取服务端未解决错题并支持删除/标记已解决，科目筛选仍在客户端完成，自动归档规则、掌握状态和跨设备同步增强尚未接入；原型“一键重做”无事件，RN 严格保留只读状态。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
 
 ### 19. 收藏夹
 
@@ -225,16 +231,16 @@
 - Android 截图：`docs/screenshots/android-favorites.png`。
 - 关键交互：UIAutomator 已确认 `favorites-screen`、`共 4 条收藏`、4 张收藏行和全部标题；点击首项后进入“收藏题目”并显示 `1 / 4`。Jest 固定验证 4 个唯一收藏节点、全部文案及 `{mode: chapter, title: 收藏题目}` 路由参数。
 - 数据与导航：保留原型三道题目和一条《民法典》第311条法条收藏；法条项仅显示“民法典”标签，不增加年份。
-- 已知差异：当前收藏数据仍为原型 Mock，尚未接入账号级收藏增删和同步；原型所有收藏项统一进入客观题页，RN 按其可达行为复刻。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+- 已知差异：Mock 模式继续使用原型三道题目加一条法条 fixture；真实模式已读取账号级题目收藏并支持取消收藏，法条收藏由法条检索页的独立接口处理，批量操作和更完整同步策略尚未接入；原型所有收藏项统一进入客观题页，RN 按其可达行为复刻。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
 
 ### 20. 法条检索
 
 - 原型源码：`得宝APP (1)/src/pages/LawSearch.tsx`、公共 `TopBar`、`Tag`、首页主观题快捷入口和客观题作答页法条入口已核对。
 - 原型截图：`docs/screenshots/figma-law-search.png`、`figma-law-article-sheet.png`、`figma-law-forum.png`、`figma-law-notices.png`，均为 390x844。
 - Android 截图：`docs/screenshots/android-law-search.png`、`android-law-search-result.png`、`android-law-article-sheet.png`、`android-law-forum.png`、`android-law-notices.png`、`android-law-notice-expanded.png`。
-- 关键交互：UIAutomator 已验证搜索 `311` 返回唯一结果、打开第311条全文、跳转“第311条相关练习”、论坛“答疑求助”筛选和首条公告展开；Jest 使用原型关键词“善意取得”固定搜索结果，并覆盖全文收藏、关联练习路由、6 篇论坛帖子/2 篇筛选结果和 6 条公告。
-- 数据与导航：完整迁移 10 条法条、4 条高频法条、8 个科目筛选、5 个有数据的科目分组、6 篇论坛帖子和 6 条公告；关联练习携带 `{mode: chapter, title: 第311条相关练习}` 进入客观题作答。
-- 已知差异：当前内容仍为原型 Mock，尚未接入权威法规数据源、版本更新、全文索引、论坛服务和公告后台；原型中发布帖子、论坛点赞/回复及公告收藏没有业务事件，RN 不自行增加交互。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+- 关键交互：UIAutomator 已验证搜索 `311` 返回唯一结果、打开第311条全文、跳转“第311条相关练习”和论坛“答疑求助”筛选；Jest 使用原型关键词“善意取得”固定搜索结果，并覆盖全文收藏、关联练习路由、6 篇论坛帖子/2 篇筛选结果及论坛详情/发布导航，同时断言法条页不包含公告 Tab。
+- 数据与导航：完整迁移 10 条法条、4 条高频法条、8 个科目筛选、5 个有数据的科目分组和 6 篇论坛帖子；关联练习携带 `{mode: chapter, title: 第311条相关练习}` 进入客观题作答。公告从法条页移出，统一由首页公告位和消息通知承载。后续业务 Goal 在不改变列表正常态的前提下新增 `ForumDetail` 和 `ForumCompose`。
+- 已知差异：法条页已按产品信息架构移除原型中的公告 Tab；真实模式已接 `/law/search` 和法条收藏。公告在首页公告位和消息通知中支持已读、关闭及 App/H5/内容深链；论坛已接真实列表、详情、发帖、评论、点赞、收藏、作者操作和举报受理，后台举报/处罚治理的本机闭环也已完成。权威法规数据源、版本更新、全文索引、生产内容风控和推送触达仍待外部运营能力；新增详情/发布属于原型范围外的产品化扩展，仍需三端真机视觉证据。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
 
 ### 21. AI 对话
 
@@ -243,7 +249,7 @@
 - Android 截图：`docs/screenshots/android-ai-chat.png`、`android-ai-chat-loading.png`、`android-ai-chat-answer.png`、`android-ai-chat-keyboard.png`。
 - 关键交互：UIAutomator 已验证初始欢迎消息、4 个快捷问题、快捷提问“三点思考”态、完整第311条回答、右上角重置、输入框和发送按钮；标准键盘下输入区保持可见，输入 `test` 并回车后生成通用三步分析。Jest 固定验证快捷问题、思考延迟、定制回答、通用回答、重置和返回。
 - 数据与状态：完整迁移善意取得、诉讼时效、合同无效和共同犯罪 4 组定制答案；其他输入使用原型通用“定性→构成要件→结合案情”回答。发送期间隐藏快捷问题并阻止重复提交，0.8-1.3 秒后一次性追加回答，保持原型行为而非旧 RN 的逐字流式输出。
-- 已知差异：当前回答仍为原型本地固定逻辑，不构成真实 AI 服务或法律意见；外部模型、鉴权、配额、内容审查、网络错误和中断协议尚未接入。Android 模拟器 Gboard 使用浮动键盘，输入区仍保持可见；除此之外仅有平台状态栏、Safe Area、设备纵向空间、系统键盘和字体栅格化差异。
+- 已知差异：Mock 模式回答仍为原型本地固定逻辑；真实模式已接单轮 AI API、配额/风险数据层和 Provider 不可用错误边界，但尚未配置生产模型、流式中断、内容审查与成本 Provider，不构成真实法律意见。Android 模拟器 Gboard 使用浮动键盘，输入区仍保持可见；除此之外仅有平台状态栏、Safe Area、设备纵向空间、系统键盘和字体栅格化差异。
 
 ### 22. 订单列表
 
@@ -252,7 +258,7 @@
 - Android 截图：`docs/screenshots/android-order-list.png`。
 - 关键交互：UIAutomator 已从“我的 → 订单与已购”进入页面，确认两条订单的状态、商品名、日期和金额；点击第二条进入“订单详情”。Jest 固定验证两条唯一订单行和 `navigation.navigate('OrderDetail', {orderId: 'o2'})`。
 - 数据与导航：新增 `src/data/orders.ts` 保存与原型同源的 `o1/o2` 订单、订单号、商品/课程关联；列表仅展示原型定义的状态、商品名、日期和金额，不保留旧 RN 的订单号副标题、状态胶囊和“实付”前缀。
-- 已知差异：订单仍为原型 Mock，尚未接入账号订单分页、刷新和服务端状态；第 23 页订单详情单独验收。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+- 已知差异：Mock 模式继续使用原型两条订单 fixture；真实模式已读取账号范围内的订单列表，客户端尚未实现分页、刷新和完整状态时间线，支付、退款、售后和服务端回调仍未接入；第 23 页订单详情单独验收。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
 
 ### 23. 订单详情
 
@@ -261,16 +267,16 @@
 - Android 截图：`docs/screenshots/android-order-detail-complete.png`、`android-order-detail-pending.png`。
 - 关键交互：UIAutomator 已验证 `o1` 的“已完成/课程权限已自动开通”和 `o2` 的“待开课/课程将于开课日自动激活”；`o2` 点击“查看商品”进入 `product-detail` 并显示法考直播冲刺班与 `¥680`，`o1` 点击“进入课程”进入 `course-detail`。Jest 固定验证两态全部文案、未知订单回退、`{productId: 'p1'/'p4'}` 和 `{courseId: 'c1'}` 导航参数。
 - 数据与状态：详情页复用 `src/data/orders.ts` 的两条订单和商品图片；`o1` 展示视频课程、`¥3,980`、`DB2024031200001`、微信支付及双按钮，`o2` 展示直播课程、`¥680`、`DB2024052800078`、微信支付且仅保留查看商品。未知 `orderId` 按原型回退 `o1`。
-- 已知差异：订单仍为原型 Mock，不包含真实服务端订单状态、物流、退款或售后流程；除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+- 已知差异：Mock 模式继续使用原型订单 fixture；真实模式已按 `orderId` 读取用户订单详情，但页面仍未展示服务端时间线/物流，退款、售后、支付回调和权益补偿流程尚未接入。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
 
 ### 24. 用户资料
 
 - 原型源码：`得宝APP (1)/src/pages/UserProfile.tsx`、公共 `TopBar`/`BottomSheet` 和个人页头像/编辑资料入口已核对。
 - 原型截图：`docs/screenshots/figma-user-profile.png`、`figma-user-profile-edit.png`、`figma-user-profile-stage.png`、`figma-user-profile-avatar.png`、`figma-user-profile-saved.png`，均为 390x844。
 - Android 截图：`docs/screenshots/android-user-profile.png`、`android-user-profile-edit.png`、`android-user-profile-keyboard.png`、`android-user-profile-stage.png`、`android-user-profile-avatar.png`、`android-user-profile-saved.png`。
-- 关键交互：UIAutomator 已从“我的 → 编辑资料”进入，确认五项资料、手机号禁用、账号安全三行、文本编辑和计数、5 个备考阶段、6 个头像色板及 2 秒保存提示；昵称输入获得焦点后浮动键盘不遮挡取消/保存。Jest 固定验证默认内容、只读/无事件行、空值回退、阶段选择、六色头像和提示自动消失。
+- 关键交互：UIAutomator 已从“我的 → 编辑资料”进入，确认五项资料、手机号禁用、账号安全三行、文本编辑和计数、5 个备考阶段、6 个头像色板及 2 秒保存提示；昵称输入获得焦点后浮动键盘不遮挡取消/保存。Jest 固定验证默认内容、手机号只读、账号安全导航、空值回退、阶段选择、六色头像和提示自动消失。
 - 数据与状态：初始昵称、手机号、备考目标、阶段和学校与原型一致；文本字段最大 30 字，空白保存保留旧值；头像颜色仅在原型给定的 `#4C4BEA/#C0385A/#3A7A46/#A87000/#1A5FA8/#1A8B8B` 中选择。
-- 已知差异：原型资料修改只保存在页面状态，当前同样未接入账号持久化、头像照片上传、密码/微信/注销业务；账号安全三行按原型保留为无事件展示。除此之外仅有平台状态栏、Safe Area、设备纵向空间、系统键盘和字体栅格化差异。
+- 已知差异：原型正常态布局与文案保持不变；账号安全三行现在统一导航到新增的账号安全业务页。昵称、考试年份、头像颜色/URL 可持久化，头像照片上传仍需原生图片选择和对象存储。除此之外仅有平台状态栏、Safe Area、设备纵向空间、系统键盘和字体栅格化差异。
 
 ### 25. 设置
 
@@ -279,7 +285,7 @@
 - Android 截图：`docs/screenshots/android-settings.png`、`android-settings-logout.png`。
 - 关键交互：UIAutomator 已从“我的 → 设置与隐私”进入，确认通知/隐私/关于三组 8 项和 `v2.4.1`；8 个设置行均无可点击节点。点击退出登录打开居中 Dialog，取消后仍在设置页，确认后返回 `profile-screen`。Jest 固定验证完整文案、静态行、取消和确认返回。
 - 数据与状态：学习提醒只显示“每日学习计划提醒”说明，不保留旧 RN 的通知开关；退出确认只关闭 Dialog 并 `goBack()`，严格对应原型，不调用登出服务或清空本地学习数据。
-- 已知差异：所有设置项按原型保持无业务事件，真实账号安全、协议、客服、通知权限和退出登录服务尚未接入；除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+- 已知差异：正常态仍按原型保持静态通知/课程/订单行；账号安全、隐私政策/用户协议、学习提醒偏好和真实模式退出登录已接入对应服务，客服渠道、系统通知权限/Token、推送 Provider 和更多设置写操作仍待外部能力。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
 
 ### 26. 消息通知
 
@@ -288,7 +294,7 @@
 - Android 截图：`docs/screenshots/android-notifications.png`。
 - 关键状态：UIAutomator 已从“我的 → 消息通知”进入并命中 4 条完整通知；`notification-row-*` 共 4 个且均不可点击，`notification-unread-*` 仅有 2 个。Jest 固定验证顺序、全文、时间、三类图标、两条未读圆点及无“未读”文字胶囊。
 - 数据与状态：固定展示学习提醒、课程更新、订单通知和错题复习提醒；前两条使用 `#FAFAFE` 未读底色和品牌色圆点，后两条为已读标题色；提醒/课程/订单分别使用紫/绿/玫红图标。
-- 已知差异：原型页面为无事件静态列表，当前同样未接入服务端通知、标记已读、分页、推送权限或跳转目标；除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+- 已知差异：Mock 模式保持原型无事件静态列表；真实模式已读取 `/notifications`，公告通知按类型展示并支持点击标记已读和深链，通知分页、推送权限/Token、APNs/Android 厂商/FCM/Harmony Push 和真实触达仍未接入。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
 
 ### 27. 批改服务
 
@@ -297,7 +303,7 @@
 - Android 截图：`docs/screenshots/android-grading-service.png`。
 - 关键交互：UIAutomator 已从“我的 → 批改服务”进入，确认剩余/已用次数、20% 进度、提交入口和两条记录；两条记录均不可点击。点击提交入口进入 `subjective-answer-screen`，显示“民法 · 分科真题”和 `1 / 5`。Jest 固定验证全文、静态记录和 `{questionIndex: 0, subjectName: '民法'}` 参数。
 - 数据与状态：展示剩余 8 次、已使用 2/共 10 次；记录为 2023 民法股权转让案例 `38/50` 已批改及 2022 合同解除与违约责任待批改，只有首条包含反馈。
-- 已知差异：当前为原型静态次数与批改记录，未接入真实权益、答案上传、人工派单、进度和反馈服务；除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+- 已知差异：Mock 模式保持原型次数和记录 fixture；真实模式已读取可批改套卷/提交记录，并可进入提交、状态和报告基础流程，服务端已具备版本快照、幂等、AI/人工状态机、任务分配、扣次账本和后台批改工作台。附件上传/对象存储安全扫描、独立生产 Worker/队列、真实权益商品映射、通知 Provider 和完整反馈文件仍受外部部署条件约束。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
 
 ### 28. 做题记录
 
@@ -306,4 +312,7 @@
 - Android 截图：`docs/screenshots/android-question-records.png`，1080x2400。
 - 关键交互：UIAutomator 已从“我的 → 做题记录”进入并确认页面标题、`2,847`/`68%` 两项统计、4 条记录及 4 个可点击 `question-record-r*` 节点；点击首条后进入 `objective-report-screen`，显示 75 分、答对 3、答错 1、总题数 4。Jest 固定验证全部原型文案、四条唯一记录和四次 `{correct: 3, total: 4}` 导航参数。
 - 数据与状态：记录依次为今天 21:05 民法物权法 75%、昨天 20:30 2023 年卷一 72%、8 月 24 日刑法总论 80%、8 月 23 日民法合同法 68%；前三条正确率为绿色，最后一条为错误色。
-- 已知差异：当前为原型静态统计与记录，未接入真实历史、分页、筛选或服务端报告；除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+- 已知差异：Mock 模式保持原型静态统计和四条记录 fixture；真实模式已读取 `/question-records` 并按记录进入服务端提交报告，客户端尚未暴露分页/科目筛选控件，长期统计和更完整报告聚合仍未接入。除此之外仅有平台状态栏、Safe Area、设备纵向空间和字体栅格化差异。
+# 真实模式状态说明（2026-09-02）
+
+页面的 Mock 渲染仍以 Figma 原型为 1:1 基准。`DEBAO_USE_MOCKS=false` 时，当前已读取本地 API 的范围包括：首页、课程列表/详情/权益/进度、题库科目与客观题会话、答题记录/报告、错题、题目收藏、学习计划/任务/周报、用户资料、账号安全、订单列表/详情、商品详情、批改套卷/提交记录、通知列表/已读、法条搜索/收藏、论坛列表/详情/发帖/评论/举报和公告。Mock 与 remote 的视觉基线必须分开验收；媒体真实播放、推送权限、支付 SDK、AI 生产 Provider、附件上传和文件存储仍由外部供应商或三端原生工程提供，详见 `INTEGRATION_BLOCKERS.md`。

@@ -9,7 +9,7 @@ flowchart TD
   UI --> CONTRACT["Service Contracts"]
   STORE --> STORAGE["AsyncStorage"]
   CONTRACT --> MOCK["Mock Services"]
-  CONTRACT --> API["ApiClient / future backend"]
+  CONTRACT --> API["ApiClient / local or production backend"]
   MOCK --> DATA["Local mock data"]
   UI --> PLATFORM["Platform capability adapters"]
   PLATFORM --> ANDROID["Android / Kotlin"]
@@ -25,7 +25,7 @@ flowchart TD
 - `store`：保存跨页面客户端状态；仅持久化必要字段。
 - `services/contracts.ts`：定义业务能力边界。
 - `services/mockServices.ts`：第一阶段演示实现，所有异步结果都明确属于 Mock。
-- `services/apiClient.ts`：未来真实 HTTP 接入点，包含超时和标准错误映射。
+- `services/apiClient.ts`：真实模式的 HTTP 接入点，包含超时、鉴权刷新和标准错误映射；Mock 模式不发网络请求。
 - `platform`：声明支付、推送、媒体、下载的平台实现状态。
 - `data`：演示数据，不应被正式环境直接引用。
 - `theme`：颜色、间距、圆角、阴影 Token。
@@ -56,16 +56,19 @@ sequenceDiagram
   participant S as Screen
   participant V as Service Contract
   participant M as Mock Service
+  participant A as ApiClient / API
   participant Z as Zustand/AsyncStorage
   U->>S: 操作
   S->>V: 调用业务接口
-  V->>M: 当前 useMocks=true
+  V->>M: Mock 模式（useMocks=true）
   M-->>S: 明确的 Mock 结果
+  V->>A: Remote 模式（useMocks=false）
+  A-->>S: ApiEnvelope 或 ApiError
   S->>Z: 保存草稿/收藏/资料
   Z-->>S: 持久化状态更新
 ```
 
-正式后端接入时替换 Service 实例，不允许让页面直接拼接 URL 或保存访问令牌。
+页面始终只依赖 Service Contract；运行时按 `DEBAO_USE_MOCKS` 选择 Mock 或 API 实例，不允许页面直接拼接 URL 或保存访问令牌。
 
 ## 三端共享与专用代码
 
@@ -85,4 +88,4 @@ sequenceDiagram
 
 ## Mock 边界
 
-Mock 包括用户资料、题库提交、订单、支付、AI 流式文本、媒体准备、通知。媒体页只有 UI 和状态机，没有真实播放；支付不会扣款；AI 不调用外部模型；通知不请求系统权限。
+Mock 仍包括原型视觉所需的用户资料、题目、订单、学习工具、通知和固定 AI 回答。`DEBAO_USE_MOCKS=false` 时，登录、题库/报告、课程/权益/进度、学习计划/报告、订单、论坛、通知列表/已读、法条、错题/收藏和基础批改已通过 `realServices.ts` 读取本地 API；请求失败不会静默回退 fixture。媒体页仍只有授权探测和 UI 状态机，支付不会扣款，AI 生产 Provider、推送权限和附件上传仍未接入。

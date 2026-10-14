@@ -1,13 +1,17 @@
+import {useCallback, useEffect, useState} from 'react';
 import {Image, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
-import {CheckCircle, ChevronLeft} from 'lucide-react-native';
+import {CheckCircle, ChevronLeft, RefreshCw} from 'lucide-react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import type {RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
-import {prototypeOrders} from '@/data/orders';
+import {RemoteState} from '@/components/ui';
+import {prototypeOrders, type PrototypeOrder} from '@/data/orders';
 import {catalogProducts} from '@/data/products';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
+import {environment} from '@/config/environment';
+import {orderService} from '@/services';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type DetailRoute = RouteProp<RootStackParamList, 'OrderDetail'>;
@@ -15,9 +19,31 @@ type DetailRoute = RouteProp<RootStackParamList, 'OrderDetail'>;
 export default function OrderDetailScreen() {
   const navigation = useNavigation<Navigation>();
   const route = useRoute<DetailRoute>();
-  const order = prototypeOrders.find(item => item.id === route.params.orderId) ?? prototypeOrders[0];
-  const product = catalogProducts.find(item => item.id === order.productId) ?? catalogProducts[0];
-  const completed = order.status === '已完成';
+  const [order, setOrder] = useState<PrototypeOrder | null>(environment.useMocks ? (prototypeOrders.find(item => item.id === route.params.orderId) ?? prototypeOrders[0]) : null);
+  const [loading, setLoading] = useState(!environment.useMocks);
+  const [error, setError] = useState('');
+  const load = useCallback(async () => {
+    if (environment.useMocks) return;
+    setLoading(true);
+    setError('');
+    try {
+      const item = await orderService.get(route.params.orderId);
+      if (!item) {
+        setOrder(null);
+        setError('订单不存在');
+        return;
+      }
+      const productId = item.productId ?? catalogProducts.find(productItem => productItem.name === item.productName)?.id ?? 'p1';
+      setOrder({id: item.id, productName: item.productName, orderNo: item.id, date: item.createdAt, amount: item.amount, status: item.status === 'paid' ? '已完成' : '待开课', productId, courseId: item.status === 'paid' ? (productId === 'p1' ? 'c1' : productId === 'p2' ? 'c3' : null) : null});
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '订单加载失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
+  }, [route.params.orderId]);
+  useEffect(() => { load().catch(() => undefined); }, [load]);
+  const product = order ? catalogProducts.find(item => item.id === order.productId) ?? catalogProducts[0] : null;
+  const completed = order?.status === '已完成';
 
   return (
     <AppScreen scroll={false} backgroundColor={colors.page} testID="order-detail-screen">
@@ -29,7 +55,9 @@ export default function OrderDetailScreen() {
         <View style={styles.headerSide} />
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      {loading || (error && !order) ? <RemoteState testID="order-detail-state" loading={loading} error={error} loadingLabel="正在加载订单详情..." emptyTitle="暂无订单详情" emptyDescription="该订单可能已被删除。" onRetry={load} /> : order && product ? <>
+        {error ? <View testID="order-detail-inline-error" style={styles.inlineError}><Text accessibilityRole="alert" style={styles.inlineErrorText}>{error}</Text><Pressable testID="order-detail-retry" onPress={load} style={styles.retry}><RefreshCw size={14} color={colors.brand} /><Text style={styles.retryText}>重新加载</Text></Pressable></View> : null}
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View testID="order-detail-status" style={styles.statusCard}>
           <View style={[styles.statusIcon, completed ? styles.completedIcon : styles.pendingIcon]}>
             <CheckCircle size={22} color={completed ? colors.success : '#A87000'} />
@@ -86,6 +114,7 @@ export default function OrderDetailScreen() {
           </Pressable>
         ) : null}
       </View>
+      </> : null}
     </AppScreen>
   );
 }
@@ -123,4 +152,8 @@ const styles = StyleSheet.create({
   secondaryText: {fontSize: 14, color: colors.body},
   primaryButton: {backgroundColor: colors.brand},
   primaryText: {fontSize: 14, fontWeight: '600', color: colors.surface},
+  inlineError: {marginHorizontal: 16, marginTop: 16, padding: 12, borderRadius: radius.md, backgroundColor: colors.apricot, flexDirection: 'row', alignItems: 'center', gap: 10},
+  inlineErrorText: {flex: 1, fontSize: 12, lineHeight: 18, color: colors.error},
+  retry: {height: 36, paddingHorizontal: 12, borderRadius: radius.md, borderWidth: 1, borderColor: colors.brand, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.surface},
+  retryText: {fontSize: 12, fontWeight: '700', color: colors.brand},
 });

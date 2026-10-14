@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    env_file: /etc/debao/postgres.env
+    ports: ["127.0.0.1:55432:5432"]
+    volumes: ["postgres:/var/lib/postgresql/data"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U debao -d debao"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["127.0.0.1:56379:6379"]
+    volumes: ["redis:/data"]
+    restart: unless-stopped
+volumes:
+  postgres:
+  redis:

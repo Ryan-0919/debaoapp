@@ -10,7 +10,7 @@
     "harmony:bundle": "react-native bundle-harmony --config metro.harmony.config.js --dev false --minify true --js-engine hermes",
     "harmony:run": "react-native run-harmony",
     "lint": "eslint .",
-    "start": "react-native start",
+    "start": "node scripts/start-metro.mjs",
     "test": "jest --runInBand",
     "typecheck": "tsc --noEmit",
     "check": "pnpm typecheck && pnpm lint && pnpm test",

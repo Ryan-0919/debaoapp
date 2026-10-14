@@ -6,7 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import {AlertCircle, ChevronRight, Inbox} from 'lucide-react-native';
+import {AlertCircle, ChevronRight, Inbox, RefreshCw} from 'lucide-react-native';
 import {colors, radius, shadows, spacing} from '@/theme';
 
 export function Card({children, style}: PropsWithChildren<{style?: object}>) {
@@ -136,6 +136,59 @@ export function EmptyState({title, description}: {title: string; description: st
   );
 }
 
+export function RemoteState({
+  testID,
+  loading = false,
+  error,
+  empty = false,
+  loadingLabel = '正在加载...',
+  emptyTitle = '暂无数据',
+  emptyDescription = '完成操作后，相关内容会显示在这里。',
+  onRetry,
+}: {
+  testID: string;
+  loading?: boolean;
+  error?: string;
+  empty?: boolean;
+  loadingLabel?: string;
+  emptyTitle?: string;
+  emptyDescription?: string;
+  onRetry?: () => void;
+}) {
+  if (loading) {
+    return (
+      <View testID={`${testID}-loading`} style={styles.remoteState}>
+        <ActivityIndicator color={colors.brand} />
+        <Text style={styles.remoteStateText}>{loadingLabel}</Text>
+      </View>
+    );
+  }
+  if (error) {
+    return (
+      <View testID={`${testID}-error`} style={styles.remoteState}>
+        <AlertCircle size={30} color={colors.error} />
+        <Text accessibilityRole="alert" style={styles.remoteStateError}>{error}</Text>
+        {onRetry ? (
+          <Pressable testID={`${testID}-retry`} onPress={onRetry} style={({pressed}) => [styles.remoteRetry, pressed && styles.pressed]}>
+            <RefreshCw size={14} color={colors.brand} />
+            <Text style={styles.remoteRetryText}>重新加载</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    );
+  }
+  if (empty) {
+    return (
+      <View testID={`${testID}-empty`} style={styles.remoteState}>
+        <Inbox size={30} color={colors.muted} />
+        <Text style={styles.remoteStateTitle}>{emptyTitle}</Text>
+        <Text style={styles.remoteStateText}>{emptyDescription}</Text>
+      </View>
+    );
+  }
+  return null;
+}
+
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
@@ -195,4 +248,10 @@ const styles = StyleSheet.create({
   empty: {padding: 40, alignItems: 'center'},
   emptyTitle: {fontSize: 16, fontWeight: '700', color: colors.ink, marginTop: spacing.md},
   emptyDescription: {fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: spacing.sm, lineHeight: 20},
+  remoteState: {flex: 1, minHeight: 180, padding: spacing.xl, alignItems: 'center', justifyContent: 'center', gap: spacing.sm},
+  remoteStateTitle: {fontSize: 14, fontWeight: '700', color: colors.ink, textAlign: 'center'},
+  remoteStateText: {fontSize: 13, lineHeight: 19, color: colors.muted, textAlign: 'center'},
+  remoteStateError: {maxWidth: 300, fontSize: 13, lineHeight: 20, color: colors.error, textAlign: 'center'},
+  remoteRetry: {height: 40, paddingHorizontal: spacing.lg, borderRadius: radius.md, borderWidth: 1, borderColor: colors.brand, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.surface},
+  remoteRetryText: {fontSize: 13, fontWeight: '700', color: colors.brand},
 });

@@ -1,38 +1,147 @@
-import {useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Modal, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import type {RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {ChevronLeft, ChevronRight, Grid3x3, X} from 'lucide-react-native';
 import {AppScreen} from '@/components/AppScreen';
+import {RemoteState} from '@/components/ui';
 import {OBJECTIVE_QUESTIONS} from '@/data/objectiveQuestions';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
 import {environment} from '@/config/environment';
-import {questionService} from '@/services';
+import {learningService, questionService} from '@/services';
+import type {ObjectiveSession, ObjectiveSessionQuestion} from '@/services';
+import type {ObjectiveQuestion} from '@/data/objectiveQuestions';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type ScreenRoute = RouteProp<RootStackParamList, 'ObjectiveAnswer'>;
+type ObjectiveViewQuestion = ObjectiveQuestion & {questionType?: 'true_false' | 'single' | 'multiple' | 'indeterminate'};
+
+const allowsMultipleAnswers = (questionType?: ObjectiveViewQuestion['questionType']) => questionType === 'multiple' || questionType === 'indeterminate';
+
+function mapSessionQuestions(items: ObjectiveSessionQuestion[]): ObjectiveViewQuestion[] {
+  return items.map((item, index) => ({
+    id: item.id,
+    subject: item.subjectId ?? '在线题库',
+    year: '2026',
+    num: index + 1,
+    stem: item.stem,
+    options: item.options.map((text, optionIndex) => ({key: String.fromCharCode(65 + optionIndex), text})),
+    answer: '',
+    explanation: item.analysis ?? '',
+    point: '在线练习',
+    lawBasis: '',
+    questionType: item.questionType,
+  }));
+}
 
 export default function ObjectiveAnswerScreen() {
   const navigation = useNavigation<Navigation>();
+  const navigationRef = useRef(navigation);
+  navigationRef.current = navigation;
   const route = useRoute<ScreenRoute>();
+  const subjectId = route.params?.subjectId;
+  const paperId = route.params?.paperId;
+  const requestedSessionId = route.params?.sessionId;
+  const requestedQuestionIds = route.params?.questionIds;
+  const sessionMode = route.params?.mode === 'exam' ? 'exam' : route.params?.mode === 'random' ? 'random' : 'chapter';
+  const createKeyRef = useRef<string | undefined>(undefined);
+  const submitKeyRef = useRef<string | undefined>(undefined);
+  const pendingSavesRef = useRef(new Map<string, Promise<unknown>>());
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [session, setSession] = useState<ObjectiveSession | null>(null);
   const [cardVisible, setCardVisible] = useState(false);
   const [submitVisible, setSubmitVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const question = OBJECTIVE_QUESTIONS[currentIdx];
-  const userAnswer = answers[question.id];
+  const [questionList, setQuestionList] = useState<ObjectiveViewQuestion[]>(environment.useMocks ? OBJECTIVE_QUESTIONS : []);
+  const [loading, setLoading] = useState(!environment.useMocks);
+  const [error, setError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const supportsSessions = !environment.useMocks
+    && typeof questionService.createSession === 'function'
+    && typeof questionService.getSession === 'function'
+    && typeof questionService.saveSessionAnswer === 'function'
+    && typeof questionService.submitSession === 'function';
+
+  const restoreSession = (remote: ObjectiveSession) => {
+    setSession(remote);
+    setCurrentIdx(0);
+    const restored: Record<string, string> = {};
+    for (const item of remote.answers) {
+      if (item.answers.length) restored[item.questionId] = item.answers.map(value => String.fromCharCode(65 + Number(value))).join(',');
+    }
+    setAnswers(restored);
+    setQuestionList(mapSessionQuestions(remote.questions));
+  };
+
   const title = route.params?.title ?? (route.params?.mode === 'exam' ? '客观题考试' : '客观题练习');
+
+  const loadQuestions = useCallback(async () => {
+    if (environment.useMocks) return;
+    setLoading(true);
+    setError('');
+    setSaveError('');
+    try {
+      if (supportsSessions) {
+        const remote = requestedSessionId
+          ? await questionService.getSession!(requestedSessionId)
+          : await questionService.createSession!({
+            mode: sessionMode,
+            title,
+            subjectId,
+            paperId,
+            questionIds: requestedQuestionIds,
+            limit: sessionMode === 'exam' ? 100 : 20,
+            idempotencyKey: createKeyRef.current ?? (createKeyRef.current = `objective-session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`),
+          });
+        restoreSession(remote);
+        if (remote.status === 'submitted' && remote.reportId) {
+          navigationRef.current.replace('ObjectiveReport', {sessionId: remote.id});
+        }
+        return;
+      }
+      const result = await questionService.listQuestions(subjectId);
+      setCurrentIdx(0);
+      setQuestionList(result.items.map((item, index) => ({id: item.id, subject: item.subjectId ?? '在线题库', year: '2026', num: index + 1, stem: item.stem, options: item.options.map((text, optionIndex) => ({key: String.fromCharCode(65 + optionIndex), text})), answer: String.fromCharCode(65 + item.answer), explanation: item.analysis, point: '在线练习', lawBasis: '', questionType: item.questionType})));
+    } catch (reason) {
+      setQuestionList([]);
+      setError(reason instanceof Error ? reason.message : '题目加载失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
+  }, [paperId, requestedQuestionIds, requestedSessionId, sessionMode, subjectId, supportsSessions, title]);
+  useEffect(() => { loadQuestions().catch(() => undefined); }, [loadQuestions]);
+  const question = questionList[currentIdx];
+  const userAnswer = question ? answers[question.id] : undefined;
   const answered = Object.values(answers).filter(Boolean).length;
   const correct = useMemo(
-    () => OBJECTIVE_QUESTIONS.filter(item => answers[item.id] === item.answer).length,
-    [answers],
+    () => questionList.filter(item => answers[item.id] === item.answer).length,
+    [answers, questionList],
   );
 
   const selectAnswer = (key: string) => {
-    setAnswers(current => ({...current, [question.id]: key}));
+    if (!question) return;
+    const nextValue = allowsMultipleAnswers(question.questionType)
+      ? (userAnswer ?? '').split(',').filter(Boolean).includes(key)
+        ? (userAnswer ?? '').split(',').filter(item => item !== key).join(',')
+        : [...(userAnswer ?? '').split(',').filter(Boolean), key].sort().join(',')
+      : key;
+    setAnswers(current => ({...current, [question.id]: nextValue}));
+    if (supportsSessions && session && questionService.saveSessionAnswer) {
+      setSaveError('');
+      const indexes = nextValue.split(',').filter(Boolean).map(item => String(item.charCodeAt(0) - 65));
+      const savePromise = questionService.saveSessionAnswer(session.id, question.id, indexes).catch(reason => {
+        setSaveError(reason instanceof Error ? reason.message : '答案保存失败，请重试');
+        throw reason;
+      });
+      pendingSavesRef.current.set(question.id, savePromise);
+      savePromise.finally(() => {
+        if (pendingSavesRef.current.get(question.id) === savePromise) pendingSavesRef.current.delete(question.id);
+      }).catch(() => undefined);
+    }
   };
 
   const openQuestion = (index: number) => {
@@ -42,19 +151,62 @@ export default function ObjectiveAnswerScreen() {
 
   const submit = async () => {
     if (submitting) return;
-    setSubmitVisible(false);
-    if (!environment.useMocks) {
+    setSubmitError('');
+    if (supportsSessions && session && questionService.submitSession) {
       setSubmitting(true);
       try {
-        await Promise.all(Object.entries(answers).filter(([, value]) => value).map(([questionId, value]) => questionService.submit({questionId, answers: [String(value.charCodeAt(0) - 65)]})));
-      } catch {
-        // Keep the local report available when the API is temporarily unavailable.
+        if (saveError) throw new Error(saveError);
+        if (pendingSavesRef.current.size) await Promise.all([...pendingSavesRef.current.values()]);
+        const key = submitKeyRef.current ?? `objective-submit-${session.id}`;
+        submitKeyRef.current = key;
+        await questionService.submitSession(session.id, key);
+        if (route.params?.learningTaskId) await learningService.completeTask(route.params.learningTaskId);
+        navigation.navigate('ObjectiveReport', {sessionId: session.id});
+      } catch (reason) {
+        setSubmitError(reason instanceof Error ? reason.message : '提交失败，请检查网络后重试');
+        return;
+      } finally {
+        setSubmitting(false);
+      }
+    } else if (!environment.useMocks) {
+      setSubmitting(true);
+      try {
+        await Promise.all(Object.entries(answers).filter(([, value]) => value).map(([questionId, value]) => questionService.submit({questionId, answers: value.split(',').map(item => String(item.charCodeAt(0) - 65))})));
+        if (route.params?.learningTaskId) await learningService.completeTask(route.params.learningTaskId);
+      } catch (reason) {
+        setSubmitError(reason instanceof Error ? reason.message : '提交失败，请检查网络后重试');
+        return;
       } finally {
         setSubmitting(false);
       }
     }
-    navigation.navigate('ObjectiveReport', {correct, total: OBJECTIVE_QUESTIONS.length});
+    setSubmitVisible(false);
+    if (environment.useMocks || !supportsSessions) navigation.navigate('ObjectiveReport', {correct, total: questionList.length});
   };
+
+  if (loading || error || !question) {
+    return (
+      <AppScreen scroll={false} testID="objective-answer-screen">
+        <View style={styles.header}>
+          <Pressable accessibilityLabel="返回" testID="objective-answer-back" hitSlop={10} onPress={() => navigation.goBack()} style={styles.headerSide}>
+            <ChevronLeft size={22} color={colors.ink} />
+          </Pressable>
+          <View style={styles.headerCopy}><Text numberOfLines={1} style={styles.headerTitle}>{title}</Text><Text style={styles.headerProgress}>{loading ? '加载中' : ''}</Text></View>
+          <View style={[styles.headerSide, styles.headerRight]} />
+        </View>
+        <RemoteState
+          testID="objective-answer-state"
+          loading={loading}
+          error={error}
+          empty={!loading && !error && !questionList.length}
+          loadingLabel="正在加载题目..."
+          emptyTitle="暂无可作答题目"
+          emptyDescription="当前题库还没有发布可作答内容。"
+          onRetry={loadQuestions}
+        />
+      </AppScreen>
+    );
+  }
 
   return (
     <AppScreen scroll={false} testID="objective-answer-screen">
@@ -64,7 +216,7 @@ export default function ObjectiveAnswerScreen() {
         </Pressable>
         <View style={styles.headerCopy}>
           <Text numberOfLines={1} style={styles.headerTitle}>{title}</Text>
-          <Text testID="objective-progress-text" style={styles.headerProgress}>{currentIdx + 1} / {OBJECTIVE_QUESTIONS.length}</Text>
+          <Text testID="objective-progress-text" style={styles.headerProgress}>{currentIdx + 1} / {questionList.length}</Text>
         </View>
         <View style={[styles.headerSide, styles.headerRight]}>
           <Pressable accessibilityLabel="答题卡" testID="objective-open-card" hitSlop={9} onPress={() => setCardVisible(true)} style={styles.headerAction}>
@@ -74,7 +226,7 @@ export default function ObjectiveAnswerScreen() {
       </View>
       <View style={styles.progressArea}>
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, {width: `${((currentIdx + 1) / OBJECTIVE_QUESTIONS.length) * 100}%`}]} />
+          <View style={[styles.progressFill, {width: `${((currentIdx + 1) / questionList.length) * 100}%`}]} />
         </View>
       </View>
 
@@ -90,7 +242,9 @@ export default function ObjectiveAnswerScreen() {
 
         <View style={styles.options}>
           {question.options.map(option => {
-            const selected = userAnswer === option.key;
+            const selected = allowsMultipleAnswers(question.questionType)
+              ? (userAnswer ?? '').split(',').includes(option.key)
+              : userAnswer === option.key;
             return (
               <Pressable
                 key={option.key}
@@ -107,6 +261,7 @@ export default function ObjectiveAnswerScreen() {
             );
           })}
         </View>
+        {saveError ? <Text accessibilityRole="alert" testID="objective-answer-save-error" style={styles.saveError}>{saveError}</Text> : null}
       </ScrollView>
 
       <View style={[styles.bottomBar, (cardVisible || submitVisible) && styles.bottomBarBehindModal]}>
@@ -119,7 +274,7 @@ export default function ObjectiveAnswerScreen() {
           <ChevronLeft size={16} color={colors.body} />
           <Text style={styles.previousText}>上一题</Text>
         </Pressable>
-        {currentIdx < OBJECTIVE_QUESTIONS.length - 1 ? (
+        {currentIdx < questionList.length - 1 ? (
           <Pressable accessibilityLabel="下一题" testID="objective-next" onPress={() => setCurrentIdx(index => index + 1)} style={({pressed}) => [styles.nextButton, pressed && styles.primaryPressed]}>
             <Text style={styles.nextText}>下一题</Text>
             <ChevronRight size={16} color={colors.surface} />
@@ -147,7 +302,7 @@ export default function ObjectiveAnswerScreen() {
                 <View style={styles.legendItem}><View style={styles.legendDot} /><Text style={styles.legendText}>未答</Text></View>
               </View>
               <View style={styles.cardGrid}>
-                {OBJECTIVE_QUESTIONS.map((item, index) => {
+                {questionList.map((item, index) => {
                   const active = index === currentIdx;
                   const hasAnswer = !!answers[item.id];
                   return (
@@ -162,7 +317,7 @@ export default function ObjectiveAnswerScreen() {
                   );
                 })}
               </View>
-              <Text testID="objective-card-summary" style={styles.cardSummary}>已作答 {answered} / {OBJECTIVE_QUESTIONS.length}，未作答 {OBJECTIVE_QUESTIONS.length - answered} 题</Text>
+              <Text testID="objective-card-summary" style={styles.cardSummary}>已作答 {answered} / {questionList.length}，未作答 {questionList.length - answered} 题</Text>
               <Pressable testID="objective-card-submit" onPress={() => {setCardVisible(false); setSubmitVisible(true);}} style={({pressed}) => [styles.sheetSubmit, pressed && styles.primaryPressed]}>
                 <Text style={styles.sheetSubmitText}>交卷</Text>
               </Pressable>
@@ -177,7 +332,8 @@ export default function ObjectiveAnswerScreen() {
           <View accessibilityViewIsModal testID="objective-submit-dialog" style={styles.dialogCard}>
             <View style={styles.dialogBody}>
               <Text style={styles.dialogTitle}>确认交卷</Text>
-              <Text style={styles.dialogDescription}>已作答 {answered} 题，{OBJECTIVE_QUESTIONS.length - answered} 题未作答，交卷后不可修改。</Text>
+              <Text style={styles.dialogDescription}>已作答 {answered} 题，{questionList.length - answered} 题未作答，交卷后不可修改。</Text>
+              {submitError ? <Text accessibilityRole="alert" testID="objective-submit-error" style={styles.submitError}>{submitError}</Text> : null}
             </View>
             <View style={styles.dialogActions}>
               <Pressable testID="objective-submit-cancel" onPress={() => setSubmitVisible(false)} style={({pressed}) => [styles.dialogButton, pressed && styles.pressed]}>
@@ -258,6 +414,8 @@ const styles = StyleSheet.create({
   dialogBody: {padding: 24},
   dialogTitle: {fontSize: 16, lineHeight: 22, fontWeight: '700', color: colors.ink, marginBottom: 8},
   dialogDescription: {fontSize: 14, lineHeight: 22, color: colors.body},
+  submitError: {fontSize: 12, lineHeight: 18, color: colors.error, marginTop: 10},
+  saveError: {fontSize: 12, lineHeight: 18, color: colors.error, marginTop: 10},
   dialogActions: {height: 49, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line},
   dialogButton: {flex: 1, alignItems: 'center', justifyContent: 'center'},
   dialogDivider: {width: StyleSheet.hairlineWidth, backgroundColor: colors.line},

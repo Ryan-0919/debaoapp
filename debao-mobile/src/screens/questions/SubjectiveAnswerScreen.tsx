@@ -1,4 +1,4 @@
-import {useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   Modal,
   Pressable,
@@ -13,11 +13,13 @@ import type {RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {BookOpen, ChevronLeft, Save} from 'lucide-react-native';
 import {AppScreen} from '@/components/AppScreen';
+import {RemoteState} from '@/components/ui';
 import {
   SUBJECTIVE_QUESTIONS,
   type SubjectiveDifficulty,
 } from '@/data/subjectiveQuestions';
-import {questionService} from '@/services';
+import {gradingService, learningService, questionService} from '@/services';
+import type {GradingQuestion} from '@/services';
 import {useAppStore} from '@/store/useAppStore';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
@@ -39,11 +41,49 @@ export default function SubjectiveAnswerScreen() {
   const navigation = useNavigation<Navigation>();
   const route = useRoute<ScreenRoute>();
   const subjectName = route.params.subjectName;
+  const gradingQuestionId = route.params.gradingQuestionId;
+  const gradingPaperId = route.params.gradingPaperId;
+  const learningQuestionId = route.params.learningQuestionId;
+  const learningTaskId = route.params.learningTaskId;
+  const [remoteQuestion, setRemoteQuestion] = useState<GradingQuestion | null>(null);
+  const [remoteLoading, setRemoteLoading] = useState(Boolean(gradingQuestionId || learningQuestionId));
+  const [remoteError, setRemoteError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const idempotencyKey = useRef(`grading-${gradingQuestionId ?? 'local'}-${Date.now()}`).current;
+  const loadRemoteQuestion = useCallback(async () => {
+    if (!gradingQuestionId && !learningQuestionId) return;
+    setRemoteLoading(true);
+    setRemoteError('');
+    try {
+      if (learningQuestionId) {
+        if (!learningService.subjectiveQuestion) throw new Error('当前服务暂不支持加载学习主观题');
+        const item = await learningService.subjectiveQuestion(learningQuestionId);
+        if (!item) throw new Error('题目不存在或已下架');
+        setRemoteQuestion({id: item.id, rubricId: `learning-${item.id}`, version: 1, title: item.title, subjectId: item.subjectId, caseMaterial: item.caseMaterial ?? item.stem, subQuestions: item.subQuestions.map(question => ({id: question.id, prompt: question.prompt, maxScore: question.score})), totalScore: item.subQuestions.reduce((sum, question) => sum + question.score, 0), suggestedMinutes: item.estimatedMinutes, allowedAnswerTypes: ['text']});
+      } else {
+        if (!gradingService?.questions) throw new Error('当前服务暂不支持加载批改题目');
+        const items = await gradingService.questions();
+        const item = items.find(entry => entry.id === gradingQuestionId);
+        if (!item) throw new Error('题目不存在或已下架');
+        setRemoteQuestion(item);
+      }
+    } catch (reason) {
+      setRemoteQuestion(null);
+      setRemoteError(reason instanceof Error ? reason.message : '题目加载失败，请稍后重试');
+    } finally {
+      setRemoteLoading(false);
+    }
+  }, [gradingQuestionId, learningQuestionId]);
+  useEffect(() => { loadRemoteQuestion().catch(() => undefined); }, [loadRemoteQuestion]);
   const questions = useMemo(
-    () => SUBJECTIVE_QUESTIONS.filter(item => item.subject === subjectName),
-    [subjectName],
+    () => (gradingQuestionId || learningQuestionId) ? (remoteQuestion ? [{id: remoteQuestion.id, year: new Date().getFullYear().toString(), title: remoteQuestion.title, summary: remoteQuestion.caseMaterial, difficulty: '中' as SubjectiveDifficulty, subCount: remoteQuestion.subQuestions.length, suggestMinutes: remoteQuestion.suggestedMinutes, status: 'none' as const, subject: subjectName, content: remoteQuestion.caseMaterial, questions: remoteQuestion.subQuestions.map((item, index) => ({id: item.id, num: index + 1, text: `${item.prompt}（${item.maxScore}分）`}))}] : []) : SUBJECTIVE_QUESTIONS.filter(item => item.subject === subjectName),
+    [gradingQuestionId, learningQuestionId, remoteQuestion, subjectName],
   );
   const storedDrafts = useAppStore(state => state.drafts);
+  const storedDraftsRef = useRef(storedDrafts);
+  storedDraftsRef.current = storedDrafts;
   const saveLocalDraft = useAppStore(state => state.saveDraft);
   const requestedIndex = route.params.questionIndex ?? 0;
   const initialIndex = questions.length
@@ -68,10 +108,48 @@ export default function SubjectiveAnswerScreen() {
   const [submitDialog, setSubmitDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (!questions.length) return;
+    setAnswers(current => {
+      const next = {...current};
+      questions.forEach(question => question.questions.forEach((_, index) => {
+        const key = `${question.id}-${index}`;
+        if (!(key in next)) {
+          const draft = storedDraftsRef.current[`subjective-${key}`];
+          if (draft) next[key] = draft;
+        }
+      }));
+      return next;
+    });
+  }, [questions]);
+
   const q = questions[qIdx];
   const subQ = q?.questions[activeSubQ];
   const answerKey = q ? `${q.id}-${activeSubQ}` : '';
   const currentAnswer = answers[answerKey] ?? '';
+
+  if (remoteLoading || remoteError) {
+    return (
+      <AppScreen scroll={false} testID="subjective-answer-screen">
+        <View style={styles.topHeader}>
+          <Pressable accessibilityLabel="返回" hitSlop={10} onPress={() => navigation.goBack()} style={styles.headerSide}>
+            <ChevronLeft size={22} color={colors.ink} />
+          </Pressable>
+          <Text style={styles.headerTitle}>{subjectName} · 分科真题</Text>
+          <View style={styles.headerSide} />
+        </View>
+        <RemoteState
+          testID="subjective-answer-state"
+          loading={remoteLoading}
+          error={remoteError}
+          loadingLabel="正在加载题目..."
+          emptyTitle="暂无可作答题目"
+          emptyDescription="当前题目还没有发布。"
+          onRetry={loadRemoteQuestion}
+        />
+      </AppScreen>
+    );
+  }
 
   if (!q) {
     return (
@@ -102,12 +180,33 @@ export default function SubjectiveAnswerScreen() {
   };
 
   const saveNow = async () => {
+    if (saving) return;
+    setSaving(true);
+    setSaveError('');
     saveLocalDraft(`subjective-${answerKey}`, currentAnswer);
-    await questionService.saveDraft({
-      questionId: q.id,
-      answers: q.questions.map((_, index) => answers[`${q.id}-${index}`] ?? ''),
+    try {
+      // Learning-plan subjective questions use their own task submission API;
+      // the legacy standalone draft endpoint only knows the old question table.
+      if (!learningTaskId) await questionService.saveDraft({
+        questionId: q.id,
+        answers: q.questions.map((_, index) => answers[`${q.id}-${index}`] ?? ''),
+      });
+      setSavedAt(formatDraftTime(new Date()));
+    } catch (reason) {
+      setSaveError(reason instanceof Error ? reason.message : '保存失败，请检查网络后重试');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openLawSearch = () => {
+    // Persist all entered answers before leaving so a reload or offline transition can recover them.
+    Object.entries(answers).forEach(([key, value]) => {
+      if (value.trim()) {
+        saveLocalDraft(`subjective-${key}`, value);
+      }
     });
-    setSavedAt(formatDraftTime(new Date()));
+    navigation.navigate('LawSearch', {source: 'subjective-answer', subject: subjectName});
   };
 
   const goPrevious = () => {
@@ -131,16 +230,27 @@ export default function SubjectiveAnswerScreen() {
   };
 
   const submit = async () => {
+    if (submitting) return;
+    setSubmitError('');
     setSubmitting(true);
-    await questionService.submit({
-      questionId: `subjective-${subjectName}`,
-      answers: questions.flatMap(question =>
-        question.questions.map((_, index) => answers[`${question.id}-${index}`] ?? ''),
-      ),
-    });
-    setSubmitting(false);
-    setSubmitDialog(false);
-    navigation.goBack();
+    try {
+      if (learningTaskId) {
+        if (!learningService.submitSubjectiveTask) throw new Error('当前服务暂不支持提交学习主观题');
+        await learningService.submitSubjectiveTask(learningTaskId, q.questions.map((question, index) => ({subQuestionId: question.id, text: answers[`${q.id}-${index}`] ?? ''})));
+      } else if (gradingQuestionId) {
+        const submission = await gradingService.submit({paperId: gradingPaperId, questionId: gradingQuestionId, idempotencyKey, answers: q.questions.map((question, index) => ({subQuestionId: question.id, text: answers[`${q.id}-${index}`] ?? ''}))});
+        setSubmitDialog(false);
+        navigation.replace('GradingSubmitSuccess', {submissionId: submission.id, paperId: gradingPaperId, questionTitle: q.title});
+        return;
+      } else {
+        await questionService.submit({questionId: `subjective-${subjectName}`, answers: questions.flatMap(question => question.questions.map((_, index) => answers[`${question.id}-${index}`] ?? ''))});
+      }
+      setSubmitDialog(false); navigation.goBack();
+    } catch (reason) {
+      setSubmitError(reason instanceof Error ? reason.message : '提交失败，请检查网络后重试');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const isLast = qIdx === questions.length - 1 && activeSubQ === q.questions.length - 1;
@@ -158,7 +268,7 @@ export default function SubjectiveAnswerScreen() {
             <Text style={styles.headerProgress}>{qIdx + 1} / {questions.length}</Text>
           </View>
           <View style={[styles.headerSide, styles.headerSideRight]}>
-            <Pressable accessibilityLabel="法条检索" testID="subjective-open-law-search" hitSlop={8} onPress={() => navigation.navigate('LawSearch')} style={styles.lawButton}>
+            <Pressable accessibilityLabel="法条检索" testID="subjective-open-law-search" hitSlop={8} onPress={openLawSearch} style={styles.lawButton}>
               <BookOpen size={15} color={colors.brand} />
             </Pressable>
           </View>
@@ -231,13 +341,13 @@ export default function SubjectiveAnswerScreen() {
           />
         </View>
         <View style={styles.saveStateRow}>
-          <Text testID="subjective-answer-save-state" style={styles.saveState}>{savedAt ? `草稿已保存 ${savedAt}` : currentAnswer ? '未保存' : ''}</Text>
+          <Text testID="subjective-answer-save-state" accessibilityRole={saveError ? 'alert' : undefined} style={saveError ? styles.saveError : styles.saveState}>{saveError || (savedAt ? `草稿已保存 ${savedAt}` : currentAnswer ? '未保存' : '')}</Text>
           <Text style={styles.characterCount}>{currentAnswer.length} 字</Text>
         </View>
         <View style={styles.actionBar}>
-          <Pressable accessibilityLabel="保存" testID="subjective-answer-save" hitSlop={4} onPress={saveNow} style={({pressed}) => [styles.secondaryButton, pressed && styles.pressed]}>
+          <Pressable accessibilityLabel="保存" testID="subjective-answer-save" hitSlop={4} disabled={saving} onPress={saveNow} style={({pressed}) => [styles.secondaryButton, saving && styles.disabled, pressed && styles.pressed]}>
             <Save size={14} color={colors.muted} />
-            <Text style={styles.secondaryButtonText}>保存</Text>
+            <Text style={styles.secondaryButtonText}>{saving ? '保存中…' : '保存'}</Text>
           </Pressable>
           <Pressable
             accessibilityLabel="上一题"
@@ -260,6 +370,7 @@ export default function SubjectiveAnswerScreen() {
             <View style={styles.dialogBody}>
               <Text style={styles.dialogTitle}>确认提交</Text>
               <Text style={styles.dialogDescription}>您已完成本次练习。共{questions.length}道题，{answeredCount}个小问已作答。提交后无法修改答案。</Text>
+              {submitError ? <Text accessibilityRole="alert" testID="subjective-submit-error" style={styles.submitError}>{submitError}</Text> : null}
             </View>
             <View style={styles.dialogActions}>
               <Pressable testID="subjective-submit-cancel" disabled={submitting} onPress={() => setSubmitDialog(false)} style={({pressed}) => [styles.dialogButton, pressed && styles.pressed]}>
@@ -320,6 +431,7 @@ const styles = StyleSheet.create({
   input: {height: 101, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, backgroundColor: '#F8F9FA', paddingHorizontal: 12, paddingTop: 10, paddingBottom: 10, fontSize: 13, lineHeight: 19, color: colors.ink},
   saveStateRow: {height: 26, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center'},
   saveState: {fontSize: 10, color: colors.muted},
+  saveError: {fontSize: 10, color: colors.error, flex: 1},
   characterCount: {marginLeft: 'auto', fontSize: 10, color: colors.muted},
   actionBar: {height: 50, paddingHorizontal: 16, paddingBottom: 10, flexDirection: 'row', gap: 8},
   secondaryButton: {height: 40, minWidth: 64, paddingHorizontal: 12, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4},
@@ -335,6 +447,7 @@ const styles = StyleSheet.create({
   dialogBody: {padding: 24},
   dialogTitle: {fontSize: 16, lineHeight: 22, fontWeight: '700', color: colors.ink, marginBottom: 8},
   dialogDescription: {fontSize: 14, lineHeight: 22, color: colors.body},
+  submitError: {fontSize: 12, lineHeight: 18, color: colors.error, marginTop: 10},
   dialogActions: {height: 49, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line},
   dialogButton: {flex: 1, alignItems: 'center', justifyContent: 'center'},
   dialogDivider: {width: StyleSheet.hairlineWidth, backgroundColor: colors.line},

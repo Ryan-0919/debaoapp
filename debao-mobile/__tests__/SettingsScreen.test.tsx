@@ -4,9 +4,10 @@ import {Text} from 'react-native';
 import SettingsScreen from '../src/screens/account/SettingsScreen';
 
 const mockGoBack = jest.fn();
+const mockNavigate = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({canGoBack: () => true, goBack: mockGoBack}),
+  useNavigation: () => ({canGoBack: () => true, goBack: mockGoBack, navigate: mockNavigate}),
 }));
 
 jest.mock('@/components/AppScreen', () => ({
@@ -29,18 +30,23 @@ function textValues(renderer: ReactTestRenderer.ReactTestRenderer) {
 }
 
 describe('SettingsScreen', () => {
-  beforeEach(() => mockGoBack.mockClear());
+  beforeEach(() => { mockGoBack.mockClear(); mockNavigate.mockClear(); });
 
-  test('matches all three prototype groups without invented row interactions', () => {
+  test('matches all three prototype groups and exposes account/legal navigation', () => {
     let renderer: ReactTestRenderer.ReactTestRenderer;
     act(() => {renderer = ReactTestRenderer.create(<SettingsScreen />);});
     expect(textValues(renderer!)).toEqual(expect.arrayContaining([
       '设置与隐私', '通知', '学习提醒', '每日学习计划提醒', '课程更新通知', '订单通知',
       '隐私', '账号与安全', '隐私政策', '关于', '版本信息', 'v2.4.1', '用户协议', '联系客服', '退出登录',
     ]));
-    for (const label of ['学习提醒', '课程更新通知', '订单通知', '账号与安全', '隐私政策', '版本信息', '用户协议', '联系客服']) {
+    for (const label of ['学习提醒', '课程更新通知', '订单通知', '版本信息', '联系客服']) {
       expect(renderer!.root.findByProps({testID: `settings-row-${label}`}).props.onPress).toBeUndefined();
     }
+    for (const label of ['账号与安全', '隐私政策', '用户协议']) {
+      expect(renderer!.root.findByProps({testID: `settings-row-${label}`}).props.onPress).toEqual(expect.any(Function));
+    }
+    press(renderer!, 'settings-row-账号与安全');
+    expect(mockNavigate).toHaveBeenCalledWith('AccountSecurity');
     act(() => renderer!.unmount());
   });
 

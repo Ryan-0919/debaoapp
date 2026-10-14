@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {ChevronLeft, ChevronRight, Star} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
@@ -27,13 +27,32 @@ function toUiFavorite(item: QuestionFavorite) {
 export default function FavoritesScreen() {
   const navigation = useNavigation<Navigation>();
   const [favorites, setFavorites] = useState<FavoriteItem[]>([...FAVORITES]);
+  const [loading, setLoading] = useState(!environment.useMocks);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (environment.useMocks) return;
-    let active = true;
-    questionService.listFavorites().then(items => { if (active) setFavorites(items.map(toUiFavorite)); }).catch(() => undefined);
-    return () => { active = false; };
+    setLoading(true);
+    setError('');
+    try {
+      setFavorites((await questionService.listFavorites()).map(toUiFavorite));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '收藏加载失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+  useEffect(() => { load().catch(() => undefined); }, [load]);
+
+  const remove = async (id: string) => {
+    if (environment.useMocks) return;
+    try {
+      await questionService.removeFavorite(id);
+      setFavorites(items => items.filter(item => item.id !== id));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '取消收藏失败，请稍后重试');
+    }
+  };
 
   return (
     <AppScreen scroll={false} backgroundColor={colors.page} testID="favorites-screen">
@@ -47,6 +66,8 @@ export default function FavoritesScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} testID="favorites-scroll">
         <Text style={styles.summary} testID="favorites-summary">共 {favorites.length} 条收藏</Text>
+        {loading ? <Text testID="favorites-loading" style={styles.stateText}>正在加载收藏...</Text> : null}
+        {error ? <View testID="favorites-error" style={styles.errorBox}><Text accessibilityRole="alert" style={styles.errorText}>{error}</Text><Pressable testID="favorites-retry" onPress={load}><Text style={styles.retryText}>重新加载</Text></Pressable></View> : null}
         <View style={styles.list}>
           {favorites.map((favorite, index) => (
             <Pressable
@@ -56,7 +77,9 @@ export default function FavoritesScreen() {
               testID={favorite.id}
               onPress={() => navigation.navigate('ObjectiveAnswer', {mode: 'chapter', title: '收藏题目'})}
               style={({pressed}) => [styles.row, index < favorites.length - 1 && styles.rowDivider, pressed && styles.pressed]}>
-              <Star size={16} color="#A87000" fill="#A87000" style={styles.star} />
+              <Pressable accessibilityLabel={`取消收藏${favorite.title}`} testID={`remove-favorite-${favorite.id}`} onPress={event => { event.stopPropagation(); remove(favorite.id).catch(() => undefined); }} style={styles.removeButton}>
+                <Star size={16} color="#A87000" fill="#A87000" style={styles.star} />
+              </Pressable>
               <View style={styles.rowCopy}>
                 <View style={styles.tags}>
                   <View style={styles.tag}><Text style={styles.tagText}>{favorite.subject}</Text></View>
@@ -68,6 +91,7 @@ export default function FavoritesScreen() {
             </Pressable>
           ))}
         </View>
+        {!loading && !favorites.length ? <Text testID="favorites-empty" style={styles.stateText}>暂无收藏题目</Text> : null}
       </ScrollView>
     </AppScreen>
   );
@@ -91,4 +115,9 @@ const styles = StyleSheet.create({
   title: {fontSize: 13, lineHeight: 19, color: colors.ink},
   chevron: {marginTop: 3},
   pressed: {opacity: 0.65},
+  removeButton: {width: 24, height: 28, alignItems: 'center', justifyContent: 'center'},
+  stateText: {paddingVertical: 24, textAlign: 'center', fontSize: 13, color: colors.muted},
+  errorBox: {marginHorizontal: 16, marginBottom: 10, padding: 12, borderRadius: radius.md, backgroundColor: colors.apricot, flexDirection: 'row', alignItems: 'center', gap: 10},
+  errorText: {flex: 1, fontSize: 12, lineHeight: 18, color: colors.error},
+  retryText: {fontSize: 12, fontWeight: '700', color: colors.brand},
 });

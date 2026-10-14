@@ -21,8 +21,10 @@ import {OrderDetailScreen, OrderListScreen} from '@/screens/commerce/OrderScreen
 import CourseDetailScreen from '@/screens/courses/CourseDetailScreen';
 import {AudioPlayerScreen, LiveCourseScreen, VideoPlayerScreen} from '@/screens/courses/MediaScreens';
 import AIChatScreen from '@/screens/ai/AIChatScreen';
-import {NotificationsScreen, SettingsScreen, UserProfileScreen} from '@/screens/account/AccountScreens';
-import {FavoritesScreen, GradingServiceScreen, LawSearchScreen, LearningPlanScreen, LearningReportScreen, MistakeBookScreen, QuestionRecordsScreen} from '@/screens/tools/ToolScreens';
+import {AccountSecurityScreen, AnnouncementDetailScreen, LegalDocumentScreen, NotificationsScreen, SettingsScreen, UserProfileScreen} from '@/screens/account/AccountScreens';
+import {FavoritesScreen, ForumComposeScreen, ForumDetailScreen, GradingPaperDetailScreen, GradingReportScreen, GradingServiceScreen, GradingSubmitSuccessScreen, LawSearchScreen, LearningPlanScreen, LearningReportScreen, LearningTaskDetailScreen, MistakeBookScreen, QuestionRecordsScreen} from '@/screens/tools/ToolScreens';
+import LearningCenterScreen from '@/screens/learning/LearningCenterScreen';
+import LearningDiagnosticScreen from '@/screens/learning/LearningDiagnosticScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tabs = createBottomTabNavigator<MainTabParamList>();
@@ -78,16 +80,27 @@ export default function AppNavigator() {
       <Stack.Screen name="AudioPlayer" component={AudioPlayerScreen} />
       <Stack.Screen name="LearningReport" component={LearningReportScreen} />
       <Stack.Screen name="LearningPlan" component={LearningPlanScreen} />
+      <Stack.Screen name="LearningTaskDetail" component={LearningTaskDetailScreen} />
+      <Stack.Screen name="LearningCenter" component={LearningCenterScreen} />
+      <Stack.Screen name="LearningDiagnostic" component={LearningDiagnosticScreen} />
       <Stack.Screen name="MistakeBook" component={MistakeBookScreen} />
       <Stack.Screen name="Favorites" component={FavoritesScreen} />
       <Stack.Screen name="LawSearch" component={LawSearchScreen} />
+      <Stack.Screen name="ForumDetail" component={ForumDetailScreen} />
+      <Stack.Screen name="ForumCompose" component={ForumComposeScreen} />
       <Stack.Screen name="AIChat" component={AIChatScreen} />
       <Stack.Screen name="OrderList" component={OrderListScreen} />
       <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
       <Stack.Screen name="UserProfile" component={UserProfileScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="AccountSecurity" component={AccountSecurityScreen} />
+      <Stack.Screen name="LegalDocument" component={LegalDocumentScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
+      <Stack.Screen name="AnnouncementDetail" component={AnnouncementDetailScreen} />
       <Stack.Screen name="Grading" component={GradingServiceScreen} />
+      <Stack.Screen name="GradingPaperDetail" component={GradingPaperDetailScreen} />
+      <Stack.Screen name="GradingSubmitSuccess" component={GradingSubmitSuccessScreen} />
+      <Stack.Screen name="GradingReport" component={GradingReportScreen} />
       <Stack.Screen name="QuestionRecords" component={QuestionRecordsScreen} />
     </Stack.Navigator>
   );

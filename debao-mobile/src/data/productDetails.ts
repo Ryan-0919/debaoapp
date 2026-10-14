@@ -21,6 +21,7 @@ export interface ProductMarketing {
 }
 
 export const teacherInfo: Record<string, TeacherInfo> = {
+  得恩教研团队: {title: '法考学习规划与教研团队', bio: '负责诊断题、学习画像和学习计划的持续维护。首次诊断会从基础、时间、执行、理解、记忆和练习习惯等维度了解你的当前状态。'},
   张明远: {title: '法考名师 · 执业律师 · 民法方向', bio: '从事法律职业资格考试辅导16年，民法学博士，曾在头部律所任高级合伙人。授课以框架清晰、案例鲜活著称，善用思维导图串联考点，历届学员客观题通过率显著高于行业均值。'},
   王晓峰: {title: '法考名师 · 主观题专家 · 前高院法官', bio: '曾任省高级人民法院法官12年，深谙裁判思维与答题逻辑。擅长主观题答题规范训练，所带学员主观题均分高出全国平均15+分，批改评语精准到位。'},
   李东明: {title: '法考名师 · 刑法方向 · 双一流高校副教授', bio: '知名高校刑法学副教授，同时担任司法考试辅导机构首席讲师。理论功底深厚，结合真实案例讲授刑法体系，直播课互动氛围好，考前押题命中率极高。'},
@@ -28,6 +29,12 @@ export const teacherInfo: Record<string, TeacherInfo> = {
 };
 
 export const productSyllabi: Record<string, ProductSyllabus> = {
+  'deen-private-coach': {heading: '服务流程', items: [
+    {label: '第 1 步', title: '完成首次学习诊断', meta: '约 5 分钟'},
+    {label: '第 2 步', title: '生成初始学习画像', meta: '提交后即时生成'},
+    {label: '第 3 步', title: '形成个性化学习计划', meta: '依据画像安排'},
+    {label: '第 4 步', title: '根据学习数据动态调整', meta: '持续更新'},
+  ], footer: '首次诊断只能提交一次，后续通过阶段复测和真实学习数据调整画像'},
   p1: {heading: '课程大纲（节选）', items: [
     {label: '第一章', title: '民法总则与基本原则', meta: '18讲'}, {label: '第二章', title: '物权法精讲', meta: '22讲'},
     {label: '第三章', title: '合同法核心考点', meta: '26讲'}, {label: '第四章', title: '刑法总论与分论', meta: '36讲'},
@@ -61,6 +68,7 @@ export const productSyllabi: Record<string, ProductSyllabus> = {
 };
 
 export const productReviews: Record<string, ProductReview[]> = {
+  'deen-private-coach': [],
   p1: [
     {name: '法**生', stars: 5, date: '2024-08-15', tag: '全程班学员', text: '全程班内容太全了，从客观题到主观题一条龙，老师讲得系统清晰，配套题库质量也很高，今年终于过了！'},
     {name: '王*明', stars: 5, date: '2024-07-28', tag: '二战上岸', text: '二战选了这套课，和一战相比进步非常明显。张老师民法讲得真的绝，逻辑框架清楚，案例举一反三。'},
@@ -97,6 +105,25 @@ const feature = (icon: DetailIcon, color: string, title: string, description: st
 const guarantee = (icon: DetailIcon, color: string, text: string) => ({icon, color, text});
 
 export const productMarketing: Record<string, ProductMarketing> = {
+  'deen-private-coach': {
+    heroTitle: '先诊断，再制定学习方案', heroSubtitle: '了解基础、时间与学习习惯\n生成属于你的法考学习画像', heroColor: '#26236F',
+    stats: [{icon: 'target', value: '6项', label: '画像维度'}, {icon: 'clock', value: '约5分钟', label: '首次诊断'}, {icon: 'book', value: '1份', label: '专属画像'}, {icon: 'zap', value: '持续', label: '动态调整'}],
+    featureHeading: '得恩私教如何工作', features: [
+      feature('target', '#4C4BEA', '首次学习诊断', '通过选择题了解你的备考基础、可投入时间和真实学习习惯'),
+      feature('book', '#287A65', '生成专属画像', '将诊断结果整理成清晰的能力维度，为后续计划提供依据'),
+      feature('zap', '#B56B16', '安排学习节奏', '结合画像分配学习内容和练习强度，减少无效重复'),
+      feature('shield', '#B43F5C', '持续动态调整', '后续根据任务完成情况和阶段复测结果更新学习方案'),
+    ],
+    photoCaption: '个性化诊断 · 专属学习方案',
+    timelineHeading: '你的使用路径',
+    timeline: [
+      {phase: '购买后', marker: '1', title: '完成首次诊断', detail: '按真实情况完成画像选择题', color: '#4C4BEA'},
+      {phase: '提交后', marker: '2', title: '查看初始画像', detail: '了解当前优势与需要加强的维度', color: '#287A65'},
+      {phase: '学习中', marker: '3', title: '执行专属计划', detail: '按阶段任务推进并记录学习数据', color: '#B56B16'},
+      {phase: '阶段末', marker: '4', title: '复测与调整', detail: '根据实际表现更新后续安排', color: '#B43F5C'},
+    ],
+    guarantees: [guarantee('shield', '#287A65', '诊断结果仅用于学习规划'), guarantee('target', '#4C4BEA', '方案基于真实作答生成'), guarantee('zap', '#B56B16', '学习数据持续参与调整'), guarantee('book', '#B43F5C', '关键阶段提供复测')],
+  },
   p1: {
     heroTitle: '一次报名 · 全程无忧', heroSubtitle: '客观题 + 主观题 完整覆盖\n从零基础到高分上岸', heroColor: '#252075',
     stats: [{icon: 'clock', value: '420', label: '课时总量'}, {icon: 'users', value: '2847+', label: '已报名学员'}, {icon: 'trophy', value: '91%', label: '历届通过率'}, {icon: 'book', value: '12000+', label: '配套题目'}],

@@ -1,4 +1,4 @@
-import type {ReactNode} from 'react';
+import {useEffect, useState, type ReactNode} from 'react';
 import {Image, Pressable, StyleSheet, Text, View} from 'react-native';
 import {
   AlertCircle,
@@ -18,6 +18,8 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
+import {environment} from '@/config/environment';
+import {authService, courseService, learningService} from '@/services';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -57,8 +59,22 @@ function SectionGroup({title, items}: {title: string; items: MenuItem[]}) {
 export default function ProfileScreen() {
   const navigation = useNavigation<Navigation>();
   const go = <T extends keyof RootStackParamList>(route: T) => navigation.navigate(route as never);
+  const [summary, setSummary] = useState({name: '李明远', examYear: '2024', courseCount: 2, weeklyHours: '4.2h', progress: 42, courseTitle: '民法精讲课（2024版）'});
+
+  useEffect(() => {
+    if (environment.useMocks) return;
+    let active = true;
+    Promise.all([authService.getProfile(), courseService.list(), learningService.report('week')]).then(([profile, courses, report]) => {
+      if (!active) return;
+      const activeCourses = courses.filter(course => course.progress > 0);
+      const current = activeCourses[0] ?? courses[0];
+      setSummary({name: profile.name, examYear: profile.examYear, courseCount: activeCourses.length, weeklyHours: `${(report.minutes / 60).toFixed(1)}h`, progress: Math.round(current?.progress ?? 0), courseTitle: current?.title ?? '暂无课程'});
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   const studyItems: MenuItem[] = [
+    {label: '得恩私教', icon: <BookOpen size={18} color={colors.brand} />, iconBackground: colors.brandLight, onPress: () => go('LearningCenter')},
     {label: '学习计划', icon: <ClipboardList size={18} color={colors.brand} />, iconBackground: colors.brandLight, onPress: () => go('LearningPlan')},
     {label: '学习报告', icon: <FileText size={18} color="#3A7A46" />, iconBackground: colors.mint, onPress: () => go('LearningReport')},
     {label: '做题记录', icon: <BookOpen size={18} color="#1A5FA8" />, iconBackground: colors.sky, onPress: () => go('QuestionRecords')},
@@ -78,10 +94,10 @@ export default function ProfileScreen() {
   return (
     <AppScreen testID="profile-screen">
       <View style={styles.account}>
-        <Pressable testID="profile-avatar" onPress={() => go('UserProfile')} style={styles.avatar}><Text style={styles.avatarText}>李</Text></Pressable>
+        <Pressable testID="profile-avatar" onPress={() => go('UserProfile')} style={styles.avatar}><Text style={styles.avatarText}>{summary.name.slice(0, 1)}</Text></Pressable>
         <View style={styles.accountCopy}>
-          <Text style={styles.name}>李明远</Text>
-          <Text style={styles.examStatus}>备考中  ·  2024客观题</Text>
+          <Text style={styles.name}>{summary.name}</Text>
+          <Text style={styles.examStatus}>备考中  ·  {summary.examYear}客观题</Text>
         </View>
         <Pressable testID="profile-edit" onPress={() => go('UserProfile')} style={styles.editButton}><Text style={styles.editText}>编辑资料</Text></Pressable>
       </View>
@@ -90,9 +106,9 @@ export default function ProfileScreen() {
         <View style={styles.continueCard}>
           <Image source={require('@/assets/images/course-civil-law.png')} style={styles.courseImage} />
           <View style={styles.courseCopy}>
-            <Text numberOfLines={1} style={styles.courseTitle}>民法精讲课（2024版）</Text>
+            <Text numberOfLines={1} style={styles.courseTitle}>{summary.courseTitle}</Text>
             <Text numberOfLines={1} style={styles.lesson}>第18讲：物权变动的公示与公信原则</Text>
-            <MiniProgress value={42} />
+            <MiniProgress value={summary.progress} />
           </View>
           <Pressable testID="profile-continue-course" onPress={() => navigation.navigate('CourseDetail', {courseId: 'c1'})} style={styles.continueButton}>
             <Play size={11} color={colors.ink} fill={colors.ink} /><Text style={styles.continueText}>继续</Text>
@@ -100,7 +116,7 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.assets}>
-          {[['2', '已开课程'], ['4.2h', '本周学习'], ['42%', '当前进度']].map(([value, label], index) => (
+          {[[String(summary.courseCount), '已开课程'], [summary.weeklyHours, '本周学习'], [`${summary.progress}%`, '当前进度']].map(([value, label], index) => (
             <View key={label} style={[styles.asset, index > 0 && styles.assetDivider]}>
               <Text style={styles.assetValue}>{value}</Text><Text style={styles.assetLabel}>{label}</Text>
             </View>

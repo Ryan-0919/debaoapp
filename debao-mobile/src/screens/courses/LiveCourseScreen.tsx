@@ -7,6 +7,7 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
+import {MediaAvailabilityNotice} from './MediaAvailabilityNotice';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type ScreenRoute = RouteProp<RootStackParamList, 'LiveCourse'>;
@@ -38,6 +39,7 @@ export default function LiveCourseScreen() {
   return (
     <AppScreen scroll={false} backgroundColor="#0A0A0F" testID="live-course-screen">
       <View style={styles.screen}>
+        <MediaAvailabilityNotice courseId={route.params.courseId} kind="live" />
         <View style={styles.header}>
           <Pressable accessibilityLabel="返回" hitSlop={8} onPress={() => navigation.goBack()} style={({pressed}) => [styles.backButton, pressed && styles.pressed]}>
             <ChevronLeft size={18} color={colors.surface} />

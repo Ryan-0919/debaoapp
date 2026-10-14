@@ -35,3 +35,17 @@ test('question bank mode switch replaces content without navigating away', async
 
   await act(() => renderer!.unmount());
 }, 15000);
+
+test('chapter practice carries the selected subject id into objective answering', async () => {
+  let renderer: ReactTestRenderer.ReactTestRenderer;
+  await act(() => { renderer = ReactTestRenderer.create(<QuestionBankScreen />); });
+
+  await act(() => renderer!.root.findByProps({testID: 'question-bank-subject-criminal'}).props.onPress());
+  await act(() => renderer!.root.findByProps({testID: 'question-bank-chapter-criminal-0'}).props.onPress());
+
+  expect(mockNavigate).toHaveBeenCalledWith('ObjectiveAnswer', expect.objectContaining({
+    mode: 'chapter',
+    subjectId: 'criminal',
+  }));
+  await act(() => renderer!.unmount());
+});

@@ -20,6 +20,10 @@ export default function PurchaseSuccessScreen() {
   const activeColor = product.autoStart ? colors.success : '#A87000';
 
   const openCourse = () => {
+    if (product.id === 'deen-private-coach') {
+      navigation.replace('LearningCenter');
+      return;
+    }
     if (courseId) {
       navigation.navigate('CourseDetail', {courseId});
       return;
@@ -44,13 +48,13 @@ export default function PurchaseSuccessScreen() {
             </Text>
           </View>
           <Text style={styles.activationBody}>
-            {product.autoStart ? '可在「我的课程」中立即开始学习' : '开课后将收到通知，届时可进入课程'}
+            {product.id === 'deen-private-coach' ? '现在可以进入得恩私教，完成首次学习诊断' : product.autoStart ? '可在「我的课程」中立即开始学习' : '开课后将收到通知，届时可进入课程'}
           </Text>
         </View>
 
         <View style={styles.actions}>
           <AppButton
-            label={courseId ? '进入课程' : '查看我的课程'}
+            label={product.id === 'deen-private-coach' ? '开始首次诊断' : courseId ? '进入课程' : '查看我的课程'}
             onPress={openCourse}
             testID="purchase-success-course"
           />

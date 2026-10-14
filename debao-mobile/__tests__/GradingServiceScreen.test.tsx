@@ -35,7 +35,7 @@ describe('GradingServiceScreen', () => {
     mockNavigate.mockClear();
   });
 
-  test('matches usage and both prototype grading records', () => {
+  test('matches the RC usage, submit entry and history records', () => {
     let renderer: ReactTestRenderer.ReactTestRenderer;
     act(() => {renderer = ReactTestRenderer.create(<GradingServiceScreen />);});
     expect(textValues(renderer!)).toEqual(expect.arrayContaining([

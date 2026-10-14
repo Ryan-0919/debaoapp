@@ -1,10 +1,11 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {ChevronRight} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
 import {PageHeader} from '@/components/PageHeader';
+import {RemoteState} from '@/components/ui';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
 import {environment} from '@/config/environment';
@@ -23,18 +24,30 @@ const records = [
 function toUiRecord(item: QuestionRecord) {
   const date = new Date(item.createdAt);
   const validDate = !Number.isNaN(date.getTime());
-  return {id: item.id, date: validDate ? date.toLocaleDateString('zh-CN', {month: 'numeric', day: 'numeric'}) : item.createdAt, time: validDate ? date.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit', hour12: false}) : '', mode: '在线练习', title: `题目 ${item.questionId}`, count: 1, correct: item.correct ? 1 : 0};
+  const count = item.total ?? 1;
+  const correct = item.correctCount ?? (item.correct ? 1 : 0);
+  return {id: item.id, date: validDate ? date.toLocaleDateString('zh-CN', {month: 'numeric', day: 'numeric'}) : item.createdAt, time: validDate ? date.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit', hour12: false}) : '', mode: item.mode === 'subjective' ? '主观题练习' : '在线练习', title: item.title ?? `题目 ${item.questionId}`, count, correct};
 }
 
 export default function QuestionRecordsScreen() {
   const navigation = useNavigation<Navigation>();
-  const [recordList, setRecordList] = useState(records);
-  useEffect(() => {
+  const [recordList, setRecordList] = useState(environment.useMocks ? records : []);
+  const [loading, setLoading] = useState(!environment.useMocks);
+  const [error, setError] = useState('');
+  const load = useCallback(async () => {
     if (environment.useMocks) return;
-    let active = true;
-    questionService.listRecords().then(items => { if (active) setRecordList(items.map(toUiRecord)); }).catch(() => undefined);
-    return () => { active = false; };
+    setLoading(true);
+    setError('');
+    try {
+      const items = await questionService.listRecords();
+      setRecordList(items.map(toUiRecord));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '做题记录加载失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+  useEffect(() => { load().catch(() => undefined); }, [load]);
   const totals = useMemo(() => {
     if (environment.useMocks) return {answered: 2847, correctRate: 68};
     const answered = recordList.reduce((sum, item) => sum + item.count, 0);
@@ -45,7 +58,8 @@ export default function QuestionRecordsScreen() {
   return (
     <AppScreen backgroundColor={colors.page} scroll={false} testID="question-records-screen">
       <PageHeader title="做题记录" />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {loading || (error && !recordList.length) ? <RemoteState testID="question-records-state" loading={loading} error={error} loadingLabel="正在加载做题记录..." emptyTitle="暂无做题记录" emptyDescription="完成练习后，记录会显示在这里。" onRetry={load} /> : <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {error ? <View testID="question-records-inline-error" style={styles.inlineError}><Text accessibilityRole="alert" style={styles.inlineErrorText}>{error}</Text><Pressable testID="question-records-retry" onPress={load}><Text style={styles.retryText}>重新加载</Text></Pressable></View> : null}
         <View style={styles.statsCard}>
           <View style={styles.stat}>
             <Text style={styles.statValue}>{totals.answered.toLocaleString()}</Text>
@@ -69,7 +83,7 @@ export default function QuestionRecordsScreen() {
                 accessibilityLabel={accessibilityLabel}
                 accessibilityRole="button"
                 key={record.id}
-                onPress={() => navigation.navigate('ObjectiveReport', environment.useMocks ? {correct: 3, total: 4} : {correct: record.correct, total: record.count})}
+                onPress={() => navigation.navigate('ObjectiveReport', environment.useMocks ? {correct: 3, total: 4} : {submissionId: record.id, correct: record.correct, total: record.count})}
                 style={({pressed}) => [
                   styles.record,
                   index < recordList.length - 1 && styles.recordDivider,
@@ -92,7 +106,8 @@ export default function QuestionRecordsScreen() {
             );
           })}
         </View>
-      </ScrollView>
+        {!recordList.length ? <View testID="question-records-empty" style={styles.empty}><Text style={styles.emptyText}>暂无做题记录</Text></View> : null}
+      </ScrollView>}
     </AppScreen>
   );
 }
@@ -117,4 +132,9 @@ const styles = StyleSheet.create({
   successRate: {color: colors.success},
   errorRate: {color: colors.error},
   pressed: {backgroundColor: colors.page},
+  inlineError: {marginHorizontal: 16, marginTop: 16, padding: 12, borderRadius: radius.md, backgroundColor: colors.apricot, flexDirection: 'row', alignItems: 'center', gap: 10},
+  inlineErrorText: {flex: 1, fontSize: 12, lineHeight: 18, color: colors.error},
+  retryText: {fontSize: 12, fontWeight: '700', color: colors.brand},
+  empty: {marginHorizontal: 16, marginTop: 12, padding: 28, borderRadius: radius.md, backgroundColor: colors.surface, alignItems: 'center'},
+  emptyText: {fontSize: 13, color: colors.muted},
 });

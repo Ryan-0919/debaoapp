@@ -30,6 +30,7 @@ import {AppScreen} from '@/components/AppScreen';
 import {findCourse} from '@/data/courses';
 import {colors, radius, shadows} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
+import {MediaAvailabilityNotice} from './MediaAvailabilityNotice';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type ScreenRoute = RouteProp<RootStackParamList, 'AudioPlayer'>;
@@ -139,6 +140,7 @@ export default function AudioPlayerScreen() {
   return (
     <AppScreen scroll={false} keyboardAware backgroundColor={colors.page} testID="audio-player-screen">
       <View style={styles.screen}>
+        <MediaAvailabilityNotice courseId={route.params.courseId} kind="audio" />
         <View style={styles.header}>
           <Pressable accessibilityLabel="返回" hitSlop={6} onPress={() => navigation.goBack()} style={({pressed}) => [styles.headerButton, pressed && styles.pressed]}>
             <ChevronLeft size={20} color={colors.body} />

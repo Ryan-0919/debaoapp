@@ -23,6 +23,9 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
+import {environment} from '@/config/environment';
+import {courseService} from '@/services';
+import type {Course as ApiCourse} from '@/types/domain';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type CourseView = 'calendar' | 'all';
@@ -432,8 +435,8 @@ function SectionLabel({children}: {children: React.ReactNode}) {
   return <Text style={styles.sectionLabel}>{children}</Text>;
 }
 
-function AllCoursesView({navigation, onAdd, added}: {navigation: Navigation; onAdd: (name: string) => void; added: boolean}) {
-  const recorded = [
+function AllCoursesView({navigation, onAdd, added, remoteCourses}: {navigation: Navigation; onAdd: (name: string) => void; added: boolean; remoteCourses: ApiCourse[]}) {
+  const recorded = remoteCourses.length ? remoteCourses.map(course => ({id: course.id, name: course.title, teacher: course.teacher, progress: course.progress, completed: Math.round((course.progress / 100) * course.lessons), total: course.lessons, last: '最近学习'})) : [
     {id: 'c1', name: '民法精讲（2024版）', teacher: '张明远', progress: 42, completed: 28, total: 68, last: '昨天 21:30'},
     {id: 'c2', name: '刑法体系课（2024版）', teacher: '李东明', progress: 18, completed: 13, total: 72, last: '3天前'},
   ];
@@ -521,12 +524,19 @@ export default function CoursesScreen() {
   const [reschedule, setReschedule] = useState<Session | null>(null);
   const [addCourse, setAddCourse] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
+  const [remoteCourses, setRemoteCourses] = useState<ApiCourse[]>([]);
+  useEffect(() => {
+    if (environment.useMocks) return;
+    let active = true;
+    courseService.list().then(items => { if (active) setRemoteCourses(items); }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
   const selected = useMemo(() => selectedKey, [selectedKey]);
 
   return (
     <AppScreen scroll={false} testID="courses-screen">
       <Segment view={view} onChange={setView} />
-      {view === 'calendar' ? <CalendarView navigation={navigation} onOpenMonth={() => setMonthVisible(true)} selectedKey={selected} onSelectDate={setSelectedKey} onReschedule={setReschedule} /> : <AllCoursesView navigation={navigation} onAdd={setAddCourse} added={added} />}
+      {view === 'calendar' ? <CalendarView navigation={navigation} onOpenMonth={() => setMonthVisible(true)} selectedKey={selected} onSelectDate={setSelectedKey} onReschedule={setReschedule} /> : <AllCoursesView navigation={navigation} onAdd={setAddCourse} added={added} remoteCourses={remoteCourses} />}
       <MonthSheet visible={monthVisible} selected={selectedKey} onClose={() => setMonthVisible(false)} onSelect={setSelectedKey} />
       <RescheduleSheet session={reschedule} onClose={() => setReschedule(null)} />
       <AddCalendarSheet course={addCourse} onClose={() => setAddCourse(null)} onDone={() => {setAdded(true); setAddCourse(null);}} />

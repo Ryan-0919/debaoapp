@@ -1,10 +1,10 @@
 # 得宝 App 第一阶段迁移报告
 
-报告日期：2026-08-28
+报告日期：2026-09-02
 
 ## 结论
 
-Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript 工程骨架。28 个原型页面均有对应的 React Native 页面和类型化路由，但“存在对应页面”不等于“视觉和交互 1:1 完成”。截至 2026-08-28，前 11 页已按原型源码及实际渲染完成逐项重做、关键交互和 Android 截图验证；其余 17 页仍需逐页 1:1 核验。Android/iOS production JS bundle 与 HarmonyOS production Hermes bundle 已验证通过。
+Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript 工程骨架。28 个原型页面均有对应的 React Native 页面和类型化路由，但“存在对应页面”不等于“视觉和交互 1:1 完成”。截至 2026-09-02，Android API 36 模拟器已完成 28 页的截图/关键交互回归记录；逐页视觉 1:1 是否完成仍以 [PAGE_PARITY_MATRIX.md](docs/PAGE_PARITY_MATRIX.md) 的源码、原型截图、交互和对照截图证据为准。Android/iOS production JS bundle 与 HarmonyOS production Hermes bundle 已验证通过。
 
 “页面迁移完成”只代表共享源码和 bundle 层完成。Android Debug APK 已在 API 36 模拟器完成构建、安装、冷启动和首页视觉验证；当前 Windows 主机仍缺少 DevEco 工具链，且不能运行 Xcode，因此本报告不声称 iOS App 或 Harmony HAP 已完成原生构建、安装或真机验证。
 
@@ -27,6 +27,8 @@ Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript �
 
 ## 页面映射
 
+下表的“验证边界”保留第一阶段 1:1 视觉迁移快照：Mock fixture 用于复现原型截图，remote 模式的业务接入状态不改变原型视觉基线。当前 API 覆盖和仍待完成的生产能力，以 `docs/PAGE_PARITY_MATRIX.md`、`docs/PROGRESS.md` 及下方“Mock 与真实能力边界”为准。
+
 | 优先级 | Figma Make 页面 | React Native 页面/路由 | 状态 | 验证边界 |
 |---|---|---|---|---|
 | P0 | `Home.tsx` | `HomeScreen` / `Home` Tab | 已完成 | 1:1 源码/渲染对照；主客观题、双 Banner、入口、促销、倒计时、课程、公告、社区、路由、Android 多态截图 |
@@ -38,25 +40,25 @@ Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript �
 | P1 | `SubjectiveAnswer.tsx` | `SubjectiveAnswerScreen` / `SubjectiveAnswer` | 已完成 | 1:1 源码/渲染对照；五题/小问切换、独立答案、保存/字数、法条导航、提交 Dialog、Android 三态截图 |
 | P1 | `ObjectiveAnswer.tsx` | `ObjectiveAnswerScreen` / `ObjectiveAnswer` | 已完成 | 1:1 源码/渲染对照；四题单选、上下题、进度、答题卡、交卷 Dialog、报告参数、Android 三态截图 |
 | P1 | `ObjectiveReport.tsx` | `ObjectiveReportScreen` / `ObjectiveReport` | 已完成 | 1:1 源码/渲染对照；动态成绩、科目分析、四题解析、错题本/返回、Android 首尾截图 |
-| P1 | `CourseDetail.tsx` | `CourseDetailScreen` / `CourseDetail` | 已完成 | `courseId` 参数与 bundle |
+| P1 | `CourseDetail.tsx` | `CourseDetailScreen` / `CourseDetail` | 已完成 | `courseId` 参数、原型内容与真实模式课程/权益读取 |
 | P1 | `VideoPlayer.tsx` | `VideoPlayerScreen` / `VideoPlayer` | 已完成 | 仅播放器 UI/状态机 |
 | P1 | `AudioPlayer.tsx` | `AudioPlayerScreen` / `AudioPlayer` | 已完成 | 仅播放器 UI/状态机 |
 | P1 | `LiveCourse.tsx` | `LiveCourseScreen` / `LiveCourse` | 已完成 | 仅直播 UI/状态机 |
 | P1 | `ProductDetail.tsx` | `ProductDetailScreen` / `ProductDetail` | 已完成 | 1:1 源码/渲染对照；6 商品、三类封面、教师/大纲/交付、营销长页、评价、展开、购买弹层、支付导航、Android 四态截图 |
 | P1 | `PurchaseSuccess.tsx` | `PurchaseSuccessScreen` / `PurchaseSuccess` | 已完成 | 1:1 源码/渲染对照；自动开通/预约开课双状态、商品-课程关联、课程/订单/首页导航、Android 两态截图 |
-| P1 | `OrderList.tsx` | `OrderListScreen` / `OrderList` | 已完成 | Mock 订单列表 |
-| P1 | `OrderDetail.tsx` | `OrderDetailScreen` / `OrderDetail` | 已完成 | `orderId` 参数与 Mock 数据 |
-| P1 | `AIChat.tsx` | `AIChatScreen` / `AIChat` | 已完成 | Mock 流式文本，不调用外部模型 |
+| P1 | `OrderList.tsx` | `OrderListScreen` / `OrderList` | 已完成 | 原型订单 fixture；真实模式读取用户订单列表 |
+| P1 | `OrderDetail.tsx` | `OrderDetailScreen` / `OrderDetail` | 已完成 | `orderId` 参数、原型两态与真实模式订单详情读取 |
+| P1 | `AIChat.tsx` | `AIChatScreen` / `AIChat` | 已完成 | Mock 固定回答用于 1:1 验收；真实模式提供 HTTP AI adapter 边界 |
 | P1 | `UserProfile.tsx` | `UserProfileScreen` / `UserProfile` | 已完成 | 本地资料与持久化 |
 | P1 | `Settings.tsx` | `SettingsScreen` / `Settings` | 已完成 | 本地设置，不申请真实平台权限 |
-| P1 | `Notifications.tsx` | `NotificationsScreen` / `Notifications` | 已完成 | Mock 通知，不接系统推送 |
-| P2 | `LearningReport.tsx` | `LearningReportScreen` / `LearningReport` | 已完成 | Mock 统计数据 |
-| P2 | `LearningPlan.tsx` | `LearningPlanScreen` / `LearningPlan` | 已完成 | 本地演示计划 |
-| P2 | `MistakeBook.tsx` | `MistakeBookScreen` / `MistakeBook` | 已完成 | Mock 错题数据 |
-| P2 | `Favorites.tsx` | `FavoritesScreen` / `Favorites` | 已完成 | 本地收藏状态 |
-| P2 | `LawSearch.tsx` | `LawSearchScreen` / `LawSearch` | 已完成 | 本地演示检索 |
-| P2 | `GradingService.tsx` | `GradingServiceScreen` / `Grading` | 已完成 | 仅提交 UI，无上传/人工派单 |
-| P2 | `QuestionRecords.tsx` | `QuestionRecordsScreen` / `QuestionRecords` | 已完成 | Mock 答题记录 |
+| P1 | `Notifications.tsx` | `NotificationsScreen` / `Notifications` | 已完成 | 原型通知 fixture；真实模式读取列表并支持已读回执 |
+| P2 | `LearningReport.tsx` | `LearningReportScreen` / `LearningReport` | 已完成 | 原型统计 fixture；真实模式读取周报基础字段 |
+| P2 | `LearningPlan.tsx` | `LearningPlanScreen` / `LearningPlan` | 已完成 | 原型演示计划 fixture；真实模式读取云端计划/任务 |
+| P2 | `MistakeBook.tsx` | `MistakeBookScreen` / `MistakeBook` | 已完成 | 原型错题 fixture；真实模式读取未解决错题并支持删除 |
+| P2 | `Favorites.tsx` | `FavoritesScreen` / `Favorites` | 已完成 | 原型收藏 fixture；真实模式读取题目收藏并支持取消 |
+| P2 | `LawSearch.tsx` | `LawSearchScreen` / `LawSearch` | 已完成 | 原型检索 fixture；真实模式接法条搜索、收藏和公告列表 |
+| P2 | `GradingService.tsx` | `GradingServiceScreen` / `Grading` | 已完成 | 原型视觉 fixture；真实模式读取批改套卷/提交记录并进入报告基础流程 |
+| P2 | `QuestionRecords.tsx` | `QuestionRecordsScreen` / `QuestionRecords` | 已完成 | 原型记录 fixture；真实模式读取服务端答题记录和报告 |
 
 公共组件对应关系：`TopBar` 重写为 `PageHeader`，`BottomNav` 由 React Navigation Bottom Tabs 取代，`Dialog`/`BottomSheet` 的确认场景统一为 React Native `Modal` 驱动的 `ConfirmSheet`，原型公共按钮和卡片重写到 `src/components/ui.tsx`。
 
@@ -79,17 +81,20 @@ Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript �
 
 | 能力 | 当前实现 | 真实接入位置 | 正式接入验收条件 |
 |---|---|---|---|
-| 登录/用户 | 本地 Mock 用户和资料 | `AuthService` | Token 刷新、安全存储、退出失效和接口错误测试通过 |
-| 题库/报告 | 本地题目、提交和统计 | `QuestionService` | 组卷、保存、交卷幂等、报告口径和弱网恢复通过 |
-| 课程 | 本地课程列表与详情 | `CourseService` | 分页、购买权限、学习进度和缓存策略通过 |
-| 订单 | 本地 Mock 订单 | `OrderService` | 服务端价格校验、状态机、分页、退款/售后协议通过 |
+| 登录/用户 | Mock fixture + `AuthService` 真实模式 | `AuthService` | Token 刷新、安全存储、退出失效和接口错误测试通过；正式短信/微信 SDK 仍待供应商 |
+| 题库/报告 | Mock fixture + `QuestionService` 真实题目/会话/提交/记录/报告 | `QuestionService` | 客观题会话保存、交卷幂等、不可变快照和基础报告契约通过；真实组卷和统计增强待完成 |
+| 课程 | Mock fixture + `CourseService` 真实课程/权益/进度读取 | `CourseService` | 用户范围、权益和进度接口通过；真实媒体源、分页和缓存策略待完成 |
+| 订单 | Mock fixture + `OrderService` 真实列表/详情/下单 | `OrderService` | 服务端价格校验、状态机和用户隔离通过；支付回调、分页、退款/售后待完成 |
 | 支付 | Mock 成功/失败结果，不扣款 | `PaymentService` + 三端 adapter | 服务端下单验签、三端 SDK、回调幂等和沙箱测试通过 |
-| AI | 本地定时分片模拟流式回复 | `AIService` | 鉴权、SSE/WebSocket 中断、超时、配额、内容安全和隐私策略通过 |
+| AI | Mock 固定回答 + `AIService` HTTP adapter | `AIService` | 本地错误边界和 Provider 不可用状态通过；生产模型鉴权、流式中断、配额、内容安全和隐私策略待完成 |
 | 媒体/直播 | UI 与准备状态机 | `MediaService` + 三端播放器 | 播放、暂停、进度、后台、耳机中断、DRM/直播信令真机通过 |
-| 通知 | Mock 通知列表 | `NotificationService` + 三端推送 | 权限、Token 注册、前后台消息、点击路由和注销通过 |
+| 通知 | Mock fixture + `NotificationService` 真实列表/已读 | `NotificationService` + 三端推送 | 列表和已读回执通过；权限、Token 注册、前后台消息、点击路由和注销待三端 Provider |
+| 学习计划/报告 | Mock fixture + `LearningService` 真实计划、任务、日/周/月聚合和周报字段 | `LearningService` | 计划/任务读取、基础 CRUD、任务完成和聚合报告接口通过；提醒投递、自动生成、跨设备冲突和生产监控待完成 |
+| 错题/收藏 | Mock fixture + `QuestionService` 真实错题和题目收藏 | `QuestionService` / `LegalService` | 账号范围读取、取消/标记解决和法条收藏接口通过；批量操作、自动归档和完整同步待完成 |
+| 批改 | Mock fixture + `GradingService` 真实套卷、提交记录、状态机和报告流程 | `GradingService` | 版本快照、幂等、AI/人工状态机、任务分配、扣次账本和后台报告接口通过；对象存储安全扫描、独立生产 Worker/队列、真实权益映射和通知 Provider 待外部部署 |
 | 下载 | 能力声明，无真实文件下载 | 平台 download adapter | 空间检查、断点续传、校验、加密、清理和后台策略通过 |
 
-`src/services/apiClient.ts` 已提供未来 HTTP 的超时和错误映射入口，但第一阶段不发送正式业务请求，也不包含真实密钥。
+`src/services/apiClient.ts` 在 `DEBAO_USE_MOCKS=false` 下承载已覆盖模块的鉴权 HTTP 请求，并统一超时和错误映射；Mock 模式仍只使用 fixture，工程不包含生产密钥。
 
 ## 三端适配现状
 
@@ -107,7 +112,7 @@ Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript �
 |---|---|---|
 | TypeScript strict | 通过 | Harmony Hvigor 脚本由 DevEco/ohpm 类型系统负责，不混入 RN `tsc` |
 | ESLint | 通过 | 无 warning |
-| Jest | 通过 | 11 个套件、12 个测试；覆盖关键页面交互、导航和公共按钮行为 |
+| Jest | 通过 | 36 个套件、73 个测试；覆盖页面交互、导航、远端边界和公共按钮行为 |
 | Android production JS bundle | 通过 | 只证明共享 JS 可打包 |
 | iOS production JS bundle | 通过 | 只证明共享 JS 可打包 |
 | Harmony production Hermes bundle | 通过 | 生成 `hermes_bundle.hbc`，并确认四个 RNOH 包重定向 |
@@ -121,7 +126,7 @@ Figma Make 输出的 React Web 原型已建立 React Native Bare + TypeScript �
 
 1. Android 原生构建基线已经完成；继续补齐返回、键盘、Safe Area、小屏和真机矩阵。iOS 在 macOS 安装 Pods 并配置签名；HarmonyOS 安装 DevEco SDK/CLI、同步 ohpm 并配置签名。每端至少记录一次冷启动和关键交互截图。
 2. 发布前确认正式 applicationId/bundle identifier/bundleName、应用中文名、商标和签名主体，再一次性修改三端配置并做升级安装测试。
-3. 后端团队按 `docs/API.md` 输出可执行 OpenAPI、鉴权流程和错误码；客户端从登录、题库、课程、订单顺序替换 Mock，并为每个 Service 增加契约测试。
+3. 后端继续按 `docs/API.md` 固化未覆盖能力的 OpenAPI、错误码和测试环境；客户端已替换登录、题库、课程、学习、订单、论坛、通知和基础批改服务的 Mock，后续聚焦媒体、支付、推送、AI 生产链路、附件上传和统计增强，并为新增 Service 增加契约测试。
 4. 支付必须先确定商品属性和三端合规路径，再实现服务端订单、验签、回调幂等及 Android/iOS/Harmony 沙箱 adapter；未完成前保留 Mock 标识。
 5. 媒体方案必须先验证 Android/iOS 播放器与 RNOH/Harmony 可用能力，再决定共享库或三端 adapter；验收包含后台、中断、弱网、直播延迟和授权内容保护。
 6. 当前五个主 Tab 已有组件交互测试与 Android 截图证据，但尚无自动像素回归或完整端到端覆盖。继续补 React Native Testing Library、关键流程 E2E 和三端视觉基线。

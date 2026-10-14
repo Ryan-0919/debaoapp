@@ -28,19 +28,38 @@ services:
   api:
     build: .
     environment:
+      # This compose file is the local integration environment.  Keep the
+      # admin session cookie usable over http://127.0.0.1; production deploys
+      # should continue to use NODE_ENV=production behind HTTPS.
+      NODE_ENV: development
       PORT: 4000
       HOST: 0.0.0.0
       DATABASE_URL: postgres://debao:debao@postgres:5432/debao
       REDIS_URL: redis://redis:6379
       DEBAO_AUTH_SECRET: local-development-only-change-me
+      DEBAO_ADMIN_USERNAME: admin
+      DEBAO_ADMIN_PASSWORD: local-compose-admin-2026
+      DEBAO_GRADING_ADMIN_USERNAME: grading-admin
+      DEBAO_GRADING_ADMIN_PASSWORD: local-compose-grading-admin-2026
+      DEBAO_LEARNING_ADMIN_USERNAME: learning-admin
+      DEBAO_LEARNING_ADMIN_PASSWORD: local-compose-learning-admin-2026
+      DEBAO_ADMIN_MFA_REQUIRED: "false"
       PAYMENT_ADAPTER: local
+      SMS_ADAPTER: local
+      WECHAT_AUTH_ADAPTER: local
+      CARRIER_AUTH_ADAPTER: local
     ports:
       - "4000:4000"
+    volumes:
+      - debao-question-media:/app/uploads
     command: ["sh", "-c", "npm run migrate && node dist/server.js"]
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: on-failure
 volumes:
   debao-postgres:
   debao-redis:
+  debao-question-media:

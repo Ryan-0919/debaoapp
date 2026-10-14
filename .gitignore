@@ -14,3 +14,29 @@
 *.log
 .env*
 !.env.example
+
+# Local agent worktrees, runtime files and generated reports
+.claude/
+.android-runtime/
+runtime-logs/
+**/__pycache__/
+*.pyc
+**/coverage/
+**/.flutter_tool_state
+debao-flutter/analyze-*.txt
+debao-flutter/test-output-*.txt
+
+# Local uploads, databases and private signing material
+debao-server/uploads/
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+*.pem
+*.p12
+*.pfx
+*.jks
+key.properties
+*.keystore
+!debao-mobile/android/app/debug.keystore

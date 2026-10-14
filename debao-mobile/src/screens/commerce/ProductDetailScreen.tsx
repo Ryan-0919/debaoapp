@@ -1,4 +1,4 @@
-import {useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   Image,
   Modal,
@@ -33,6 +33,7 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import type {RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppScreen} from '@/components/AppScreen';
+import {RemoteState} from '@/components/ui';
 import {
   productMarketing,
   productReviews,
@@ -40,10 +41,11 @@ import {
   teacherInfo,
   type DetailIcon,
 } from '@/data/productDetails';
-import {findCatalogProduct, type ProductType} from '@/data/products';
-import {orderService, paymentService} from '@/services';
+import {findCatalogProduct, type CatalogProduct, type ProductType} from '@/data/products';
+import {orderService, paymentService, productService} from '@/services';
 import {colors, radius} from '@/theme';
 import type {RootStackParamList} from '@/types/navigation';
+import {environment} from '@/config/environment';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type ScreenRoute = RouteProp<RootStackParamList, 'ProductDetail'>;
@@ -52,6 +54,7 @@ const typeColors: Record<ProductType, {background: string; foreground: string}> 
   视频课程: {background: '#F0F0FF', foreground: '#4C4BEA'},
   直播课程: {background: '#FFF0F5', foreground: '#C0385A'},
   音频课程: {background: '#EAF7F7', foreground: '#1A8B8B'},
+  学习服务: {background: '#F0F0FF', foreground: '#4C4BEA'},
 };
 
 function Glyph({name, color, size = 18}: {name: DetailIcon; color: string; size?: number}) {
@@ -73,21 +76,83 @@ function Glyph({name, color, size = 18}: {name: DetailIcon; color: string; size?
 function TypeIcon({type, color}: {type: ProductType; color: string}) {
   if (type === '音频课程') return <Headphones color={color} size={13} />;
   if (type === '直播课程') return <Radio color={color} size={13} />;
+  if (type === '学习服务') return <Target color={color} size={13} />;
   return <PlayCircle color={color} size={13} />;
 }
 
 export default function ProductDetailScreen() {
   const navigation = useNavigation<Navigation>();
   const route = useRoute<ScreenRoute>();
-  const product = useMemo(() => findCatalogProduct(route.params.productId), [route.params.productId]);
-  const syllabus = productSyllabi[product.id];
-  const reviews = productReviews[product.id] ?? productReviews.p1;
-  const marketing = productMarketing[product.id];
-  const teacher = teacherInfo[product.teacher];
-  const palette = typeColors[product.type];
+  const prototypeProduct = useMemo(() => findCatalogProduct(route.params.productId), [route.params.productId]);
+  const [product, setProduct] = useState<CatalogProduct | null>(environment.useMocks ? prototypeProduct : null);
+  const [loading, setLoading] = useState(!environment.useMocks);
+  const [error, setError] = useState('');
+  // These hooks must run on every render, including the loading/error states
+  // returned below. Keeping them before the early return avoids a hook-order
+  // mismatch when a remote product finishes loading.
   const [expanded, setExpanded] = useState(false);
   const [sheetVisible, setSheetVisible] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
+  const load = useCallback(async () => {
+    if (environment.useMocks) {
+      setProduct(prototypeProduct);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError('');
+    setProduct(null);
+    try {
+      const item = await productService.get(route.params.productId);
+      if (!item) {
+        setError('商品不存在');
+        return;
+      }
+      setProduct({
+        ...prototypeProduct,
+        id: item.id,
+        name: item.name,
+        category: item.category as CatalogProduct['category'],
+        price: item.price,
+        originalPrice: item.originalPrice,
+        sold: item.sold,
+        accent: item.accent,
+        benefits: item.benefits,
+        // The API calls this field `benefits`; the prototype/detail renderer
+        // calls the same content `includes`. Keep both in sync when a real
+        // product response replaces the local fixture.
+        includes: item.benefits?.length ? item.benefits : prototypeProduct.includes,
+      });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '商品加载失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
+  }, [prototypeProduct, route.params.productId]);
+  useEffect(() => { load().catch(() => undefined); }, [load]);
+
+  const waitingForProduct = !environment.useMocks && (!product || product.id !== route.params.productId);
+  if (loading || error || waitingForProduct || !product) {
+    return (
+      <AppScreen backgroundColor={colors.page} scroll={false} testID="product-detail-screen">
+        <View style={styles.header}>
+          <Pressable accessibilityLabel="返回" hitSlop={10} onPress={navigation.goBack} style={styles.headerButton} testID="product-detail-back"><ArrowLeft color={colors.body} size={22} /></Pressable>
+          <View style={styles.headerSpacer} />
+          <View style={styles.headerButton} />
+        </View>
+        <RemoteState testID="product-detail-state" loading={loading} error={error} loadingLabel="正在加载商品..." empty={!error && !loading} emptyTitle="暂无商品详情" emptyDescription="该商品可能已下架。" onRetry={load} />
+      </AppScreen>
+    );
+  }
+  // Remote catalogs can contain products that are not part of the prototype
+  // fixture set. Reuse the closest local detail template for those products
+  // while keeping all server-owned product fields (name, price, benefits).
+  const syllabus = productSyllabi[product.id] ?? productSyllabi[prototypeProduct.id] ?? productSyllabi.p1;
+  const reviews = productReviews[product.id] ?? productReviews.p1;
+  const marketing = productMarketing[product.id] ?? productMarketing[prototypeProduct.id] ?? productMarketing.p1;
+  const teacher = teacherInfo[product.teacher] ?? teacherInfo[prototypeProduct.teacher] ?? teacherInfo['张明远'];
+  const palette = typeColors[product.type] ?? typeColors['视频课程'];
   const visibleSyllabus = expanded ? syllabus.items : syllabus.items.slice(0, 4);
   const discount = product.originalPrice - product.price;
 
@@ -98,11 +163,24 @@ export default function ProductDetailScreen() {
   const pay = async () => {
     if (paying) return;
     setPaying(true);
-    const order = await orderService.create(product);
-    await paymentService.pay(order);
-    setPaying(false);
-    setSheetVisible(false);
-    navigation.replace('PurchaseSuccess', {productName: product.name, productId: product.id, orderId: order.id});
+    setPaymentError('');
+    try {
+      const order = await orderService.create(product);
+      const result = await paymentService.pay(order);
+      // A pending provider response is not a successful purchase. Keep the
+      // confirmation sheet open so the user can retry or dismiss it, instead
+      // of presenting a success screen before the server confirms payment.
+      if (result.status === 'pending') {
+        setPaymentError('支付正在处理中，请稍后在订单中查看');
+        return;
+      }
+      setSheetVisible(false);
+      navigation.replace('PurchaseSuccess', {productName: product.name, productId: product.id, orderId: order.id});
+    } catch (reason) {
+      setPaymentError(reason instanceof Error ? reason.message : '支付失败，请稍后重试');
+    } finally {
+      setPaying(false);
+    }
   };
 
   return (
@@ -243,7 +321,8 @@ export default function ProductDetailScreen() {
         </View>
 
         <View style={styles.section} testID="product-reviews">
-          <View style={styles.reviewHeader}><Text style={styles.sectionTitleNoMargin}>学员评价</Text><View style={styles.reviewScore}><Text style={styles.reviewScoreValue}>4.9</Text><Text style={styles.reviewScoreTotal}>/ 5.0</Text></View></View>
+          <View style={styles.reviewHeader}><Text style={styles.sectionTitleNoMargin}>学员评价</Text>{reviews.length ? <View style={styles.reviewScore}><Text style={styles.reviewScoreValue}>4.9</Text><Text style={styles.reviewScoreTotal}>/ 5.0</Text></View> : null}</View>
+          {!reviews.length ? <Text style={styles.reviewEmpty}>产品新上线，暂无学员评价</Text> : null}
           {reviews.map((review, index) => (
             <View key={`${review.name}-${review.date}`} style={[styles.review, index < reviews.length - 1 && styles.reviewDivider]} testID={`product-review-${index}`}>
               <View style={styles.reviewMeta}>
@@ -258,7 +337,7 @@ export default function ProductDetailScreen() {
 
       <View style={[styles.purchaseBar, sheetVisible && styles.purchaseBarHidden]}>
         <View><Text style={styles.purchaseLabel}>限时优惠</Text><Text style={styles.purchasePrice}>¥{product.price.toLocaleString()}</Text></View>
-        <Pressable accessibilityRole="button" onPress={() => setSheetVisible(true)} style={({pressed}) => [styles.buyButton, pressed && styles.pressed]} testID="product-buy"><Text style={styles.buyText}>立即购买</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => {setPaymentError(''); setSheetVisible(true);}} style={({pressed}) => [styles.buyButton, pressed && styles.pressed]} testID="product-buy"><Text style={styles.buyText}>立即购买</Text></Pressable>
       </View>
 
       <Modal animationType="slide" navigationBarTranslucent onRequestClose={() => setSheetVisible(false)} transparent visible={sheetVisible}>
@@ -276,6 +355,7 @@ export default function ProductDetailScreen() {
               <View style={[styles.sheetPriceRow, styles.sheetTotalRow]}><Text style={styles.sheetTotalLabel}>实付金额</Text><Text style={styles.sheetTotal}>¥{product.price.toLocaleString()}</Text></View>
             </View>
             <View style={styles.sheetNotice}><Text style={styles.sheetNoticeText}>购买后系统将自动开通课程权限。如需发票，请在"订单与已购"中申请。</Text></View>
+            {paymentError ? <Text accessibilityRole="alert" style={styles.paymentError} testID="product-payment-error">{paymentError}</Text> : null}
             <View style={styles.sheetActions}>
               <Pressable disabled={paying} onPress={() => setSheetVisible(false)} style={styles.cancelButton} testID="product-purchase-cancel"><Text style={styles.cancelText}>取消</Text></Pressable>
               <Pressable disabled={paying} onPress={pay} style={[styles.confirmButton, paying && styles.disabled]} testID="product-purchase-confirm"><Text style={styles.confirmText}>{paying ? '支付中…' : `确认支付 ¥${product.price.toLocaleString()}`}</Text></Pressable>
@@ -319,8 +399,8 @@ const styles = StyleSheet.create({
   detailImage: {width: '100%', height: 180}, photoCaption: {fontSize: 11, lineHeight: 28, color: colors.muted, textAlign: 'center', backgroundColor: colors.page},
   timelineBlock: {paddingHorizontal: 16, paddingVertical: 20, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.page}, timelineRow: {minHeight: 52, flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 12}, timelineMarker: {width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center'}, timelineMarkerText: {width: 34, textAlign: 'center', color: '#FFFFFF', fontSize: 10, fontWeight: '800'}, timelineCopy: {flex: 1, paddingTop: 4}, timelinePhase: {fontSize: 10, lineHeight: 40, color: '#C0C5D0'},
   guaranteeBlock: {padding: 16, backgroundColor: '#F8F9FF'}, guaranteeHeading: {fontSize: 12, color: colors.muted, fontWeight: '700', textAlign: 'center', marginBottom: 12}, guaranteeGrid: {flexDirection: 'row', flexWrap: 'wrap', gap: 8}, guaranteeItem: {width: '48.8%', minHeight: 48, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center', gap: 8}, guaranteeText: {flex: 1, fontSize: 11, lineHeight: 16, color: colors.body},
-  reviewHeader: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12}, reviewScore: {flexDirection: 'row', alignItems: 'baseline', gap: 3}, reviewScoreValue: {fontSize: 18, color: colors.brand, fontWeight: '800'}, reviewScoreTotal: {fontSize: 12, color: colors.muted}, review: {paddingBottom: 12, marginBottom: 12}, reviewDivider: {borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.page}, reviewMeta: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6}, reviewerIdentity: {flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8}, reviewAvatar: {width: 28, height: 28, borderRadius: 14, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center'}, reviewAvatarText: {fontSize: 11, color: '#FFFFFF', fontWeight: '800'}, reviewerName: {fontSize: 12, color: colors.ink, fontWeight: '600'}, reviewTag: {fontSize: 10, lineHeight: 18, paddingHorizontal: 6, borderRadius: 4, overflow: 'hidden', color: colors.success, backgroundColor: colors.mint}, reviewStars: {fontSize: 12, color: colors.warning}, reviewStarsOff: {color: colors.line}, reviewText: {fontSize: 13, lineHeight: 20, color: colors.body}, reviewDate: {fontSize: 11, color: '#C0C5D0', marginTop: 4},
+  reviewHeader: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12}, reviewScore: {flexDirection: 'row', alignItems: 'baseline', gap: 3}, reviewScoreValue: {fontSize: 18, color: colors.brand, fontWeight: '800'}, reviewScoreTotal: {fontSize: 12, color: colors.muted}, reviewEmpty: {fontSize: 13, color: colors.muted, paddingVertical: 12}, review: {paddingBottom: 12, marginBottom: 12}, reviewDivider: {borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.page}, reviewMeta: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6}, reviewerIdentity: {flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8}, reviewAvatar: {width: 28, height: 28, borderRadius: 14, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center'}, reviewAvatarText: {fontSize: 11, color: '#FFFFFF', fontWeight: '800'}, reviewerName: {fontSize: 12, color: colors.ink, fontWeight: '600'}, reviewTag: {fontSize: 10, lineHeight: 18, paddingHorizontal: 6, borderRadius: 4, overflow: 'hidden', color: colors.success, backgroundColor: colors.mint}, reviewStars: {fontSize: 12, color: colors.warning}, reviewStarsOff: {color: colors.line}, reviewText: {fontSize: 13, lineHeight: 20, color: colors.body}, reviewDate: {fontSize: 11, color: '#C0C5D0', marginTop: 4},
   purchaseBar: {minHeight: 72, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: colors.surface, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line}, purchaseBarHidden: {opacity: 0}, purchaseLabel: {fontSize: 11, color: colors.muted}, purchasePrice: {fontSize: 18, lineHeight: 24, color: colors.brand, fontWeight: '900'}, buyButton: {flex: 1, height: 48, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand}, buyText: {fontSize: 15, color: '#FFFFFF', fontWeight: '700'}, pressed: {opacity: 0.72},
   overlay: {flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlay}, overlayDismiss: {flex: 1}, sheet: {paddingHorizontal: 20, paddingBottom: 28, backgroundColor: colors.surface, borderTopLeftRadius: 12, borderTopRightRadius: 12}, sheetHeader: {height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}, sheetTitle: {fontSize: 18, color: colors.ink, fontWeight: '800'}, sheetProduct: {paddingBottom: 16, flexDirection: 'row', gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line}, sheetImage: {width: 64, height: 48, borderRadius: 4, backgroundColor: colors.line}, sheetProductCopy: {flex: 1}, sheetProductName: {fontSize: 14, lineHeight: 19, color: colors.ink, fontWeight: '700'}, sheetType: {alignSelf: 'flex-start', height: 21, marginTop: 5, paddingHorizontal: 8, borderRadius: 4, flexDirection: 'row', alignItems: 'center', gap: 4}, sheetTypeText: {fontSize: 11, fontWeight: '600'},
-  sheetPrices: {paddingVertical: 14, gap: 12}, sheetPriceRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}, sheetPriceLabel: {fontSize: 14, color: colors.body}, sheetOriginal: {fontSize: 14, color: colors.muted, textDecorationLine: 'line-through'}, sheetDiscount: {fontSize: 14, color: colors.error}, sheetTotalRow: {paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line}, sheetTotalLabel: {fontSize: 15, color: colors.ink, fontWeight: '700'}, sheetTotal: {fontSize: 15, color: colors.brand, fontWeight: '800'}, sheetNotice: {padding: 12, borderRadius: 8, backgroundColor: colors.page}, sheetNoticeText: {fontSize: 12, lineHeight: 18, color: colors.muted}, sheetActions: {marginTop: 20, flexDirection: 'row', gap: 8}, cancelButton: {flex: 1, height: 48, borderRadius: 8, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center'}, cancelText: {fontSize: 14, color: colors.body}, confirmButton: {flex: 1, height: 48, borderRadius: 8, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center'}, confirmText: {fontSize: 14, color: '#FFFFFF', fontWeight: '700'}, disabled: {opacity: 0.65},
+  sheetPrices: {paddingVertical: 14, gap: 12}, sheetPriceRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}, sheetPriceLabel: {fontSize: 14, color: colors.body}, sheetOriginal: {fontSize: 14, color: colors.muted, textDecorationLine: 'line-through'}, sheetDiscount: {fontSize: 14, color: colors.error}, sheetTotalRow: {paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line}, sheetTotalLabel: {fontSize: 15, color: colors.ink, fontWeight: '700'}, sheetTotal: {fontSize: 15, color: colors.brand, fontWeight: '800'}, sheetNotice: {padding: 12, borderRadius: 8, backgroundColor: colors.page}, sheetNoticeText: {fontSize: 12, lineHeight: 18, color: colors.muted}, paymentError: {marginTop: 10, fontSize: 12, lineHeight: 18, color: colors.error}, sheetActions: {marginTop: 20, flexDirection: 'row', gap: 8}, cancelButton: {flex: 1, height: 48, borderRadius: 8, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center'}, cancelText: {fontSize: 14, color: colors.body}, confirmButton: {flex: 1, height: 48, borderRadius: 8, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center'}, confirmText: {fontSize: 14, color: '#FFFFFF', fontWeight: '700'}, disabled: {opacity: 0.65},
 });
