@@ -1,3 +1,4 @@
+import '../../core/config/app_environment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,7 +12,7 @@ const _page = Color(0xFFF4F5F7);
 const _muted = Color(0xFF707684);
 
 class AccountSecurityScreen extends StatefulWidget {
-  const AccountSecurityScreen({super.key, this.remoteEnabled = false});
+  const AccountSecurityScreen({super.key, this.remoteEnabled = remoteDataDefault});
   final bool remoteEnabled;
   @override
   State<AccountSecurityScreen> createState() => _AccountSecurityState();
@@ -177,7 +178,7 @@ class _LegalLink extends StatelessWidget {
 
 class LegalDocumentScreen extends ConsumerWidget {
   const LegalDocumentScreen(
-      {super.key, required this.document, this.remoteEnabled = false});
+      {super.key, required this.document, this.remoteEnabled = remoteDataDefault});
   final String document;
   final bool remoteEnabled;
   @override

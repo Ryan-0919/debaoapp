@@ -18,9 +18,6 @@ dependencies:
   go_router: ^15.1.2
   webview_flutter: ^4.14.1
   url_launcher: ^6.3.2
-  # Polyv's official native live-room viewer. Android resolution requires the
-  # private Maven credentials supplied by Polyv; see docs/POLYV_INTEGRATION.md.
-  polyv_live_scenes: ^0.0.3
 
 dev_dependencies:
   flutter_test:

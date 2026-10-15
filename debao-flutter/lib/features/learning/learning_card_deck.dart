@@ -118,6 +118,7 @@ class _LearningCardDeckState extends State<LearningCardDeck> {
                 child: PageView.builder(
               key: const ValueKey('card-deck-pages'),
               controller: controller,
+              scrollDirection: Axis.vertical,
               itemCount: count,
               onPageChanged: (value) => setState(() => index = value),
               itemBuilder: (context, page) => Padding(
@@ -146,9 +147,9 @@ class _LearningCardDeckState extends State<LearningCardDeck> {
                   IconButton(
                       tooltip: '上一张',
                       onPressed: index > 0 ? () => move(index - 1) : null,
-                      icon: const Icon(Icons.chevron_left)),
+                      icon: const Icon(Icons.keyboard_arrow_up)),
                   Expanded(
-                      child: Text(count > 1 ? '左右滑动切换卡片' : '读完后确认背诵',
+                      child: Text(count > 1 ? '上下滑动切换 · 点击内容可缩放' : '读完后确认背诵',
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                               color: DebaoColors.body, fontSize: 12))),
@@ -156,7 +157,7 @@ class _LearningCardDeckState extends State<LearningCardDeck> {
                       tooltip: '下一张',
                       onPressed:
                           index + 1 < count ? () => move(index + 1) : null,
-                      icon: const Icon(Icons.chevron_right)),
+                      icon: const Icon(Icons.keyboard_arrow_down)),
                 ])),
             Container(
                 color: Colors.white,
@@ -164,6 +165,16 @@ class _LearningCardDeckState extends State<LearningCardDeck> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (phase == 0 && !canMark)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                            widget.card.assets[index].type == 'html'
+                                ? '请先打开卡片阅读，完成后返回即可确认背诵'
+                                : '素材加载完成后可确认背诵；加载失败请点击重新加载',
+                            style: const TextStyle(
+                                color: DebaoColors.muted, fontSize: 12)),
+                      ),
                     if (widget.error != null)
                       Padding(
                           padding: const EdgeInsets.only(bottom: 8),
@@ -337,18 +348,41 @@ class _LearningCardDeckState extends State<LearningCardDeck> {
   Widget _content(int page) {
     final asset = widget.card.assets[page];
     if (asset.type == 'text')
-      return SingleChildScrollView(
-          padding: const EdgeInsets.all(26),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(asset.filename ?? widget.card.title,
-                style: const TextStyle(
-                    fontSize: 24, fontWeight: FontWeight.w700, height: 1.4)),
-            const SizedBox(height: 24),
-            SelectableText(asset.reference,
-                style: const TextStyle(
-                    fontSize: 18, height: 1.8, color: DebaoColors.body)),
-          ]));
+      return Column(children: [
+        Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+                onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => _CardZoomPage(
+                            title: asset.filename ?? widget.card.title,
+                            child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: SelectableText(asset.reference,
+                                    style: const TextStyle(
+                                        fontSize: 18, height: 1.8)))))),
+                icon: const Icon(Icons.zoom_in),
+                label: const Text('放大阅读'))),
+        Expanded(
+            child: SingleChildScrollView(
+                padding: const EdgeInsets.all(26),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(asset.filename ?? widget.card.title,
+                          style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                              height: 1.4)),
+                      const SizedBox(height: 24),
+                      SelectableText(asset.reference,
+                          style: const TextStyle(
+                              fontSize: 18,
+                              height: 1.8,
+                              color: DebaoColors.body)),
+                    ]))),
+      ]);
     if (asset.type == 'html')
       return Center(
           child: Padding(
@@ -389,14 +423,11 @@ class _LearningCardDeckState extends State<LearningCardDeck> {
         onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
-                builder: (_) => Scaffold(
-                      appBar: AppBar(title: Text('第 ${page + 1} 张')),
-                      body: Center(
-                          child: InteractiveViewer(
-                              maxScale: 5,
-                              child: Image.network(url,
-                                  errorBuilder: (_, __, ___) =>
-                                      const Text('图片加载失败，请返回重试')))),
+                builder: (_) => _CardZoomPage(
+                      title: '第 ${page + 1} 张',
+                      child: Image.network(url,
+                          errorBuilder: (_, __, ___) =>
+                              const Text('图片加载失败，请返回重试')),
                     ))),
         child: Column(children: [
           const Padding(
@@ -429,4 +460,67 @@ class _LearningCardDeckState extends State<LearningCardDeck> {
           const SizedBox(height: 16),
         ]));
   }
+}
+
+/// A separate reader keeps zoom/pan gestures from swallowing vertical paging.
+class _CardZoomPage extends StatefulWidget {
+  const _CardZoomPage({required this.title, required this.child});
+  final String title;
+  final Widget child;
+  @override
+  State<_CardZoomPage> createState() => _CardZoomPageState();
+}
+
+class _CardZoomPageState extends State<_CardZoomPage> {
+  final transform = TransformationController();
+  @override
+  void dispose() {
+    transform.dispose();
+    super.dispose();
+  }
+
+  void zoom(double factor) {
+    final old = transform.value.getMaxScaleOnAxis();
+    final scale = (old * factor).clamp(.5, 5.0);
+    final center = transform.toScene(viewport.center(Offset.zero));
+    setState(() => transform.value = Matrix4.identity()
+      ..translateByDouble(viewport.width / 2 - center.dx * scale,
+          viewport.height / 2 - center.dy * scale, 0, 1)
+      ..scaleByDouble(scale, scale, 1, 1));
+  }
+
+  Size viewport = Size.zero;
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: Text(widget.title), actions: [
+          IconButton(
+              key: const ValueKey('card-zoom-out'),
+              tooltip: '缩小',
+              onPressed: () => zoom(1 / 1.25),
+              icon: const Icon(Icons.zoom_out)),
+          TextButton(
+              onPressed: () =>
+                  setState(() => transform.value = Matrix4.identity()),
+              child: const Text('还原')),
+          IconButton(
+              key: const ValueKey('card-zoom-in'),
+              tooltip: '放大',
+              onPressed: () => zoom(1.25),
+              icon: const Icon(Icons.zoom_in)),
+        ]),
+        body: LayoutBuilder(builder: (context, constraints) {
+          viewport = constraints.biggest;
+          return InteractiveViewer(
+            transformationController: transform,
+            minScale: .5,
+            maxScale: 5,
+            boundaryMargin: const EdgeInsets.all(300),
+            child: SizedBox(
+                width: viewport.width,
+                height: viewport.height,
+                child:
+                    Center(child: SingleChildScrollView(child: widget.child))),
+          );
+        }),
+      );
 }

@@ -12,7 +12,11 @@ import type {LearningCard, LearningCardAsset, LearningCardContentType, LearningC
 import {assertGradingTransition, gradingAnswerHash, validateRubric} from './grading.js';
 import {handleLiveRoutes} from './live-routes.js';
 export const config = loadConfig();
-export const store = createStore();
+if (config.nodeEnv === 'production' && process.env.DEBAO_TEST_FIXTURES === 'true') {
+  throw new Error('Test fixtures are forbidden in production');
+}
+// Fixtures are opt-in for tests only. Runtime data comes from PostgreSQL.
+export const store = createStore(process.env.DEBAO_TEST_FIXTURES === 'true');
 // Development fixtures must never create authenticated production sessions.
 if (config.nodeEnv === 'production') {
   store.sessions.clear();
@@ -94,8 +98,8 @@ function learningBankQuestionAsObjective(question: LearningQuestionBankQuestion)
     chapterId: question.chapterId,
     pointId: question.pointId,
     analysis: question.analysis,
-    ...(question.explanationMediaType ? {explanationMediaType: question.explanationMediaType} : {}),
-    ...(question.explanationMediaReference ? {explanationMediaReference: question.explanationMediaReference} : {}),
+    ...(question.explanationMediaVisible !== false && question.explanationMediaType ? {explanationMediaType: question.explanationMediaType} : {}),
+    ...(question.explanationMediaVisible !== false && question.explanationMediaReference ? {explanationMediaReference: question.explanationMediaReference} : {}),
     status: question.status,
     version: question.version,
     source: question.source,
@@ -109,6 +113,11 @@ function isPublishedCourse(course: {status?: string}) {
 
 function isSellableProduct(product: Product) {
   return !product.status || product.status === 'on_sale';
+}
+
+function productSales(productId: string) {
+  return store.orders.filter(order => order.productId === productId &&
+    ['paid', 'refund_requested'].includes(order.status)).length;
 }
 
 function planDate(value: unknown, field: string, fallback: string) {
@@ -280,6 +289,15 @@ function addDays(dateValue: string, amount: number) {
   return date.toISOString().slice(0, 10);
 }
 
+function earlyAccessRequestTarget(plan: Store['learningPlans'][number], tasks: Store['learningTasks']) {
+  const today = planDateFromNow();
+  const currentUnlocked = plan.earlyUnlockedThrough && plan.earlyUnlockedThrough > today ? plan.earlyUnlockedThrough : today;
+  const dayTasks = tasks.filter(task => task.planId === plan.id && task.dueDate === currentUnlocked);
+  if (!dayTasks.length || dayTasks.some(task => task.status !== 'done')) return undefined;
+  const next = addDays(currentUnlocked, 1);
+  return next <= plan.endDate ? next : undefined;
+}
+
 function learningPlanStartDate(userId: string) {
   const order = store.orders.find(item => item.userId === userId && item.status === 'paid' && store.learningClassTypes.some(classType => classType.productId === item.productId && classType.status === 'active'));
   return dateOnly(order?.paidAt ?? order?.createdAt ?? new Date().toISOString());
@@ -317,7 +335,7 @@ function validateStagePlanContent(contentType: LearningStagePlanItem['contentTyp
   }
   if (contentType === 'assessment') {
     if (!contentId) throw new HttpError(422, 'VALIDATION_ERROR', '周考必须关联已发布的客观题试卷 ID');
-    if (!store.papers.some(item => item.id === contentId && item.status === 'published')) throw new HttpError(422, 'LEARNING_CONTENT_NOT_FOUND', '关联的客观题试卷不存在或尚未发布');
+    if (!store.papers.some(item => item.id === contentId && item.status === 'published') && !store.learningAssessmentPapers.some(item => item.id === contentId && item.status === 'published')) throw new HttpError(422, 'LEARNING_CONTENT_NOT_FOUND', '关联的学习中心试卷不存在或尚未发布');
     return;
   }
   // A question slot without an ID is intentional: it is filled at runtime
@@ -943,9 +961,11 @@ function validateLearningQuestionBankInput(input: Record<string, unknown>, exist
   const difficulty = Number(input.difficulty ?? existing?.difficulty ?? 3);
   const stem = String(input.stem ?? existing?.stem ?? '').trim();
   const analysis = String(input.analysis ?? existing?.analysis ?? '').trim();
-  const explanationMediaTypeValue = String(input.explanationMediaType ?? existing?.explanationMediaType ?? '').trim();
+  const explanationMediaTypeValue = input.explanationMediaReference === '' ? '' : String(input.explanationMediaType ?? existing?.explanationMediaType ?? '').trim();
   const explanationMediaType = explanationMediaTypeValue ? explanationMediaTypeValue as 'audio' | 'video' : undefined;
   const explanationMediaReference = String(input.explanationMediaReference ?? existing?.explanationMediaReference ?? '').trim() || undefined;
+  if (input.explanationMediaVisible !== undefined && typeof input.explanationMediaVisible !== 'boolean') throw new HttpError(422, 'VALIDATION_ERROR', '讲解显示开关格式不正确');
+  const explanationMediaVisible = input.explanationMediaVisible as boolean | undefined ?? existing?.explanationMediaVisible ?? true;
   const caseMaterial = String(input.caseMaterial ?? existing?.caseMaterial ?? '').trim() || undefined;
   const estimatedMinutes = Number(input.estimatedMinutes ?? existing?.estimatedMinutes ?? (category === 'objective' ? 2 : 20));
   const source = String(input.source ?? existing?.source ?? '').trim() || undefined;
@@ -993,11 +1013,11 @@ function validateLearningQuestionBankInput(input: Record<string, unknown>, exist
     if (questionType === 'case_analysis' && (!caseMaterial || caseMaterial.length < 10)) throw new HttpError(422, 'VALIDATION_ERROR', '案例题需要填写完整案例材料');
   }
   const now = new Date().toISOString();
-  return {id: existing?.id ?? `lqb-${randomUUID()}`, category, questionType, subject, subjectId, columnName, chapterId, knowledgePoint, pointId, ...(subKnowledgePoint ? {subKnowledgePoint, subPointId} : {}), difficulty, stem, options, correctAnswers, analysis, ...(explanationMediaType && explanationMediaReference ? {explanationMediaType, explanationMediaReference} : {}), ...(caseMaterial ? {caseMaterial} : {}), subQuestions, estimatedMinutes, ...(source ? {source} : {}), ...(sourceYear ? {sourceYear} : {}), usageScenes, status: existing?.status ?? 'draft', version: existing?.version ?? 1, createdAt: existing?.createdAt ?? now, updatedAt: now, ...(existing?.publishedAt ? {publishedAt: existing.publishedAt} : {})};
+  return {id: existing?.id ?? `lqb-${randomUUID()}`, category, questionType, subject, subjectId, columnName, chapterId, knowledgePoint, pointId, ...(subKnowledgePoint ? {subKnowledgePoint, subPointId} : {}), difficulty, stem, options, correctAnswers, analysis, explanationMediaVisible, ...(explanationMediaType && explanationMediaReference ? {explanationMediaType, explanationMediaReference} : {}), ...(caseMaterial ? {caseMaterial} : {}), subQuestions, estimatedMinutes, ...(source ? {source} : {}), ...(sourceYear ? {sourceYear} : {}), usageScenes, status: existing?.status ?? 'draft', version: existing?.version ?? 1, createdAt: existing?.createdAt ?? now, updatedAt: now, ...(existing?.publishedAt ? {publishedAt: existing.publishedAt} : {})};
 }
 
 function learningQuestionExplanationMediaUpdate(question: LearningQuestionBankQuestion, adminId: string): SqlStatement {
-  return {text: 'update learning_question_bank_questions set explanation_media_type=$1, explanation_media_reference=$2, updated_by=$3 where id=$4', values: [question.explanationMediaType ?? null, question.explanationMediaReference ?? null, adminId, question.id]};
+  return {text: 'update learning_question_bank_questions set explanation_media_type=$1, explanation_media_reference=$2, updated_by=$3, explanation_media_visible=$5 where id=$4', values: [question.explanationMediaType ?? null, question.explanationMediaReference ?? null, adminId, question.id, question.explanationMediaVisible !== false]};
 }
 
 function validateLearningCardInput(input: Record<string, unknown>, existing?: LearningCard): LearningCard {
@@ -1327,6 +1347,8 @@ function notificationItemsFor(userId: string) {
     const submission = store.gradingSubmissions.find(item => item.id === report.submissionId);
     return submission?.userId === userId;
   }).map(report => ({id: `grading-report:${report.id}`, type: 'grading', title: '批改报告已发布', body: `您的主观题批改报告已发布，得分 ${report.totalScore}/${report.maxScore}。`, createdAt: report.publishedAt, deepLink: `/grading/${report.submissionId}/report`}));
+  const inquiryItems = store.learningInquiries.filter(item => item.userId === userId && item.status === 'answered')
+    .map(item => ({id: `inquiry:${item.id}`, type: 'learning', title: '老师已回复你的错因答疑', body: `${item.teacherName ?? '答疑老师'}：${item.reply ?? ''}`, createdAt: item.repliedAt!, deepLink: '/learning/inquiries'}));
   const announcementItems = store.announcements.filter(item => announcementFeedVisibleTo(item, userId)).sort(compareAnnouncements).map(item => ({id: `announcement:${item.id}`, type: 'announcement', title: item.title, body: item.body, createdAt: announcementDeliveryTime(item), deepLink: announcementDeepLink(item), pinned: item.isPinned}));
   const orderItems = store.orders.filter(order => order.userId === userId).flatMap(order => {
     const event = store.orderEvents.find(item => item.orderId === order.id && item.type !== 'created');
@@ -1334,7 +1356,7 @@ function notificationItemsFor(userId: string) {
     return [{id: `order:${order.id}:${event.id}`, type: 'order', title: '订单状态更新', body: `订单 ${order.id} 当前状态：${order.status}`, createdAt: event.createdAt, deepLink: `/orders/${encodeURIComponent(order.id)}`}];
   });
   const deduped = new Map<string, {id: string; type: string; title: string; body: string; createdAt: string; deepLink: string; pinned?: boolean}>();
-  for (const item of [...staticItems, ...gradingItems, ...announcementItems, ...orderItems]) if (!deduped.has(item.id)) deduped.set(item.id, item);
+  for (const item of [...(process.env.DEBAO_TEST_FIXTURES === 'true' ? staticItems : []), ...gradingItems, ...inquiryItems, ...announcementItems, ...orderItems]) if (!deduped.has(item.id)) deduped.set(item.id, item);
   return [...deduped.values()].filter(item => !store.notificationClosures.has(`${userId}:${item.id}`)).sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || Date.parse(b.createdAt) - Date.parse(a.createdAt)).map(item => ({...item, read: store.notificationReceipts.has(`${userId}:${item.id}`) || item.id === 'n3'}));
 }
 
@@ -1625,7 +1647,12 @@ function isAfterAscendingCursor(item: {createdAt: string; id: string}, cursor?: 
 }
 function publicProfile(profile: UserProfile): UserProfile {
   const phone = /^1\d{10}$/.test(profile.phone) ? `${profile.phone.slice(0, 3)}****${profile.phone.slice(-4)}` : profile.phone;
-  return {...profile, phone};
+  const studyDays = new Set([
+    ...store.learningActivities.filter(item => item.userId === profile.id && (item.durationSeconds > 0 || item.quantity > 0)).map(item => item.occurredAt.slice(0, 10)),
+    ...store.submissions.filter(item => item.userId === profile.id).map(item => item.createdAt.slice(0, 10)),
+    ...store.learningTasks.filter(item => item.status === 'done' && item.completedAt && store.learningPlans.some(plan => plan.id === item.planId && plan.userId === profile.id)).map(item => item.completedAt!.slice(0, 10)),
+  ]).size;
+  return {...profile, phone, studyDays: process.env.DEBAO_TEST_FIXTURES === 'true' ? profile.studyDays : studyDays};
 }
 function devicePlatform(deviceId: string): 'android' | 'ios' | 'harmony' {
   if (deviceId.toLowerCase().startsWith('ios')) return 'ios';
@@ -1703,7 +1730,7 @@ async function resolveUserForPhone(phone: string, nickname = '法考学习者') 
   if (row) {
     const id = internalUserId(row.id); store.profiles.set(id, {id, name: row.name, phone: row.phone, examYear: row.exam_year, studyDays: row.study_days}); return id;
   }
-  const id = randomUUID(); const profile: UserProfile = {id, name: nickname || '法考学习者', phone, examYear: '2026', studyDays: 0};
+  const id = randomUUID(); const profile: UserProfile = {id, name: nickname || '法考学习者', phone, examYear: String(new Date().getFullYear()), studyDays: 0};
   store.profiles.set(id, profile);
   await persist('insert into users (id, name, phone, exam_year, study_days) values ($1, $2, $3, $4, $5)', [id, profile.name, profile.phone, profile.examYear, profile.studyDays]);
   return id;
@@ -1778,6 +1805,24 @@ export async function processDueAccountDeletions(now = Date.now()) {
 
 export async function hydrateStore() {
   await ensureDevelopmentAdminRecord();
+  const inquiries = await infrastructure.query<any>('select * from learning_inquiries order by created_at desc');
+  if (inquiries) store.learningInquiries = inquiries.rows.map(row => ({
+    id: row.id, userId: internalUserId(row.user_id), reportId: row.report_id,
+    questionId: row.question_id, question: row.question_snapshot, reason: row.reason,
+    status: row.status, reply: row.reply ?? undefined, teacherName: row.teacher_name ?? undefined,
+    repliedBy: row.replied_by ?? undefined, createdAt: new Date(row.created_at).toISOString(),
+    repliedAt: row.replied_at ? new Date(row.replied_at).toISOString() : undefined,
+    clientRequestId: row.client_request_id,
+  }));
+  const auditRows = await infrastructure.query<any>('select id, admin_user_id, action, resource_type, resource_id, reason, request_id, created_at from admin_audit_logs order by created_at desc');
+  if (auditRows) {
+    adminAuditLogs.splice(0, adminAuditLogs.length, ...auditRows.rows.map(row => ({
+      id: row.id, adminUserId: row.admin_user_id, action: row.action,
+      resourceType: row.resource_type, resourceId: row.resource_id,
+      reason: row.reason, requestId: row.request_id, result: 'success',
+      createdAt: new Date(row.created_at).toISOString(),
+    })));
+  }
   const adminSettings = await infrastructure.query<{setting_key: string; setting_value: string}>('select setting_key, setting_value from admin_system_settings where setting_key = $1', ['refund_review_threshold']);
   const persistedRefundThreshold = adminSettings?.rows.find(item => item.setting_key === 'refund_review_threshold')?.setting_value;
   if (persistedRefundThreshold !== undefined) {
@@ -1786,46 +1831,56 @@ export async function hydrateStore() {
   }
   const profiles = await infrastructure.query<{id: string; name: string; phone: string; exam_year: string; study_days: number; avatar_color?: string; avatar_url?: string}>('select id, name, phone, exam_year, study_days, avatar_color, avatar_url from users where deleted_at is null order by created_at');
   if (profiles) store.profiles = new Map(profiles.rows.map(item => { const id = internalUserId(item.id); return [id, {id, name: item.name, phone: item.phone, examYear: item.exam_year, studyDays: item.study_days, avatarColor: item.avatar_color, avatarUrl: item.avatar_url}]; }));
+  const subjects = await infrastructure.query<any>('select id, name, color, question_type, chapters from subjects order by id');
+  if (subjects) {
+    store.subjects = subjects.rows.map(item => ({
+      id: item.id, name: item.name, color: item.color, questionCount: 0,
+      questionType: item.question_type, chapters: Array.isArray(item.chapters) ? item.chapters : [],
+    }));
+    adminSubjectCatalog.splice(0, adminSubjectCatalog.length, ...store.subjects.map(subject => ({
+      ...subject, questionType: subject.questionType ?? 'both' as const, chapters: subject.chapters ?? [],
+    })));
+  }
   const restrictions = await infrastructure.query<{user_id: string; restriction_type: 'login' | 'community'; reason: string; expires_at?: string; created_at: string; lifted_at?: string}>('select user_id, restriction_type, reason, expires_at, created_at, lifted_at from user_restrictions where lifted_at is null');
-  if (restrictions?.rows.length) store.userRestrictions = new Map(restrictions.rows.map(item => [internalUserId(item.user_id), {type: item.restriction_type, reason: item.reason, expiresAt: item.expires_at ? new Date(item.expires_at).toISOString() : undefined, createdAt: new Date(item.created_at).toISOString()}]));
+  if (restrictions) store.userRestrictions = new Map(restrictions.rows.map(item => [internalUserId(item.user_id), {type: item.restriction_type, reason: item.reason, expiresAt: item.expires_at ? new Date(item.expires_at).toISOString() : undefined, createdAt: new Date(item.created_at).toISOString()}]));
   const userSettings = await infrastructure.query<{user_id: string; learning_reminders: boolean; course_updates: boolean; order_notifications: boolean; updated_at: string}>('select user_id, learning_reminders, course_updates, order_notifications, updated_at from user_settings');
-  if (userSettings?.rows.length) {
+  if (userSettings) {
     store.userSettings = new Map(userSettings.rows.map(item => {
       const userId = internalUserId(item.user_id);
       return [userId, {userId, learningReminders: item.learning_reminders, courseUpdates: item.course_updates, orderNotifications: item.order_notifications, updatedAt: new Date(item.updated_at).toISOString()}];
     }));
   }
-  const courses = await infrastructure.query<{id: string; title: string; teacher: string; type: 'video' | 'audio' | 'live' | 'mixed'; progress: number; lessons: number; accent: string; status: 'draft' | 'scheduled' | 'published' | 'offline' | 'archived'; updated_at: string}>('select id, title, teacher, type, progress, lessons, accent, status, updated_at from courses order by id');
-  if (courses) store.courses = courses.rows.map(item => ({...item, updatedAt: new Date(item.updated_at).toISOString()}));
+  const courses = await infrastructure.query<any>('select id, title, teacher, type, progress, lessons, accent, status, product_id, is_hot, hot_sort_order, updated_at from courses order by id');
+  if (courses) store.courses = courses.rows.map(item => ({...item, ...(item.product_id ? {productId: item.product_id} : {}), isHot: Boolean(item.is_hot), hotSortOrder: Number(item.hot_sort_order ?? 0), updatedAt: new Date(item.updated_at).toISOString()}));
   const courseSections = await infrastructure.query<{id: string; course_id: string; title: string; sort_order: number; updated_at: string}>('select id, course_id, title, sort_order, updated_at from course_sections order by course_id, sort_order');
-  if (courseSections?.rows.length) store.courseSections = courseSections.rows.map(item => ({id: item.id, courseId: item.course_id, title: item.title, sortOrder: item.sort_order, updatedAt: new Date(item.updated_at).toISOString()}));
-  const courseLessons = await infrastructure.query<{id: string; section_id: string; title: string; media_kind: 'video' | 'audio' | 'live' | 'document'; media_reference?: string; handout_reference?: string; duration_seconds: number; trial_enabled: boolean; sort_order: number; updated_at: string}>('select id, section_id, title, media_kind, media_reference, handout_reference, duration_seconds, trial_enabled, sort_order, updated_at from course_lessons order by section_id, sort_order');
-  if (courseLessons?.rows.length) store.courseLessons = courseLessons.rows.map(item => ({id: item.id, sectionId: item.section_id, title: item.title, mediaKind: item.media_kind, mediaReference: item.media_reference, handoutReference: item.handout_reference, durationSeconds: item.duration_seconds, trialEnabled: item.trial_enabled, sortOrder: item.sort_order, updatedAt: new Date(item.updated_at).toISOString()}));
+  if (courseSections) store.courseSections = courseSections.rows.map(item => ({id: item.id, courseId: item.course_id, title: item.title, sortOrder: item.sort_order, updatedAt: new Date(item.updated_at).toISOString()}));
+  const courseLessons = await infrastructure.query<any>('select id, section_id, title, media_kind, media_reference, handout_reference, duration_seconds, trial_enabled, sort_order, material_category, material_kind, downloadable, article_content, updated_at from course_lessons order by section_id, sort_order');
+  if (courseLessons) store.courseLessons = courseLessons.rows.map(item => ({id: item.id, sectionId: item.section_id, title: item.title, mediaKind: item.media_kind, mediaReference: item.media_reference, handoutReference: item.handout_reference, durationSeconds: item.duration_seconds, trialEnabled: item.trial_enabled, sortOrder: item.sort_order, materialCategory: item.material_category ?? undefined, materialKind: item.material_kind ?? undefined, downloadable: Boolean(item.downloadable), articleContent: item.article_content ?? undefined, updatedAt: new Date(item.updated_at).toISOString()}));
   const liveSessions = await infrastructure.query<{id: string; course_id: string; lesson_id?: string; title: string; teacher: string; starts_at: string; ends_at: string; provider?: 'polyv'|'tencent'; provider_room_id?: string; recording_video_id?: string; play_url?: string; recording_url?: string; status: 'scheduled' | 'live' | 'completed' | 'cancelled'; notification_status: 'not_required' | 'sent' | 'unavailable' | 'failed'; updated_at: string}>('select id, course_id, lesson_id, title, teacher, starts_at, ends_at, provider, provider_room_id, recording_video_id, play_url, recording_url, status, notification_status, updated_at from live_sessions order by starts_at desc');
-  if (liveSessions?.rows.length) store.liveSessions = liveSessions.rows.map(item => ({id: item.id, courseId: item.course_id, lessonId: item.lesson_id, title: item.title, teacher: item.teacher, startsAt: new Date(item.starts_at).toISOString(), endsAt: new Date(item.ends_at).toISOString(), provider: item.provider ?? 'tencent', providerRoomId: item.provider_room_id, recordingVideoId: item.recording_video_id, playUrl: item.play_url, recordingUrl: item.recording_url, status: item.status, notificationStatus: item.notification_status, updatedAt: new Date(item.updated_at).toISOString()}));
+  if (liveSessions) store.liveSessions = liveSessions.rows.map(item => ({id: item.id, courseId: item.course_id, lessonId: item.lesson_id, title: item.title, teacher: item.teacher, startsAt: new Date(item.starts_at).toISOString(), endsAt: new Date(item.ends_at).toISOString(), provider: item.provider ?? 'tencent', providerRoomId: item.provider_room_id, recordingVideoId: item.recording_video_id, playUrl: item.play_url, recordingUrl: item.recording_url, status: item.status, notificationStatus: item.notification_status, updatedAt: new Date(item.updated_at).toISOString()}));
   const progress = await infrastructure.query<{user_id: string; course_id: string; progress: number; updated_at: string}>('select user_id, course_id, progress::float, updated_at from user_course_progress');
-  if (progress?.rows.length) store.courseProgress = progress.rows.map(item => ({userId: item.user_id === DEMO_DB_USER_ID ? 'u-demo' : item.user_id, courseId: item.course_id, progress: item.progress, updatedAt: new Date(item.updated_at).toISOString()}));
+  if (progress) store.courseProgress = progress.rows.map(item => ({userId: item.user_id === DEMO_DB_USER_ID ? 'u-demo' : item.user_id, courseId: item.course_id, progress: item.progress, updatedAt: new Date(item.updated_at).toISOString()}));
   const products = await infrastructure.query<{id: string; name: string; category: string; price: number; original_price: number; sold: number; accent: string; benefits: string[]; status?: Product['status']; updated_at?: string}>('select id, name, category, price::float, original_price::float, sold, accent, benefits, status, updated_at from products order by id');
   if (products) store.products = products.rows.map(item => ({id: item.id, name: item.name, category: item.category, price: Number(item.price), originalPrice: Number(item.original_price), sold: Number(item.sold), accent: item.accent, benefits: Array.isArray(item.benefits) ? item.benefits.map(String) : [], ...(item.status ? {status: item.status} : {}), ...(item.updated_at ? {updatedAt: new Date(item.updated_at).toISOString()} : {})}));
   const priceHistoryRows = await infrastructure.query<any>('select id, product_id, price::float, reason, created_by, created_at from product_price_history order by created_at desc');
-  if (priceHistoryRows?.rows.length) {
+  if (priceHistoryRows) {
     adminProductPriceHistory.push(...priceHistoryRows.rows.map((item: any) => ({id: item.id, productId: item.product_id, price: Number(item.price), reason: item.reason, createdBy: item.created_by ?? undefined, createdAt: new Date(item.created_at).toISOString()})));
   }
   const skus = await infrastructure.query<any>('select id, product_id, name, price::float, stock, status, attributes, updated_at from product_skus order by product_id, id');
-  if (skus?.rows.length) {
+  if (skus) {
     store.productSkus = skus.rows.map((item: any) => ({id: item.id, productId: item.product_id, name: item.name, price: Number(item.price), stock: Number(item.stock), status: item.status, attributes: item.attributes && typeof item.attributes === 'object' ? item.attributes : {}, updatedAt: new Date(item.updated_at).toISOString()}));
     const byProduct = new Map<string, ProductSku[]>();
     for (const sku of store.productSkus) byProduct.set(sku.productId, [...(byProduct.get(sku.productId) ?? []), sku]);
     store.products = store.products.map(product => ({...product, skus: byProduct.get(product.id) ?? product.skus}));
   }
   const coupons = await infrastructure.query<any>('select code, discount_type, discount_value::float, min_amount::float, max_discount::float, starts_at, ends_at, usage_limit, used_count, status from coupons order by code');
-  if (coupons?.rows.length) store.coupons = coupons.rows.map((item: any) => ({code: item.code, type: item.discount_type, value: Number(item.discount_value), minAmount: Number(item.min_amount), maxDiscount: item.max_discount === null || item.max_discount === undefined ? undefined : Number(item.max_discount), startsAt: new Date(item.starts_at).toISOString(), endsAt: new Date(item.ends_at).toISOString(), usageLimit: item.usage_limit === null || item.usage_limit === undefined ? undefined : Number(item.usage_limit), usedCount: Number(item.used_count), status: item.status}));
+  if (coupons) store.coupons = coupons.rows.map((item: any) => ({code: item.code, type: item.discount_type, value: Number(item.discount_value), minAmount: Number(item.min_amount), maxDiscount: item.max_discount === null || item.max_discount === undefined ? undefined : Number(item.max_discount), startsAt: new Date(item.starts_at).toISOString(), endsAt: new Date(item.ends_at).toISOString(), usageLimit: item.usage_limit === null || item.usage_limit === undefined ? undefined : Number(item.usage_limit), usedCount: Number(item.used_count), status: item.status}));
   const orders = await infrastructure.query<any>('select o.id, o.user_id, o.product_id, o.amount::float, o.status, o.client_request_id, o.sku_id, o.coupon_code, o.discount_amount::float, o.expires_at, o.paid_at, o.closed_at, o.refunded_at, o.created_at, p.name as product_name from orders o join products p on p.id = o.product_id order by o.created_at desc');
-  if (orders?.rows.length) store.orders = orders.rows.map((item: any) => ({id: item.id, userId: item.user_id === DEMO_DB_USER_ID ? 'u-demo' : item.user_id, productId: item.product_id, productName: item.product_name, amount: Number(item.amount), status: item.status, createdAt: new Date(item.created_at).toISOString(), ...(item.client_request_id ? {clientRequestId: item.client_request_id} : {}), ...(item.sku_id ? {skuId: item.sku_id} : {}), ...(item.coupon_code ? {couponCode: item.coupon_code} : {}), ...(item.discount_amount ? {discountAmount: Number(item.discount_amount)} : {}), ...(item.expires_at ? {expiresAt: new Date(item.expires_at).toISOString()} : {}), ...(item.paid_at ? {paidAt: new Date(item.paid_at).toISOString()} : {}), ...(item.closed_at ? {closedAt: new Date(item.closed_at).toISOString()} : {}), ...(item.refunded_at ? {refundedAt: new Date(item.refunded_at).toISOString()} : {})}));
+  if (orders) store.orders = orders.rows.map((item: any) => ({id: item.id, userId: item.user_id === DEMO_DB_USER_ID ? 'u-demo' : item.user_id, productId: item.product_id, productName: item.product_name, amount: Number(item.amount), status: item.status, createdAt: new Date(item.created_at).toISOString(), ...(item.client_request_id ? {clientRequestId: item.client_request_id} : {}), ...(item.sku_id ? {skuId: item.sku_id} : {}), ...(item.coupon_code ? {couponCode: item.coupon_code} : {}), ...(item.discount_amount ? {discountAmount: Number(item.discount_amount)} : {}), ...(item.expires_at ? {expiresAt: new Date(item.expires_at).toISOString()} : {}), ...(item.paid_at ? {paidAt: new Date(item.paid_at).toISOString()} : {}), ...(item.closed_at ? {closedAt: new Date(item.closed_at).toISOString()} : {}), ...(item.refunded_at ? {refundedAt: new Date(item.refunded_at).toISOString()} : {})}));
   const orderEvents = await infrastructure.query<any>('select id, order_id, event_type, payload, created_at from order_events order by created_at desc');
-  if (orderEvents?.rows.length) store.orderEvents = orderEvents.rows.map((item: any) => ({id: item.id, orderId: item.order_id, type: item.event_type, actor: item.payload?.actor ?? 'system', metadata: item.payload && typeof item.payload === 'object' ? Object.fromEntries(Object.entries(item.payload).filter(([key]) => key !== 'actor')) : {}, createdAt: new Date(item.created_at).toISOString()}));
+  if (orderEvents) store.orderEvents = orderEvents.rows.map((item: any) => ({id: item.id, orderId: item.order_id, type: item.event_type, actor: item.payload?.actor ?? 'system', metadata: item.payload && typeof item.payload === 'object' ? Object.fromEntries(Object.entries(item.payload).filter(([key]) => key !== 'actor')) : {}, createdAt: new Date(item.created_at).toISOString()}));
   const refundRows = await infrastructure.query<any>('select id, order_id, user_id, reason, review_reason, amount::float, status, reviewed_by, reviewed_at, first_reviewed_by, first_reviewed_at, second_reviewed_by, second_reviewed_at, created_at from refund_requests order by created_at desc');
-  if (refundRows?.rows.length) store.refunds = refundRows.rows.map((item: any) => ({
+  if (refundRows) store.refunds = refundRows.rows.map((item: any) => ({
     id: item.id,
     orderId: item.order_id,
     userId: item.user_id ? internalUserId(item.user_id) : undefined,
@@ -1841,38 +1896,42 @@ export async function hydrateStore() {
     secondReviewedBy: item.second_reviewed_by ?? undefined,
     secondReviewedAt: item.second_reviewed_at ? new Date(item.second_reviewed_at).toISOString() : undefined,
   }));
-  const plans = await infrastructure.query<any>('select id, user_id, title, daily_minutes, start_date, end_date, status, class_type_id, stage_id, auto_generated, version, change_reason, generated_through, content_cursor, content_offset_minutes, updated_at, paused_at, paused_until, pause_reason from learning_plans order by created_at desc');
-  if (plans?.rows.length) store.learningPlans = plans.rows.map((item: any) => ({id: item.id, userId: item.user_id === DEMO_DB_USER_ID ? 'u-demo' : item.user_id, title: item.title, dailyMinutes: Number(item.daily_minutes), startDate: dateOnly(String(item.start_date)), endDate: dateOnly(String(item.end_date)), status: item.status, version: Number(item.version ?? 1), ...(item.change_reason ? {changeReason: item.change_reason} : {}), ...(item.generated_through ? {generatedThrough: dateOnly(String(item.generated_through))} : {}), ...(item.content_cursor !== undefined ? {contentCursor: Number(item.content_cursor ?? 0)} : {}), ...(item.content_offset_minutes !== undefined ? {contentOffsetMinutes: Number(item.content_offset_minutes ?? 0)} : {}), ...(item.updated_at ? {updatedAt: new Date(item.updated_at).toISOString()} : {}), ...(item.paused_at ? {pausedAt: new Date(item.paused_at).toISOString()} : {}), ...(item.paused_until ? {pausedUntil: dateOnly(String(item.paused_until))} : {}), ...(item.pause_reason ? {pauseReason: item.pause_reason} : {}), ...(item.class_type_id ? {classTypeId: item.class_type_id} : {}), ...(item.stage_id ? {stageId: item.stage_id} : {}), ...(item.auto_generated ? {autoGenerated: true} : {})}));
+  const plans = await infrastructure.query<any>('select id, user_id, title, daily_minutes, start_date, end_date, status, class_type_id, stage_id, auto_generated, version, change_reason, generated_through, content_cursor, content_offset_minutes, early_unlocked_through, updated_at, paused_at, paused_until, pause_reason from learning_plans order by created_at desc');
+  if (plans) store.learningPlans = plans.rows.map((item: any) => ({id: item.id, userId: item.user_id === DEMO_DB_USER_ID ? 'u-demo' : item.user_id, title: item.title, dailyMinutes: Number(item.daily_minutes), startDate: dateOnly(String(item.start_date)), endDate: dateOnly(String(item.end_date)), status: item.status, version: Number(item.version ?? 1), ...(item.change_reason ? {changeReason: item.change_reason} : {}), ...(item.generated_through ? {generatedThrough: dateOnly(String(item.generated_through))} : {}), ...(item.content_cursor !== undefined ? {contentCursor: Number(item.content_cursor ?? 0)} : {}), ...(item.content_offset_minutes !== undefined ? {contentOffsetMinutes: Number(item.content_offset_minutes ?? 0)} : {}), ...(item.early_unlocked_through ? {earlyUnlockedThrough: dateOnly(String(item.early_unlocked_through))} : {}), ...(item.updated_at ? {updatedAt: new Date(item.updated_at).toISOString()} : {}), ...(item.paused_at ? {pausedAt: new Date(item.paused_at).toISOString()} : {}), ...(item.paused_until ? {pausedUntil: dateOnly(String(item.paused_until))} : {}), ...(item.pause_reason ? {pauseReason: item.pause_reason} : {}), ...(item.class_type_id ? {classTypeId: item.class_type_id} : {}), ...(item.stage_id ? {stageId: item.stage_id} : {}), ...(item.auto_generated ? {autoGenerated: true} : {})}));
+  const earlyAccess = await infrastructure.query<any>('select id, user_id, plan_id, requested_through, status, reason, reviewed_by, reviewed_at, created_at from learning_early_access_requests order by created_at desc');
+  if (earlyAccess) store.learningEarlyAccessRequests = earlyAccess.rows.map((item: any) => ({id: item.id, userId: internalUserId(item.user_id), planId: item.plan_id, requestedThrough: dateOnly(String(item.requested_through)), status: item.status, ...(item.reason ? {reason: item.reason} : {}), ...(item.reviewed_by ? {reviewedBy: item.reviewed_by} : {}), ...(item.reviewed_at ? {reviewedAt: new Date(item.reviewed_at).toISOString()} : {}), createdAt: new Date(item.created_at).toISOString()}));
   const planVersions = await infrastructure.query<any>('select id, plan_id, version, reason, source, snapshot, created_by, created_at from learning_plan_versions order by created_at desc');
-  if (planVersions?.rows.length) store.learningPlanVersions = planVersions.rows.map((item: any) => ({id: item.id, planId: item.plan_id, version: Number(item.version), reason: item.reason, source: item.source, snapshot: item.snapshot, ...(item.created_by ? {createdBy: item.created_by} : {}), createdAt: new Date(item.created_at).toISOString()}));
+  if (planVersions) store.learningPlanVersions = planVersions.rows.map((item: any) => ({id: item.id, planId: item.plan_id, version: Number(item.version), reason: item.reason, source: item.source, snapshot: item.snapshot, ...(item.created_by ? {createdBy: item.created_by} : {}), createdAt: new Date(item.created_at).toISOString()}));
   const diagnosticForms = await infrastructure.query<any>('select * from learning_diagnostic_forms order by created_at');
-  if (diagnosticForms?.rows.length) store.learningDiagnosticForms = diagnosticForms.rows.map((row: any) => ({id: row.id, title: row.title, subtitle: row.subtitle ?? undefined, description: row.description ?? undefined, estimatedMinutes: Number(row.estimated_minutes), submitLabel: row.submit_label, successTitle: row.success_title, successDescription: row.success_description, status: row.status, version: Number(row.version), createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString(), publishedAt: row.published_at ? new Date(row.published_at).toISOString() : undefined}));
+  if (diagnosticForms) store.learningDiagnosticForms = diagnosticForms.rows.map((row: any) => ({id: row.id, title: row.title, subtitle: row.subtitle ?? undefined, description: row.description ?? undefined, estimatedMinutes: Number(row.estimated_minutes), submitLabel: row.submit_label, successTitle: row.success_title, successDescription: row.success_description, status: row.status, version: Number(row.version), createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString(), publishedAt: row.published_at ? new Date(row.published_at).toISOString() : undefined}));
   const diagnosticDimensions = await infrastructure.query<any>('select * from learning_diagnostic_dimensions order by sort_order, code');
-  if (diagnosticDimensions?.rows.length) store.learningDiagnosticDimensions = diagnosticDimensions.rows.map((row: any) => ({code: row.code, label: row.label, description: row.description ?? undefined, color: row.color ?? undefined, sortOrder: Number(row.sort_order), status: row.status, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString()}));
+  if (diagnosticDimensions) store.learningDiagnosticDimensions = diagnosticDimensions.rows.map((row: any) => ({code: row.code, label: row.label, description: row.description ?? undefined, color: row.color ?? undefined, sortOrder: Number(row.sort_order), status: row.status, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString()}));
   const diagnosticQuestions = await infrastructure.query<any>(`select q.*, coalesce(jsonb_agg(jsonb_build_object('id', o.id, 'label', o.label, 'score', o.score, 'sortOrder', o.sort_order) order by o.sort_order) filter (where o.id is not null), '[]') as options from learning_diagnostic_questions q left join learning_diagnostic_options o on o.question_id = q.id group by q.id order by q.sort_order, q.created_at`);
-  if (diagnosticQuestions?.rows.length) store.learningDiagnosticQuestions = diagnosticQuestions.rows.map((row: any) => ({id: row.id, formId: row.form_id, stem: row.stem, description: row.description ?? undefined, section: row.section ?? undefined, placeholder: row.placeholder ?? undefined, validation: row.validation ?? undefined, type: row.question_type, dimension: row.dimension, required: row.required, sortOrder: Number(row.sort_order), status: row.status, version: Number(row.version), options: Array.isArray(row.options) ? row.options.map((option: any) => ({id: String(option.id), label: String(option.label), score: Number(option.score), sortOrder: Number(option.sortOrder)})) : [], createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString(), publishedAt: row.published_at ? new Date(row.published_at).toISOString() : undefined}));
+  if (diagnosticQuestions) store.learningDiagnosticQuestions = diagnosticQuestions.rows.map((row: any) => ({id: row.id, formId: row.form_id, stem: row.stem, description: row.description ?? undefined, section: row.section ?? undefined, placeholder: row.placeholder ?? undefined, validation: row.validation ?? undefined, type: row.question_type, dimension: row.dimension, required: row.required, sortOrder: Number(row.sort_order), status: row.status, version: Number(row.version), options: Array.isArray(row.options) ? row.options.map((option: any) => ({id: String(option.id), label: String(option.label), score: Number(option.score), sortOrder: Number(option.sortOrder)})) : [], createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString(), publishedAt: row.published_at ? new Date(row.published_at).toISOString() : undefined}));
   const diagnosticAttempts = await infrastructure.query<any>('select id, user_id, status, question_snapshot, answers, scores, started_at, submitted_at from learning_diagnostic_attempts order by submitted_at desc');
-  if (diagnosticAttempts?.rows.length) store.learningDiagnosticAttempts = diagnosticAttempts.rows.map((row: any) => ({id: row.id, userId: internalUserId(row.user_id), status: row.status, questionSnapshot: row.question_snapshot ?? [], answers: row.answers ?? [], scores: row.scores ?? emptyLearningDiagnosticScores(), startedAt: new Date(row.started_at).toISOString(), submittedAt: new Date(row.submitted_at).toISOString()}));
+  if (diagnosticAttempts) store.learningDiagnosticAttempts = diagnosticAttempts.rows.map((row: any) => ({id: row.id, userId: internalUserId(row.user_id), status: row.status, questionSnapshot: row.question_snapshot ?? [], answers: row.answers ?? [], scores: row.scores ?? emptyLearningDiagnosticScores(), startedAt: new Date(row.started_at).toISOString(), submittedAt: new Date(row.submitted_at).toISOString()}));
   const learningQuestionTaxonomy = await infrastructure.query<any>('select * from learning_question_taxonomy_nodes order by category, node_type, sort_order, name, id');
-  if (learningQuestionTaxonomy?.rows.length) store.learningQuestionTaxonomyNodes = learningQuestionTaxonomy.rows.map((row: any) => ({id: row.id, category: row.category, type: row.node_type, parentId: row.parent_id ?? undefined, code: row.code, name: row.name, sortOrder: Number(row.sort_order), status: row.status, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString()}));
+  if (learningQuestionTaxonomy) store.learningQuestionTaxonomyNodes = learningQuestionTaxonomy.rows.map((row: any) => ({id: row.id, category: row.category, type: row.node_type, parentId: row.parent_id ?? undefined, code: row.code, name: row.name, sortOrder: Number(row.sort_order), status: row.status, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString()}));
   const learningQuestionBank = await infrastructure.query<any>('select * from learning_question_bank_questions order by updated_at desc, id');
-  if (learningQuestionBank?.rows.length) store.learningQuestionBankQuestions = learningQuestionBank.rows.map((row: any) => ({id: row.id, category: row.category, questionType: row.question_type, subject: row.subject, subjectId: row.subject_id, columnName: row.column_name, chapterId: row.chapter_id, knowledgePoint: row.knowledge_point, pointId: row.point_id, subKnowledgePoint: row.sub_knowledge_point ?? undefined, subPointId: row.subpoint_id ?? undefined, difficulty: Number(row.difficulty), stem: row.stem, options: Array.isArray(row.options) ? row.options : [], correctAnswers: Array.isArray(row.correct_answers) ? row.correct_answers.map(String) : [], analysis: row.analysis ?? '', explanationMediaType: row.explanation_media_type ?? undefined, explanationMediaReference: row.explanation_media_reference ?? undefined, caseMaterial: row.case_material ?? undefined, subQuestions: Array.isArray(row.sub_questions) ? row.sub_questions.map((item: any) => ({...item, score: Number(item.score)})) : [], estimatedMinutes: Number(row.estimated_minutes), source: row.source ?? undefined, sourceYear: row.source_year === null || row.source_year === undefined ? undefined : Number(row.source_year), usageScenes: Array.isArray(row.usage_scenes) ? row.usage_scenes : [], status: row.status, version: Number(row.version), createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString(), publishedAt: row.published_at ? new Date(row.published_at).toISOString() : undefined}));
+  if (learningQuestionBank) store.learningQuestionBankQuestions = learningQuestionBank.rows.map((row: any) => ({id: row.id, category: row.category, questionType: row.question_type, subject: row.subject, subjectId: row.subject_id, columnName: row.column_name, chapterId: row.chapter_id, knowledgePoint: row.knowledge_point, pointId: row.point_id, subKnowledgePoint: row.sub_knowledge_point ?? undefined, subPointId: row.subpoint_id ?? undefined, difficulty: Number(row.difficulty), stem: row.stem, options: Array.isArray(row.options) ? row.options : [], correctAnswers: Array.isArray(row.correct_answers) ? row.correct_answers.map(String) : [], analysis: row.analysis ?? '', explanationMediaVisible: row.explanation_media_visible !== false, explanationMediaType: row.explanation_media_type ?? undefined, explanationMediaReference: row.explanation_media_reference ?? undefined, caseMaterial: row.case_material ?? undefined, subQuestions: Array.isArray(row.sub_questions) ? row.sub_questions.map((item: any) => ({...item, score: Number(item.score)})) : [], estimatedMinutes: Number(row.estimated_minutes), source: row.source ?? undefined, sourceYear: row.source_year === null || row.source_year === undefined ? undefined : Number(row.source_year), usageScenes: Array.isArray(row.usage_scenes) ? row.usage_scenes : [], status: row.status, version: Number(row.version), createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString(), publishedAt: row.published_at ? new Date(row.published_at).toISOString() : undefined}));
+  const learningAssessmentPapers = await infrastructure.query<any>('select id,title,subject_id,question_ids,duration_minutes,status,created_at,updated_at from learning_assessment_papers order by updated_at desc');
+  if (learningAssessmentPapers) store.learningAssessmentPapers = learningAssessmentPapers.rows.map((row: any) => ({id: row.id, title: row.title, subjectId: row.subject_id, questionIds: Array.isArray(row.question_ids) ? row.question_ids.map(String) : [], durationMinutes: Number(row.duration_minutes), status: row.status, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString()}));
   const learningCards = await infrastructure.query<any>('select * from learning_cards order by sort_order, updated_at desc, id');
-  if (learningCards?.rows.length) store.learningCards = learningCards.rows.map((row: any) => ({id: row.id, title: row.title, description: row.description ?? undefined, contentType: row.content_type, assets: Array.isArray(row.assets) ? row.assets : [], recallItems: Array.isArray(row.recall_items) ? row.recall_items : [], sortOrder: Number(row.sort_order), status: row.status, version: Number(row.version), createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString(), publishedAt: row.published_at ? new Date(row.published_at).toISOString() : undefined}));
+  if (learningCards) store.learningCards = learningCards.rows.map((row: any) => ({id: row.id, title: row.title, description: row.description ?? undefined, contentType: row.content_type, assets: Array.isArray(row.assets) ? row.assets : [], recallItems: Array.isArray(row.recall_items) ? row.recall_items : [], sortOrder: Number(row.sort_order), status: row.status, version: Number(row.version), createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString(), publishedAt: row.published_at ? new Date(row.published_at).toISOString() : undefined}));
   const learningClassTypes = await infrastructure.query<any>('select * from learning_class_types order by sort_order, id');
-  if (learningClassTypes?.rows.length) store.learningClassTypes = learningClassTypes.rows.map((row: any) => ({id: row.id, code: row.code, name: row.name, productId: row.product_id ?? undefined, description: row.description ?? undefined, endDate: dateOnly(String(row.end_date ?? '2099-12-31')), sortOrder: Number(row.sort_order), status: row.status, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString()}));
+  if (learningClassTypes) store.learningClassTypes = learningClassTypes.rows.map((row: any) => ({id: row.id, code: row.code, name: row.name, productId: row.product_id ?? undefined, description: row.description ?? undefined, endDate: dateOnly(String(row.end_date ?? '2099-12-31')), sortOrder: Number(row.sort_order), status: row.status, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString()}));
   const learningStages = await infrastructure.query<any>('select * from learning_stages order by sort_order, id');
-  if (learningStages?.rows.length) store.learningStages = learningStages.rows.map((row: any) => ({id: row.id, classTypeId: row.class_type_id, code: row.code, name: row.name, description: row.description ?? undefined, conditions: Array.isArray(row.conditions) ? row.conditions : [], sortOrder: Number(row.sort_order), status: row.status, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString()}));
+  if (learningStages) store.learningStages = learningStages.rows.map((row: any) => ({id: row.id, classTypeId: row.class_type_id, code: row.code, name: row.name, description: row.description ?? undefined, conditions: Array.isArray(row.conditions) ? row.conditions : [], sortOrder: Number(row.sort_order), status: row.status, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString()}));
   const learningTeachers = await infrastructure.query<any>('select * from learning_teachers order by stage_id, sort_order, id');
-  if (learningTeachers?.rows.length) store.learningTeachers = learningTeachers.rows.map((row: any) => ({id: row.id, stageId: row.stage_id, name: row.name, subject: row.subject, specialty: row.specialty, sortOrder: Number(row.sort_order), status: row.status, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString()}));
+  if (learningTeachers) store.learningTeachers = learningTeachers.rows.map((row: any) => ({id: row.id, stageId: row.stage_id, name: row.name, subject: row.subject, specialty: row.specialty, sortOrder: Number(row.sort_order), status: row.status, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString()}));
   const stagePlanConfigs = await infrastructure.query<any>('select stage_id, total_minutes, daily_minutes, min_daily_minutes, max_daily_minutes, weekday_min_minutes, weekday_max_minutes, weekend_min_minutes, weekend_max_minutes, holiday_min_minutes, holiday_max_minutes, holiday_dates, study_days, duration_days, makeup_policy, card_unlock_rule, question_push_count, question_selection_strategy, status, version, published_at, published_snapshot, updated_at from learning_stage_plan_configs');
-  if (stagePlanConfigs?.rows.length) store.learningStagePlanConfigs = stagePlanConfigs.rows.map((row: any) => ({stageId: row.stage_id, totalMinutes: Number(row.total_minutes ?? 0), dailyMinutes: Number(row.daily_minutes), minDailyMinutes: Number(row.min_daily_minutes ?? 30), maxDailyMinutes: Number(row.max_daily_minutes ?? row.daily_minutes ?? 180), weekdayMinMinutes: Number(row.weekday_min_minutes ?? row.min_daily_minutes ?? 30), weekdayMaxMinutes: Number(row.weekday_max_minutes ?? row.max_daily_minutes ?? 180), weekendMinMinutes: Number(row.weekend_min_minutes ?? row.min_daily_minutes ?? 60), weekendMaxMinutes: Number(row.weekend_max_minutes ?? row.max_daily_minutes ?? 240), holidayMinMinutes: Number(row.holiday_min_minutes ?? row.min_daily_minutes ?? 60), holidayMaxMinutes: Number(row.holiday_max_minutes ?? row.max_daily_minutes ?? 180), holidayDates: Array.isArray(row.holiday_dates) ? row.holiday_dates.map(String) : [], studyDays: Array.isArray(row.study_days) ? row.study_days.map(Number) : [1, 2, 3, 4, 5, 6, 0], durationDays: Number(row.duration_days), makeupPolicy: row.makeup_policy, cardUnlockRule: row.card_unlock_rule ?? 'after_course_checkin', questionPushCount: Number(row.question_push_count ?? 5), questionSelectionStrategy: row.question_selection_strategy ?? 'profile', status: row.status === 'draft' ? 'draft' : 'published', version: Number(row.version ?? 1), ...(row.published_at ? {publishedAt: new Date(row.published_at).toISOString()} : {}), ...(row.published_snapshot ? {publishedSnapshot: row.published_snapshot} : {}), updatedAt: new Date(row.updated_at).toISOString()}));
+  if (stagePlanConfigs) store.learningStagePlanConfigs = stagePlanConfigs.rows.map((row: any) => ({stageId: row.stage_id, totalMinutes: Number(row.total_minutes ?? 0), dailyMinutes: Number(row.daily_minutes), minDailyMinutes: Number(row.min_daily_minutes ?? 30), maxDailyMinutes: Number(row.max_daily_minutes ?? row.daily_minutes ?? 180), weekdayMinMinutes: Number(row.weekday_min_minutes ?? row.min_daily_minutes ?? 30), weekdayMaxMinutes: Number(row.weekday_max_minutes ?? row.max_daily_minutes ?? 180), weekendMinMinutes: Number(row.weekend_min_minutes ?? row.min_daily_minutes ?? 60), weekendMaxMinutes: Number(row.weekend_max_minutes ?? row.max_daily_minutes ?? 240), holidayMinMinutes: Number(row.holiday_min_minutes ?? row.min_daily_minutes ?? 60), holidayMaxMinutes: Number(row.holiday_max_minutes ?? row.max_daily_minutes ?? 180), holidayDates: Array.isArray(row.holiday_dates) ? row.holiday_dates.map(String) : [], studyDays: Array.isArray(row.study_days) ? row.study_days.map(Number) : [1, 2, 3, 4, 5, 6, 0], durationDays: Number(row.duration_days), makeupPolicy: row.makeup_policy, cardUnlockRule: row.card_unlock_rule ?? 'after_course_checkin', questionPushCount: Number(row.question_push_count ?? 5), questionSelectionStrategy: row.question_selection_strategy ?? 'profile', status: row.status === 'draft' ? 'draft' : 'published', version: Number(row.version ?? 1), ...(row.published_at ? {publishedAt: new Date(row.published_at).toISOString()} : {}), ...(row.published_snapshot ? {publishedSnapshot: row.published_snapshot} : {}), updatedAt: new Date(row.updated_at).toISOString()}));
   const stagePlanItems = await infrastructure.query<any>('select id, stage_id, content_type, content_id, knowledge_point_ids, title, description, minutes, week_day, question_count, sort_order, required from learning_stage_plan_items order by stage_id, sort_order, id');
-  if (stagePlanItems?.rows.length) store.learningStagePlanItems = stagePlanItems.rows.map((row: any) => ({id: row.id, stageId: row.stage_id, contentType: row.content_type, ...(row.content_id ? {contentId: row.content_id} : {}), knowledgePointIds: Array.isArray(row.knowledge_point_ids) ? row.knowledge_point_ids.map(String) : [], title: row.title, ...(row.description ? {description: row.description} : {}), minutes: Number(row.minutes ?? 0), ...(row.week_day ? {weekDay: Number(row.week_day)} : {}), ...(row.question_count ? {questionCount: Number(row.question_count)} : {}), sortOrder: Number(row.sort_order), required: Boolean(row.required)}));
+  if (stagePlanItems) store.learningStagePlanItems = stagePlanItems.rows.map((row: any) => ({id: row.id, stageId: row.stage_id, contentType: row.content_type, ...(row.content_id ? {contentId: row.content_id} : {}), knowledgePointIds: Array.isArray(row.knowledge_point_ids) ? row.knowledge_point_ids.map(String) : [], title: row.title, ...(row.description ? {description: row.description} : {}), minutes: Number(row.minutes ?? 0), ...(row.week_day ? {weekDay: Number(row.week_day)} : {}), ...(row.question_count ? {questionCount: Number(row.question_count)} : {}), sortOrder: Number(row.sort_order), required: Boolean(row.required)}));
   const teacherAssignments = await infrastructure.query<any>('select * from learning_teacher_assignments order by created_at desc');
-  if (teacherAssignments?.rows.length) store.learningTeacherAssignments = teacherAssignments.rows.map((row: any) => ({id: row.id, userId: internalUserId(row.user_id), attemptId: row.attempt_id, ...(row.class_type_id ? {classTypeId: row.class_type_id} : {}), stageId: row.stage_id ?? undefined, teacherId: row.teacher_id ?? undefined, scores: row.scores ?? {}, status: row.status, reason: row.reason ?? undefined, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString()}));
+  if (teacherAssignments) store.learningTeacherAssignments = teacherAssignments.rows.map((row: any) => ({id: row.id, userId: internalUserId(row.user_id), attemptId: row.attempt_id, ...(row.class_type_id ? {classTypeId: row.class_type_id} : {}), stageId: row.stage_id ?? undefined, teacherId: row.teacher_id ?? undefined, scores: row.scores ?? {}, status: row.status, reason: row.reason ?? undefined, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString()}));
   const questions = await infrastructure.query<{id: string; subject_id?: string; chapter_id?: string; point_id?: string; stem: string; options: string[]; answer: number; answer_indexes?: number[]; question_type?: NonNullable<Question['questionType']>; analysis: string; status?: Question['status']; version?: number; source?: string; updated_at?: string}>('select id, subject_id, chapter_id, point_id, stem, options, answer, answer_indexes, question_type, analysis, status, version, source, updated_at from questions where type = \'objective\' order by id');
-  if (questions?.rows.length) {
+  if (questions) {
     store.questions = questions.rows.map(item => ({
       id: item.id,
       ...(item.subject_id ? {subjectId: item.subject_id} : {}),
@@ -1891,17 +1950,17 @@ export async function hydrateStore() {
     }));
   }
   const drafts = await infrastructure.query<{user_id: string; question_id: string; answers: string[]; updated_at: string}>('select user_id, question_id, answers, updated_at from question_drafts order by updated_at desc');
-  if (drafts?.rows.length) {
+  if (drafts) {
     store.drafts = new Map(drafts.rows.map(item => {
       const userId = internalUserId(item.user_id);
       const questionId = item.question_id;
       return [draftKey(userId, questionId), {userId, questionId, answers: Array.isArray(item.answers) ? item.answers.map(String) : [], updatedAt: new Date(item.updated_at).toISOString()}];
     }));
   }
-  const papers = await infrastructure.query<{id: string; name: string; exam_year: string; volume: string; mode: string; duration_minutes: number; total_score: number; question_ids: string[]; status: 'draft' | 'published' | 'archived'; version: number; updated_at: string}>('select id, name, exam_year, volume, mode, duration_minutes, total_score, question_ids, status, version, updated_at from content_papers order by updated_at desc');
-  if (papers?.rows.length) store.papers = papers.rows.map(item => ({id: item.id, name: item.name, year: item.exam_year, volume: item.volume, mode: item.mode, durationMinutes: item.duration_minutes, totalScore: item.total_score, questionIds: item.question_ids ?? [], status: item.status, version: item.version, updatedAt: new Date(item.updated_at).toISOString()}));
+  const papers = await infrastructure.query<{id: string; name: string; exam_year: string; volume: string; mode: string; duration_minutes: number; total_score: number; question_ids: string[]; product_id?: string; status: 'draft' | 'published' | 'archived'; version: number; updated_at: string}>('select id, name, exam_year, volume, mode, duration_minutes, total_score, question_ids, product_id, status, version, updated_at from content_papers order by updated_at desc');
+  if (papers) store.papers = papers.rows.map(item => ({id: item.id, name: item.name, year: item.exam_year, volume: item.volume, mode: item.mode, durationMinutes: item.duration_minutes, totalScore: item.total_score, questionIds: item.question_ids ?? [], ...(item.product_id ? {productId: item.product_id} : {}), status: item.status, version: item.version, updatedAt: new Date(item.updated_at).toISOString()}));
   const importJobs = await infrastructure.query<any>('select id, filename, resource_type, question_kind, import_format, subject_id, chapter_id, point_id, status, success_count, warning_count, error_count, valid_records, errors, idempotency_key, created_at, completed_at from admin_import_jobs order by created_at desc');
-  if (importJobs?.rows.length) {
+  if (importJobs) {
     adminImports.splice(0, adminImports.length, ...importJobs.rows.map((item: any) => ({
       id: item.id,
       filename: item.filename,
@@ -1922,7 +1981,7 @@ export async function hydrateStore() {
     })));
   }
   const submissions = await infrastructure.query<{id: string; user_id: string; question_id: string; answers: string[]; score: number; question_snapshot?: unknown; idempotency_key?: string; created_at: string}>('select id, user_id, question_id, answers, score::float, question_snapshot, idempotency_key, created_at from question_submissions order by created_at desc');
-  if (submissions?.rows.length) store.submissions = submissions.rows.map(item => {
+  if (submissions) store.submissions = submissions.rows.map(item => {
     const snapshot = storedQuestionSnapshot(item.question_snapshot);
     return {
       id: item.id,
@@ -1936,7 +1995,7 @@ export async function hydrateStore() {
     };
   });
   const objectiveSessionRows = await infrastructure.query<any>('select id, user_id, mode, title, subject_id, paper_id, question_ids, questions_snapshot, answers, duration_seconds, started_at, expires_at, status, idempotency_key, create_idempotency_key, submission_idempotency_key, report_id, submitted_at, created_at, updated_at from objective_sessions order by created_at desc');
-  if (objectiveSessionRows?.rows.length) {
+  if (objectiveSessionRows) {
     store.objectiveSessions = objectiveSessionRows.rows.map((row: any) => ({
       id: row.id,
       userId: internalUserId(row.user_id),
@@ -1960,7 +2019,7 @@ export async function hydrateStore() {
     }));
   }
   const objectiveReportRows = await infrastructure.query<any>('select id, session_id, user_id, mode, title, total, answered, correct, score, max_score, results, subject_stats, submitted_at from objective_reports order by submitted_at desc');
-  if (objectiveReportRows?.rows.length) {
+  if (objectiveReportRows) {
     store.objectiveReports = objectiveReportRows.rows.map((row: any) => ({
       id: row.id,
       sessionId: row.session_id,
@@ -1978,49 +2037,49 @@ export async function hydrateStore() {
     }));
   }
   const tasks = await infrastructure.query<any>('select id, plan_id, title, description, due_date, minutes, status, completed_at, subject_id, content_type, content_id, prerequisite_task_id, card_recall from learning_tasks order by due_date, id');
-  if (tasks?.rows.length) store.learningTasks = tasks.rows.map((item: any) => ({id: item.id, cardRecall: item.card_recall ?? undefined, planId: item.plan_id, title: item.title, ...(item.description ? {description: item.description} : {}), dueDate: dateOnly(String(item.due_date)), minutes: Number(item.minutes), status: item.status, ...(item.completed_at ? {completedAt: new Date(item.completed_at).toISOString()} : {}), ...(item.subject_id ? {subjectId: item.subject_id} : {}), ...(item.content_type ? {contentType: item.content_type} : {}), ...(item.content_id ? {contentId: item.content_id} : {}), ...(item.prerequisite_task_id ? {prerequisiteTaskId: item.prerequisite_task_id} : {})}));
+  if (tasks) store.learningTasks = tasks.rows.map((item: any) => ({id: item.id, cardRecall: item.card_recall ?? undefined, planId: item.plan_id, title: item.title, ...(item.description ? {description: item.description} : {}), dueDate: dateOnly(String(item.due_date)), minutes: Number(item.minutes), status: item.status, ...(item.completed_at ? {completedAt: new Date(item.completed_at).toISOString()} : {}), ...(item.subject_id ? {subjectId: item.subject_id} : {}), ...(item.content_type ? {contentType: item.content_type} : {}), ...(item.content_id ? {contentId: item.content_id} : {}), ...(item.prerequisite_task_id ? {prerequisiteTaskId: item.prerequisite_task_id} : {})}));
   const learningSubjectiveSubmissions = await infrastructure.query<any>('select id, user_id, task_id, question_id, answers, submitted_at from learning_subjective_submissions order by submitted_at desc');
-  if (learningSubjectiveSubmissions?.rows.length) store.learningSubjectiveSubmissions = learningSubjectiveSubmissions.rows.map((item: any) => ({id: item.id, userId: internalUserId(item.user_id), taskId: item.task_id, questionId: item.question_id, answers: Array.isArray(item.answers) ? item.answers : [], submittedAt: new Date(item.submitted_at).toISOString()}));
+  if (learningSubjectiveSubmissions) store.learningSubjectiveSubmissions = learningSubjectiveSubmissions.rows.map((item: any) => ({id: item.id, userId: internalUserId(item.user_id), taskId: item.task_id, questionId: item.question_id, answers: Array.isArray(item.answers) ? item.answers : [], submittedAt: new Date(item.submitted_at).toISOString()}));
   const learningActivities = await infrastructure.query<any>('select id, user_id, kind, subject_id, course_id, task_id, question_id, duration_seconds, quantity, idempotency_key, occurred_at from learning_activities order by occurred_at desc');
-  if (learningActivities?.rows.length) {
+  if (learningActivities) {
     store.learningActivities = learningActivities.rows.map((item: any) => ({id: item.id, userId: internalUserId(item.user_id), kind: item.kind, subjectId: item.subject_id ?? undefined, questionId: item.question_id ?? undefined, courseId: item.course_id ?? undefined, taskId: item.task_id ?? undefined, durationSeconds: Number(item.duration_seconds), quantity: Number(item.quantity), idempotencyKey: item.idempotency_key ?? undefined, occurredAt: new Date(item.occurred_at).toISOString()}));
     store.learningActivityKeys = new Set(store.learningActivities.filter(item => item.idempotencyKey).map(item => learningActivityKey(item.userId, item.idempotencyKey!)));
   }
   const favorites = await infrastructure.query<{user_id: string; question_id: string; created_at: string}>('select user_id, question_id, created_at from favorites order by created_at desc');
-  if (favorites?.rows.length) store.favorites = favorites.rows.map(item => ({id: `favorite:${item.question_id}`, userId: item.user_id === DEMO_DB_USER_ID ? 'u-demo' : item.user_id, questionId: item.question_id, createdAt: new Date(item.created_at).toISOString()}));
+  if (favorites) store.favorites = favorites.rows.map(item => ({id: `favorite:${item.question_id}`, userId: item.user_id === DEMO_DB_USER_ID ? 'u-demo' : item.user_id, questionId: item.question_id, createdAt: new Date(item.created_at).toISOString()}));
   const mistakes = await infrastructure.query<{user_id: string; question_id: string; wrong_count: number; last_answer: string}>('select user_id, question_id, wrong_count, last_answer from mistakes where resolved_at is null');
-  if (mistakes?.rows.length) store.mistakes = mistakes.rows.map(item => ({id: `mistake:${item.question_id}`, userId: item.user_id === DEMO_DB_USER_ID ? 'u-demo' : item.user_id, questionId: item.question_id, wrongCount: item.wrong_count, lastAnswer: item.last_answer ?? '', resolved: false}));
+  if (mistakes) store.mistakes = mistakes.rows.map(item => ({id: `mistake:${item.question_id}`, userId: item.user_id === DEMO_DB_USER_ID ? 'u-demo' : item.user_id, questionId: item.question_id, wrongCount: item.wrong_count, lastAnswer: item.last_answer ?? '', resolved: false}));
   const entitlements = await infrastructure.query<{user_id: string; course_id: string; source_order_id: string; expires_at?: string}>('select user_id, course_id, source_order_id, expires_at from course_entitlements');
-  if (entitlements?.rows.length) store.entitlements = entitlements.rows.map(item => ({userId: item.user_id === DEMO_DB_USER_ID ? 'u-demo' : item.user_id, courseId: item.course_id, sourceOrderId: item.source_order_id, expiresAt: item.expires_at ? new Date(item.expires_at).toISOString() : undefined}));
+  if (entitlements) store.entitlements = entitlements.rows.map(item => ({userId: item.user_id === DEMO_DB_USER_ID ? 'u-demo' : item.user_id, courseId: item.course_id, sourceOrderId: item.source_order_id, expiresAt: item.expires_at ? new Date(item.expires_at).toISOString() : undefined}));
   const grading = await infrastructure.query<{id: string; user_id: string; question_id?: string; file_url?: string; status: 'queued' | 'processing' | 'completed' | 'rejected'; score?: number; feedback?: string; assigned_admin_id?: string; claimed_at?: string; version: number; created_at: string}>('select id, user_id, question_id, file_url, status, score::float, feedback, assigned_admin_id, claimed_at, version, created_at from grading_submissions order by created_at desc');
-  if (grading?.rows.length) store.grading = grading.rows.map(item => ({id: item.id, userId: item.user_id === DEMO_DB_USER_ID ? 'u-demo' : item.user_id, questionId: item.question_id, fileUrl: item.file_url, status: item.status, score: item.score, feedback: item.feedback, assignedAdminId: item.assigned_admin_id, claimedAt: item.claimed_at ? new Date(item.claimed_at).toISOString() : undefined, version: item.version, createdAt: new Date(item.created_at).toISOString()}));
+  if (grading) store.grading = grading.rows.map(item => ({id: item.id, userId: item.user_id === DEMO_DB_USER_ID ? 'u-demo' : item.user_id, questionId: item.question_id, fileUrl: item.file_url, status: item.status, score: item.score, feedback: item.feedback, assignedAdminId: item.assigned_admin_id, claimedAt: item.claimed_at ? new Date(item.claimed_at).toISOString() : undefined, version: item.version, createdAt: new Date(item.created_at).toISOString()}));
   const rubricRows = await infrastructure.query<any>('select r.*, coalesce(jsonb_agg(jsonb_build_object(\'id\', p.id, \'title\', p.title, \'description\', p.description, \'maxScore\', p.max_score, \'sortOrder\', p.sort_order, \'keywords\', p.keywords, \'legalReferences\', p.legal_references) order by p.sort_order) filter (where p.id is not null), \'[]\') as points from grading_rubrics r left join grading_rubric_points p on p.rubric_id = r.id group by r.id order by r.updated_at desc');
-  if (rubricRows?.rows.length) store.gradingRubrics = rubricRows.rows.map((row: any) => ({id: row.id, questionId: row.question_id, questionVersion: row.question_version, title: row.title, subjectId: row.subject_id, chapterId: row.chapter_id ?? undefined, pointId: row.point_id ?? undefined, caseMaterial: row.case_material, subQuestions: row.sub_questions, gradingBasis: row.grading_basis, totalScore: Number(row.total_score), suggestedMinutes: row.suggested_minutes, allowedAnswerTypes: row.allowed_answer_types, points: row.points ?? [], status: row.status, versionReason: row.version_reason, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString(), publishedAt: row.published_at ? new Date(row.published_at).toISOString() : undefined}));
+  if (rubricRows) store.gradingRubrics = rubricRows.rows.map((row: any) => ({id: row.id, questionId: row.question_id, questionVersion: row.question_version, title: row.title, subjectId: row.subject_id, chapterId: row.chapter_id ?? undefined, pointId: row.point_id ?? undefined, caseMaterial: row.case_material, subQuestions: row.sub_questions, gradingBasis: row.grading_basis, totalScore: Number(row.total_score), suggestedMinutes: row.suggested_minutes, allowedAnswerTypes: row.allowed_answer_types, points: row.points ?? [], status: row.status, versionReason: row.version_reason, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString(), publishedAt: row.published_at ? new Date(row.published_at).toISOString() : undefined}));
   const gradingPaperRows = await infrastructure.query<any>('select id, title, subject_id, exam_year, total_score, question_ids, status, created_at, updated_at from grading_papers order by updated_at desc');
-  if (gradingPaperRows?.rows.length) store.gradingPapers = gradingPaperRows.rows.map((row: any) => ({id: row.id, title: row.title, subjectId: row.subject_id, year: row.exam_year, totalScore: Number(row.total_score), questionIds: row.question_ids ?? [], status: row.status, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString()}));
+  if (gradingPaperRows) store.gradingPapers = gradingPaperRows.rows.map((row: any) => ({id: row.id, title: row.title, subjectId: row.subject_id, year: row.exam_year, totalScore: Number(row.total_score), questionIds: row.question_ids ?? [], status: row.status, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString()}));
   const advancedSubmissions = await infrastructure.query<any>('select id, user_id, grading_paper_id, question_id, rubric_id, question_version, idempotency_key, answer_hash, answers_snapshot, status, ai_failure_reason, current_assignment_id, latest_report_id, created_at, updated_at from grading_submissions where rubric_id is not null order by created_at desc');
-  if (advancedSubmissions?.rows.length) store.gradingSubmissions = advancedSubmissions.rows.map((row: any) => ({id: row.id, userId: internalUserId(row.user_id), paperId: row.grading_paper_id, questionId: row.question_id, rubricId: row.rubric_id, questionVersion: row.question_version, idempotencyKey: row.idempotency_key, answerHash: row.answer_hash, answers: row.answers_snapshot ?? [], status: row.status, aiFailureReason: row.ai_failure_reason, currentAssignmentId: row.current_assignment_id, latestReportId: row.latest_report_id, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString()}));
+  if (advancedSubmissions) store.gradingSubmissions = advancedSubmissions.rows.map((row: any) => ({id: row.id, userId: internalUserId(row.user_id), paperId: row.grading_paper_id, questionId: row.question_id, rubricId: row.rubric_id, questionVersion: row.question_version, idempotencyKey: row.idempotency_key, answerHash: row.answer_hash, answers: row.answers_snapshot ?? [], status: row.status, aiFailureReason: row.ai_failure_reason, currentAssignmentId: row.current_assignment_id, latestReportId: row.latest_report_id, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString()}));
   const assignmentRows = await infrastructure.query<any>('select id, submission_id, grader_id, status, claimed_at, due_at, submitted_at, return_reason, created_at from grading_assignments order by created_at desc');
-  if (assignmentRows?.rows.length) store.gradingAssignments = assignmentRows.rows.map((row: any) => ({id: row.id, submissionId: row.submission_id, graderId: row.grader_id, status: row.status, claimedAt: row.claimed_at ? new Date(row.claimed_at).toISOString() : undefined, dueAt: row.due_at ? new Date(row.due_at).toISOString() : undefined, submittedAt: row.submitted_at ? new Date(row.submitted_at).toISOString() : undefined, returnReason: row.return_reason, createdAt: new Date(row.created_at).toISOString()}));
+  if (assignmentRows) store.gradingAssignments = assignmentRows.rows.map((row: any) => ({id: row.id, submissionId: row.submission_id, graderId: row.grader_id, status: row.status, claimedAt: row.claimed_at ? new Date(row.claimed_at).toISOString() : undefined, dueAt: row.due_at ? new Date(row.due_at).toISOString() : undefined, submittedAt: row.submitted_at ? new Date(row.submitted_at).toISOString() : undefined, returnReason: row.return_reason, createdAt: new Date(row.created_at).toISOString()}));
   const aiRunRows = await infrastructure.query<any>('select * from grading_ai_runs order by created_at desc');
-  if (aiRunRows?.rows.length) store.gradingAiRuns = aiRunRows.rows.map((row: any) => ({id: row.id, submissionId: row.submission_id, provider: row.provider, model: row.model, status: row.status, suggestedScore: row.suggested_score === null ? undefined : Number(row.suggested_score), result: row.result, failureReason: row.failure_reason, inputTokens: row.input_tokens, outputTokens: row.output_tokens, costMinor: row.cost_minor, createdAt: new Date(row.created_at).toISOString(), completedAt: row.completed_at ? new Date(row.completed_at).toISOString() : undefined}));
+  if (aiRunRows) store.gradingAiRuns = aiRunRows.rows.map((row: any) => ({id: row.id, submissionId: row.submission_id, provider: row.provider, model: row.model, status: row.status, suggestedScore: row.suggested_score === null ? undefined : Number(row.suggested_score), result: row.result, failureReason: row.failure_reason, inputTokens: row.input_tokens, outputTokens: row.output_tokens, costMinor: row.cost_minor, createdAt: new Date(row.created_at).toISOString(), completedAt: row.completed_at ? new Date(row.completed_at).toISOString() : undefined}));
   const reviewRows = await infrastructure.query<any>('select * from grading_reviews order by created_at desc');
-  if (reviewRows?.rows.length) store.gradingReviews = reviewRows.rows.map((row: any) => ({id: row.id, submissionId: row.submission_id, assignmentId: row.assignment_id, graderId: row.grader_id ?? undefined, reviewerType: row.reviewer_type ?? 'grader', reviewerAdminId: row.reviewer_admin_id ?? undefined, totalScore: Number(row.total_score), pointResults: row.point_results ?? [], answerAnnotations: row.answer_annotations ?? [], missedPointIds: row.missed_point_ids ?? [], feedback: row.feedback, improvementAdvice: row.improvement_advice, aiOverrideReason: row.ai_override_reason, status: row.status, createdAt: new Date(row.created_at).toISOString(), reviewedAt: row.reviewed_at ? new Date(row.reviewed_at).toISOString() : undefined, reviewedBy: row.reviewed_by}));
+  if (reviewRows) store.gradingReviews = reviewRows.rows.map((row: any) => ({id: row.id, submissionId: row.submission_id, assignmentId: row.assignment_id, graderId: row.grader_id ?? undefined, reviewerType: row.reviewer_type ?? 'grader', reviewerAdminId: row.reviewer_admin_id ?? undefined, totalScore: Number(row.total_score), pointResults: row.point_results ?? [], answerAnnotations: row.answer_annotations ?? [], missedPointIds: row.missed_point_ids ?? [], feedback: row.feedback, improvementAdvice: row.improvement_advice, aiOverrideReason: row.ai_override_reason, status: row.status, createdAt: new Date(row.created_at).toISOString(), reviewedAt: row.reviewed_at ? new Date(row.reviewed_at).toISOString() : undefined, reviewedBy: row.reviewed_by}));
   const reportRows = await infrastructure.query<any>('select * from grading_reports order by published_at desc');
-  if (reportRows?.rows.length) store.gradingReports = reportRows.rows.map((row: any) => ({id: row.id, submissionId: row.submission_id, reviewId: row.review_id, version: row.version, totalScore: Number(row.total_score), maxScore: Number(row.max_score), answers: row.answers_snapshot ?? [], pointResults: row.point_results ?? [], answerAnnotations: row.answer_annotations ?? [], missedPointIds: row.missed_point_ids ?? [], feedback: row.feedback, improvementAdvice: row.improvement_advice, publishedBy: row.published_by, publishedAt: new Date(row.published_at).toISOString()}));
+  if (reportRows) store.gradingReports = reportRows.rows.map((row: any) => ({id: row.id, submissionId: row.submission_id, reviewId: row.review_id, version: row.version, totalScore: Number(row.total_score), maxScore: Number(row.max_score), answers: row.answers_snapshot ?? [], pointResults: row.point_results ?? [], answerAnnotations: row.answer_annotations ?? [], missedPointIds: row.missed_point_ids ?? [], feedback: row.feedback, improvementAdvice: row.improvement_advice, publishedBy: row.published_by, publishedAt: new Date(row.published_at).toISOString()}));
   const graderRows = await infrastructure.query<any>('select id, username, display_name, password_hash, status, subject_ids, created_at from grader_accounts order by created_at');
-  if (graderRows?.rows.length) store.graderAccounts = graderRows.rows.map((row: any) => ({id: row.id, username: row.username, displayName: row.display_name, passwordHash: row.password_hash, status: row.status, subjectIds: row.subject_ids ?? [], createdAt: new Date(row.created_at).toISOString()}));
+  if (graderRows) store.graderAccounts = graderRows.rows.map((row: any) => ({id: row.id, username: row.username, displayName: row.display_name, passwordHash: row.password_hash, status: row.status, subjectIds: row.subject_ids ?? [], createdAt: new Date(row.created_at).toISOString()}));
   const creditRows = await infrastructure.query<any>('select user_id, balance from grading_credit_accounts');
-  if (creditRows?.rows.length) for (const row of creditRows.rows) store.gradingCredits.set(internalUserId(row.user_id), Number(row.balance));
+  if (creditRows) for (const row of creditRows.rows) store.gradingCredits.set(internalUserId(row.user_id), Number(row.balance));
   const legalDocuments = await infrastructure.query<{id: string; title: string; article: string; content: string; document_code?: string; source_url?: string; effective_from: string; effective_to?: string; status: 'draft' | 'published' | 'disabled'; version: number; updated_at: string}>('select id, title, article, content, document_code, source_url, effective_from, effective_to, status, version, updated_at from legal_documents order by updated_at desc');
-  if (legalDocuments?.rows.length) store.legalDocuments = legalDocuments.rows.map(item => {
+  if (legalDocuments) store.legalDocuments = legalDocuments.rows.map(item => {
     const document = {id: item.id, title: item.title, article: item.article, content: item.content, documentCode: item.document_code, sourceUrl: item.source_url, effectiveFrom: item.effective_from, effectiveTo: item.effective_to, status: item.status, version: item.version, updatedAt: new Date(item.updated_at).toISOString()};
     return {...document, subjectId: legalSubjectId(document)};
   });
   const legalFavorites = await infrastructure.query<{id: string; user_id: string; legal_document_id: string; document_version: number; article: string; title: string; content: string; subject_id?: string; effective_from?: string; created_at: string}>('select id, user_id, legal_document_id, document_version, article, title, content, subject_id, effective_from, created_at from legal_favorites order by created_at desc');
-  if (legalFavorites?.rows.length) store.legalFavorites = legalFavorites.rows.map(item => ({id: item.id, userId: internalUserId(item.user_id), legalDocumentId: item.legal_document_id, documentVersion: Number(item.document_version), article: item.article, title: item.title, content: item.content, subjectId: item.subject_id, effectiveFrom: item.effective_from, createdAt: new Date(item.created_at).toISOString()}));
+  if (legalFavorites) store.legalFavorites = legalFavorites.rows.map(item => ({id: item.id, userId: internalUserId(item.user_id), legalDocumentId: item.legal_document_id, documentVersion: Number(item.document_version), article: item.article, title: item.title, content: item.content, subjectId: item.subject_id, effectiveFrom: item.effective_from, createdAt: new Date(item.created_at).toISOString()}));
   const appLegalDocuments = await infrastructure.query<{key: AppLegalDocument['key']; title: string; version: number; status: 'draft' | 'published' | 'disabled'; sections: unknown; updated_at: string}>('select key, title, version, status, sections, updated_at from app_legal_documents order by key');
-  if (appLegalDocuments?.rows.length) {
+  if (appLegalDocuments) {
     const hydrated = appLegalDocuments.rows.flatMap(item => {
       if (!appLegalKeys.has(item.key) || !Array.isArray(item.sections)) return [];
       const sections = item.sections.filter((section): section is {title: string; body: string} => Boolean(section && typeof section === 'object' && typeof (section as {title?: unknown}).title === 'string' && typeof (section as {body?: unknown}).body === 'string'));
@@ -2047,32 +2106,32 @@ export async function hydrateStore() {
     createdAt: new Date(item.created_at).toISOString(),
   }));
   const receipts = await infrastructure.query<{user_id: string; notification_id: string; closed_at?: string}>('select user_id, notification_id, closed_at from user_notification_receipts');
-  if (receipts?.rows.length) for (const item of receipts.rows) {
+  if (receipts) for (const item of receipts.rows) {
     const userId = item.user_id === DEMO_DB_USER_ID ? 'u-demo' : item.user_id;
     store.notificationReceipts.add(`${userId}:${item.notification_id}`);
     if (item.closed_at) store.notificationClosures.add(`${userId}:${item.notification_id}`);
   }
   const attachments = await infrastructure.query<any>('select id, user_id, filename, content_type, size_bytes, sha256, status, upload_token_hash, expires_at, completed_at, created_at from attachment_uploads order by created_at desc');
-  if (attachments?.rows.length) store.attachmentUploads = attachments.rows.map((item: any) => ({id: item.id, userId: internalUserId(item.user_id), filename: item.filename, contentType: item.content_type, sizeBytes: Number(item.size_bytes), sha256: item.sha256 ?? undefined, status: item.status, uploadToken: `hydrated-${item.upload_token_hash}`, expiresAt: new Date(item.expires_at).toISOString(), completedAt: item.completed_at ? new Date(item.completed_at).toISOString() : undefined, createdAt: new Date(item.created_at).toISOString(), [ATTACHMENT_TOKEN_HASH]: String(item.upload_token_hash)}));
+  if (attachments) store.attachmentUploads = attachments.rows.map((item: any) => ({id: item.id, userId: internalUserId(item.user_id), filename: item.filename, contentType: item.content_type, sizeBytes: Number(item.size_bytes), sha256: item.sha256 ?? undefined, status: item.status, uploadToken: `hydrated-${item.upload_token_hash}`, expiresAt: new Date(item.expires_at).toISOString(), completedAt: item.completed_at ? new Date(item.completed_at).toISOString() : undefined, createdAt: new Date(item.created_at).toISOString(), [ATTACHMENT_TOKEN_HASH]: String(item.upload_token_hash)}));
   const aiSessions = await infrastructure.query<any>('select id, user_id, title, client_request_id, created_at, updated_at, deleted_at from ai_sessions where deleted_at is null order by updated_at desc');
-  if (aiSessions?.rows.length) {
+  if (aiSessions) {
     store.aiSessions = aiSessions.rows.map((item: any) => ({id: item.id, userId: internalUserId(item.user_id), title: item.title, clientRequestId: item.client_request_id ?? undefined, createdAt: new Date(item.created_at).toISOString(), updatedAt: new Date(item.updated_at).toISOString(), deletedAt: item.deleted_at ? new Date(item.deleted_at).toISOString() : undefined}));
     store.aiSessionRequestKeys = new Map(store.aiSessions.filter(item => item.clientRequestId).map(item => [`${item.userId}:${item.clientRequestId}`, item.id]));
   }
   const aiMessages = await infrastructure.query<any>('select id, session_id, role, content, client_request_id, created_at from ai_messages order by created_at');
-  if (aiMessages?.rows.length) {
+  if (aiMessages) {
     store.aiMessages = aiMessages.rows.map((item: any) => ({id: item.id, sessionId: item.session_id, role: item.role, content: item.content, clientRequestId: item.client_request_id ?? undefined, createdAt: new Date(item.created_at).toISOString()}));
     store.aiMessageRequestKeys = new Map(store.aiMessages.filter(item => item.clientRequestId).map(item => [`${item.sessionId}:${item.clientRequestId}`, item.id]));
   }
   const aiQuotaRows = await infrastructure.query<any>('select user_id, daily_limit, monthly_limit, updated_by, updated_at from ai_quota_settings');
-  if (aiQuotaRows?.rows.length) {
+  if (aiQuotaRows) {
     store.aiQuotas = new Map(aiQuotaRows.rows.map((item: any) => {
       const userId = internalUserId(item.user_id);
       return [userId, {userId, dailyLimit: Number(item.daily_limit), monthlyLimit: Number(item.monthly_limit), updatedBy: item.updated_by ?? undefined, updatedAt: new Date(item.updated_at).toISOString()} satisfies AIQuota];
     }));
   }
   const aiUsageRows = await infrastructure.query<any>('select id, user_id, session_id, message_id, provider, model, feature, status, input_tokens, output_tokens, cost_minor::float, error_code, created_at from ai_usage_events order by created_at desc');
-  if (aiUsageRows?.rows.length) {
+  if (aiUsageRows) {
     store.aiUsage = aiUsageRows.rows.map((item: any) => ({
       id: item.id,
       userId: item.user_id ? internalUserId(item.user_id) : undefined,
@@ -2090,7 +2149,7 @@ export async function hydrateStore() {
     } satisfies AIUsageEvent));
   }
   const aiRiskRows = await infrastructure.query<any>('select id, user_id, session_id, message_id, risk, reason, status, reviewed_by, reviewed_at, created_at from ai_risk_flags order by created_at desc');
-  if (aiRiskRows?.rows.length) {
+  if (aiRiskRows) {
     store.aiRiskFlags = aiRiskRows.rows.map((item: any) => ({
       id: item.id,
       userId: item.user_id ? internalUserId(item.user_id) : undefined,
@@ -2105,9 +2164,9 @@ export async function hydrateStore() {
     } satisfies AIRiskFlag));
   }
   const banners = await infrastructure.query<{id: string; title: string; image_url: string; target: string; starts_at: string; ends_at?: string; position?: string; sort_order?: number; requires_login?: boolean}>('select id, title, image_url, target, starts_at, ends_at, position, sort_order, requires_login from banners order by sort_order asc, starts_at desc');
-  if (banners?.rows.length) store.banners = banners.rows.map(item => ({id: item.id, title: item.title, imageUrl: item.image_url, target: item.target, startsAt: new Date(item.starts_at).toISOString(), endsAt: item.ends_at ? new Date(item.ends_at).toISOString() : undefined, position: item.position, sortOrder: Number(item.sort_order ?? 0), requiresLogin: Boolean(item.requires_login)}));
+  if (banners) store.banners = banners.rows.map(item => ({id: item.id, title: item.title, imageUrl: item.image_url, target: item.target, startsAt: new Date(item.starts_at).toISOString(), endsAt: item.ends_at ? new Date(item.ends_at).toISOString() : undefined, position: item.position, sortOrder: Number(item.sort_order ?? 0), requiresLogin: Boolean(item.requires_login)}));
   const templateRows = await infrastructure.query<any>('select id, code, channel, title_template, body_template, status, updated_by, updated_at from notification_templates order by updated_at desc');
-  if (templateRows?.rows.length) {
+  if (templateRows) {
     // `adminPushJobs` is also used as the backwards-compatible in-memory
     // collection for templates and jobs.  Keep its public shape stable while
     // restoring durable rows after a process restart.
@@ -2116,29 +2175,29 @@ export async function hydrateStore() {
     }
   }
   const pushRows = await infrastructure.query<any>('select id, template_id, audience, status, scheduled_at, sent_count, failed_count, attempts, last_error, created_by, created_at, completed_at, updated_at from push_jobs order by created_at desc');
-  if (pushRows?.rows.length) {
+  if (pushRows) {
     for (const item of pushRows.rows) {
       adminPushJobs.push({id: item.id, resourceType: 'push_job', templateId: item.template_id ?? undefined, audience: item.audience && typeof item.audience === 'object' ? item.audience : {}, status: item.status, scheduledAt: item.scheduled_at ? new Date(item.scheduled_at).toISOString() : undefined, sentCount: Number(item.sent_count ?? 0), failedCount: Number(item.failed_count ?? 0), attempts: Number(item.attempts ?? 0), lastError: item.last_error ?? undefined, createdBy: item.created_by ?? undefined, createdAt: new Date(item.created_at).toISOString(), completedAt: item.completed_at ? new Date(item.completed_at).toISOString() : undefined, updatedAt: item.updated_at ? new Date(item.updated_at).toISOString() : undefined});
     }
   }
   const exportRows = await infrastructure.query<any>('select id, admin_user_id, resource_type, filters, status, file_url, expires_at, row_count, error_message, content_type, created_at, completed_at, updated_at from admin_export_jobs order by created_at desc');
-  if (exportRows?.rows.length) {
+  if (exportRows) {
     for (const item of exportRows.rows) {
       adminExportJobs.push({id: item.id, resourceType: item.resource_type, filters: item.filters && typeof item.filters === 'object' ? item.filters : {}, status: item.status, fileUrl: item.file_url ?? undefined, expiresAt: item.expires_at ? new Date(item.expires_at).toISOString() : undefined, rowCount: item.row_count === null || item.row_count === undefined ? undefined : Number(item.row_count), errorMessage: item.error_message ?? undefined, contentType: item.content_type ?? undefined, createdBy: item.admin_user_id, createdAt: new Date(item.created_at).toISOString(), completedAt: item.completed_at ? new Date(item.completed_at).toISOString() : undefined, updatedAt: item.updated_at ? new Date(item.updated_at).toISOString() : undefined});
     }
   }
   const devices = await infrastructure.query<{id: string; user_id: string; platform: 'android' | 'ios' | 'harmony'; name: string; push_token?: string; last_seen_at: string}>('select id, user_id, platform, name, push_token, last_seen_at from devices order by last_seen_at desc');
-  if (devices?.rows.length) store.devices = devices.rows.map(item => ({id: item.id, userId: item.user_id === DEMO_DB_USER_ID ? 'u-demo' : item.user_id, platform: item.platform, name: item.name, pushToken: item.push_token, lastSeenAt: new Date(item.last_seen_at).toISOString()}));
+  if (devices) store.devices = devices.rows.map(item => ({id: item.id, userId: item.user_id === DEMO_DB_USER_ID ? 'u-demo' : item.user_id, platform: item.platform, name: item.name, pushToken: item.push_token, lastSeenAt: new Date(item.last_seen_at).toISOString()}));
   const forumPosts = await infrastructure.query<{id: string; user_id: string; user_name: string; category: ForumCategory; title: string; body: string; likes: number; status: 'published'; created_at: string; updated_at: string; deleted_at?: string}>('select p.id, p.user_id, coalesce(u.name, \'用户\') as user_name, p.category, p.title, p.body, p.likes, p.status, p.created_at, p.updated_at, p.deleted_at from forum_posts p left join users u on u.id = p.user_id order by p.created_at desc');
   if (forumPosts) store.forumPosts = forumPosts.rows.map(item => ({id: item.id, userId: internalUserId(item.user_id), userName: item.user_name, category: item.category, title: item.title, body: item.body, likes: item.likes, status: item.status, createdAt: new Date(item.created_at).toISOString(), updatedAt: new Date(item.updated_at).toISOString(), deletedAt: item.deleted_at ? new Date(item.deleted_at).toISOString() : undefined}));
   const forumComments = await infrastructure.query<{id: string; post_id: string; user_id: string; user_name: string; body: string; created_at: string; deleted_at?: string}>('select c.id, c.post_id, c.user_id, coalesce(u.name, \'用户\') as user_name, c.body, c.created_at, c.deleted_at from forum_comments c left join users u on u.id = c.user_id order by c.created_at');
-  if (forumComments?.rows.length) store.forumComments = forumComments.rows.map(item => ({id: item.id, postId: item.post_id, userId: internalUserId(item.user_id), userName: item.user_name, body: item.body, createdAt: new Date(item.created_at).toISOString(), deletedAt: item.deleted_at ? new Date(item.deleted_at).toISOString() : undefined}));
+  if (forumComments) store.forumComments = forumComments.rows.map(item => ({id: item.id, postId: item.post_id, userId: internalUserId(item.user_id), userName: item.user_name, body: item.body, createdAt: new Date(item.created_at).toISOString(), deletedAt: item.deleted_at ? new Date(item.deleted_at).toISOString() : undefined}));
   const forumLikes = await infrastructure.query<{post_id: string; user_id: string}>('select post_id, user_id from forum_post_likes');
-  if (forumLikes?.rows.length) store.forumLikes = new Set(forumLikes.rows.map(item => forumRelationKey(item.post_id, internalUserId(item.user_id))));
+  if (forumLikes) store.forumLikes = new Set(forumLikes.rows.map(item => forumRelationKey(item.post_id, internalUserId(item.user_id))));
   const forumFavorites = await infrastructure.query<{post_id: string; user_id: string}>('select post_id, user_id from forum_post_favorites');
-  if (forumFavorites?.rows.length) store.forumFavorites = new Set(forumFavorites.rows.map(item => forumRelationKey(item.post_id, internalUserId(item.user_id))));
+  if (forumFavorites) store.forumFavorites = new Set(forumFavorites.rows.map(item => forumRelationKey(item.post_id, internalUserId(item.user_id))));
   const moderationRows = await infrastructure.query<any>('select id, target_type, target_id, action, reason, duration_seconds, created_by, created_at from community_moderation_actions order by created_at desc');
-  if (moderationRows?.rows.length) {
+  if (moderationRows) {
     store.communityModerationActions = moderationRows.rows.map((item: any) => ({
       id: item.id,
       targetType: item.target_type,
@@ -2151,12 +2210,12 @@ export async function hydrateStore() {
     }));
   }
   const identities = await infrastructure.query<{user_id: string; provider: 'wechat'; provider_user_id: string; union_id?: string; nickname?: string; created_at: string}>('select user_id, provider, provider_user_id, union_id, nickname, created_at from user_identities');
-  if (identities?.rows.length) store.identities = identities.rows.map(item => ({userId: internalUserId(item.user_id), provider: item.provider, providerUserId: item.provider_user_id, unionId: item.union_id, nickname: item.nickname, createdAt: new Date(item.created_at).toISOString()}));
+  if (identities) store.identities = identities.rows.map(item => ({userId: internalUserId(item.user_id), provider: item.provider, providerUserId: item.provider_user_id, unionId: item.union_id, nickname: item.nickname, createdAt: new Date(item.created_at).toISOString()}));
   const challenges = await infrastructure.query<{phone: string; purpose: SmsPurpose; provider_message_id: string; request_ip?: string; device_id?: string; requested_at: string; expires_at: string; attempts: number; consumed_at?: string}>('select phone, purpose, provider_message_id, request_ip, device_id, requested_at, expires_at, attempts, consumed_at from auth_verification_challenges where requested_at > now() - interval \'1 hour\' order by requested_at');
-  if (challenges?.rows.length) store.verificationChallenges = challenges.rows.map(item => ({phone: item.phone, purpose: item.purpose, providerMessageId: item.provider_message_id, requestIp: item.request_ip, deviceId: item.device_id, requestedAt: new Date(item.requested_at).toISOString(), expiresAt: new Date(item.expires_at).toISOString(), attempts: item.attempts, consumedAt: item.consumed_at ? new Date(item.consumed_at).toISOString() : undefined}));
+  if (challenges) store.verificationChallenges = challenges.rows.map(item => ({phone: item.phone, purpose: item.purpose, providerMessageId: item.provider_message_id, requestIp: item.request_ip, deviceId: item.device_id, requestedAt: new Date(item.requested_at).toISOString(), expiresAt: new Date(item.expires_at).toISOString(), attempts: item.attempts, consumedAt: item.consumed_at ? new Date(item.consumed_at).toISOString() : undefined}));
   const deletions = await infrastructure.query<{user_id: string; requested_at: string; execute_after: string; cancelled_at?: string; completed_at?: string}>('select user_id, requested_at, execute_after, cancelled_at, completed_at from account_deletion_requests order by requested_at desc');
-  if (deletions?.rows.length) store.deletionRequests = new Map(deletions.rows.map(item => { const userId = internalUserId(item.user_id); return [userId, {userId, requestedAt: new Date(item.requested_at).toISOString(), executeAfter: new Date(item.execute_after).toISOString(), cancelledAt: item.cancelled_at ? new Date(item.cancelled_at).toISOString() : undefined, completedAt: item.completed_at ? new Date(item.completed_at).toISOString() : undefined}]; }));
-  if (config.nodeEnv !== 'production') restoreDevelopmentGradingShowcase(store);
+  if (deletions) store.deletionRequests = new Map(deletions.rows.map(item => { const userId = internalUserId(item.user_id); return [userId, {userId, requestedAt: new Date(item.requested_at).toISOString(), executeAfter: new Date(item.execute_after).toISOString(), cancelledAt: item.cancelled_at ? new Date(item.cancelled_at).toISOString() : undefined, completedAt: item.completed_at ? new Date(item.completed_at).toISOString() : undefined}]; }));
+  if (process.env.DEBAO_TEST_FIXTURES === 'true') restoreDevelopmentGradingShowcase(store);
   await processDueAccountDeletions();
 }
 
@@ -2193,12 +2252,49 @@ function accessToken(req: IncomingMessage) {
   return req.headers.authorization?.replace(/^Bearer\s+/i, '');
 }
 
+function optionalUserId(req: IncomingMessage): string {
+  return accessToken(req) ? requireAuth(req) : '';
+}
+
+async function configuredExam() {
+  const result = await infrastructure.query<{setting_value: string}>(
+    'select setting_value from admin_system_settings where setting_key = $1',
+    ['exam_date'],
+  );
+  const date = result?.rows[0]?.setting_value;
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const deadline = Date.parse(`${date}T00:00:00+08:00`);
+  if (!Number.isFinite(deadline)) return null;
+  return {year: date.slice(0, 4), daysRemaining: Math.max(0, Math.ceil((deadline - Date.now()) / 86400000))};
+}
+
+async function adminSettingsView() {
+  const row = await infrastructure.query<{setting_value: string}>(
+    'select setting_value from admin_system_settings where setting_key=$1', ['exam_date']);
+  const examDate = row?.rows[0]?.setting_value ?? '';
+  const flagRows = await infrastructure.query<{setting_key: string; setting_value: string}>('select setting_key, setting_value from admin_system_settings where setting_key like $1', ['feature.%']);
+  const stored = Object.fromEntries((flagRows?.rows ?? []).map(item => [item.setting_key.slice('feature.'.length), item.setting_value === 'true']));
+  return {examYear: examDate.slice(0, 4), examDate, refundReviewThreshold: adminRefundDualReviewThreshold,
+    featureFlags: {objectiveBank: stored.objectiveBank !== false, objectiveExam: stored.objectiveExam !== false, studyMaterials: stored.studyMaterials !== false, hotCourses: stored.hotCourses !== false, ai: aiAdapter.name === 'http', forum: true}};
+}
+
+async function persistSubject(subject: typeof adminSubjectCatalog[number]) {
+  await persist(
+    'insert into subjects (id,name,color,question_count,question_type,chapters) values ($1,$2,$3,0,$4,$5::jsonb) on conflict (id) do update set name=excluded.name,question_type=excluded.question_type,chapters=excluded.chapters',
+    [subject.id, subject.name, subject.color, subject.questionType, JSON.stringify(subject.chapters)]);
+  const current = store.subjects.find(item => item.id === subject.id);
+  if (current) Object.assign(current, subject);
+  else store.subjects.push(subject);
+}
+
 type AdminAccount = {id: string; username: string; displayName: string; role: string; permissions: string[]; passwordHash?: string; mfaEnabled?: boolean; mfaSecret?: string};
 type AdminSession = {adminId: string; username: string; displayName: string; role: string; permissions: string[]; csrfToken: string; expiresAt: string; revokedAt?: string};
 const adminSessions = new Map<string, AdminSession>();
 const adminMfaChallenges = new Map<string, {account: AdminAccount; expiresAt: number; enrollmentSecret?: string}>();
 let developmentAdminMfaSecret = config.adminMfaSecret;
 let adminId = '00000000-0000-0000-0000-000000000099';
+let learningAdminId = '00000000-0000-0000-0000-000000000402';
+let gradingAdminId = '00000000-0000-0000-0000-000000000401';
 const adminPermissions = ['*'];
 const adminCookie = 'debao_admin_session';
 const adminRoleCatalog = [
@@ -2215,10 +2311,23 @@ async function ensureDevelopmentAdminRecord() {
   const existing = await infrastructure.query<{id: string}>('select id from admin_users where username = $1 limit 1', [config.adminUsername]);
   if (existing?.rows[0]?.id) {
     adminId = existing.rows[0].id;
-    return;
+  } else {
+    const created = await infrastructure.query<{id: string}>('insert into admin_users (id, username, password_hash, display_name, status, mfa_enabled) values ($1, $2, $3, $4, $5, false) on conflict (id) do update set username = excluded.username, display_name = excluded.display_name, status = excluded.status returning id', [adminId, config.adminUsername, 'development-local-auth-only', '得宝管理员', 'active']);
+    if (created?.rows[0]?.id) adminId = created.rows[0].id;
   }
-  const created = await infrastructure.query<{id: string}>('insert into admin_users (id, username, password_hash, display_name, status, mfa_enabled) values ($1, $2, $3, $4, $5, false) on conflict (id) do update set username = excluded.username, display_name = excluded.display_name, status = excluded.status returning id', [adminId, config.adminUsername, 'development-local-auth-only', '得宝管理员', 'active']);
-  if (created?.rows[0]?.id) adminId = created.rows[0].id;
+  for (const account of [
+    {id: learningAdminId, username: config.learningAdminUsername, name: '学习中心管理员', kind: 'learning'},
+    {id: gradingAdminId, username: config.gradingAdminUsername, name: '批改管理员', kind: 'grading'},
+  ]) {
+    const found = await infrastructure.query<{id: string}>('select id from admin_users where username=$1 limit 1', [account.username]);
+    let id = found?.rows[0]?.id;
+    if (!id) {
+      const saved = await infrastructure.query<{id: string}>('insert into admin_users (id,username,password_hash,display_name,status,mfa_enabled) values ($1,$2,$3,$4,$5,false) on conflict (id) do update set username=excluded.username returning id', [account.id, account.username, 'development-local-auth-only', account.name, 'active']);
+      id = saved?.rows[0]?.id;
+    }
+    if (id && account.kind === 'learning') learningAdminId = id;
+    if (id && account.kind === 'grading') gradingAdminId = id;
+  }
 }
 
 async function storeBinaryBody(req: IncomingMessage, filePath: string, maxBytes: number): Promise<number> {
@@ -3235,7 +3344,19 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       if (!announcement) throw new HttpError(404, 'ANNOUNCEMENT_NOT_FOUND', '公告不存在');
       return send(res, 200, publicAnnouncement(announcement, userId), requestId);
     }
-    if (req.method === 'GET' && path === '/v1/question-subjects') { requireAuth(req); return send(res, 200, store.subjects, requestId); }
+    if (req.method === 'GET' && path === '/v1/question-subjects') {
+      return send(res, 200, store.subjects.map(subject => ({
+        ...subject,
+        questionCount: store.questions.filter(question => question.subjectId === subject.id && question.status === 'published').length +
+          store.learningQuestionBankQuestions.filter(question => question.subjectId === subject.id && question.category === 'objective' && question.status === 'published' && !store.questions.some(item => item.id === question.id)).length,
+      })), requestId);
+    }
+    if (req.method === 'GET' && path === '/v1/question-papers') {
+      return send(res, 200, store.papers.filter(paper => paper.status === 'published').map(paper => ({
+        id: paper.id, title: paper.name, year: paper.year, volume: paper.volume, ...(paper.productId ? {productId: paper.productId} : {}),
+        questionCount: paper.questionIds.length, durationMinutes: paper.durationMinutes, mode: paper.mode,
+      })), requestId);
+    }
     if (req.method === 'POST' && path === '/v1/question-sessions') {
       const userId = requireAuth(req);
       const input = await body(req);
@@ -3252,10 +3373,12 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       if (subjectId && !store.subjects.some(item => item.id === subjectId) && !store.learningQuestionBankQuestions.some(item => item.subjectId === subjectId)) throw new HttpError(422, 'VALIDATION_ERROR', '科目不存在');
       const requestedPaperId = typeof input.paperId === 'string' && input.paperId.trim() ? input.paperId.trim() : undefined;
       const paper = requestedPaperId ? store.papers.find(item => item.id === requestedPaperId && item.status === 'published') : undefined;
-      if (requestedPaperId && !paper) throw new HttpError(404, 'QUESTION_PAPER_NOT_FOUND', '试卷不存在或尚未发布');
+      const learningPaper = requestedPaperId ? store.learningAssessmentPapers.find(item => item.id === requestedPaperId && item.status === 'published') : undefined;
+      if (requestedPaperId && !paper && !learningPaper) throw new HttpError(404, 'QUESTION_PAPER_NOT_FOUND', '试卷不存在或尚未发布');
+      if (paper?.mode === 'advanced') { const paidProductId = paper.productId; const hasEntitlement = Boolean(paidProductId) && store.orders.some(item => item.userId === userId && item.productId === paidProductId && item.status === 'paid'); if (!paidProductId || !hasEntitlement) throw new HttpError(403, 'ADVANCED_EXAM_REQUIRES_PAYMENT', '进阶考试需要购买指定商品后参加'); }
       const learningBankCandidates = store.learningQuestionBankQuestions.map(learningBankQuestionAsObjective).filter((item): item is Question => Boolean(item));
-      let candidates = paper
-        ? paper.questionIds.map(id => store.questions.find(question => question.id === id)).filter((item): item is Question => Boolean(item))
+      let candidates = paper || learningPaper
+        ? (paper?.questionIds ?? learningPaper?.questionIds ?? []).map(id => store.questions.find(question => question.id === id) ?? learningBankCandidates.find(question => question.id === id)).filter((item): item is Question => Boolean(item))
         : [...store.questions, ...learningBankCandidates].filter(item => isPublishedQuestion(item) && questionMatchesSubject(item, subjectId ?? null));
       candidates = candidates.filter(item => isPublishedQuestion(item) && (!subjectId || questionMatchesSubject(item, subjectId)));
       if (Array.isArray(input.questionIds) && input.questionIds.length > 0) {
@@ -3266,7 +3389,7 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       }
       const requestedLimit = input.limit === undefined ? (mode === 'exam' ? 100 : 20) : Number(input.limit);
       if (!Number.isInteger(requestedLimit) || requestedLimit < 1 || requestedLimit > 100) throw new HttpError(422, 'VALIDATION_ERROR', '题量必须是 1 到 100 的整数');
-      if (!paper && mode === 'random') candidates = [...candidates].sort(() => Math.random() - 0.5);
+      if (!paper && !learningPaper && mode === 'random') candidates = [...candidates].sort(() => Math.random() - 0.5);
       candidates = candidates.slice(0, requestedLimit);
       if (!candidates.length) throw new HttpError(404, 'NO_PUBLISHED_QUESTIONS', '当前没有可作答题目');
       const durationSeconds = input.durationSeconds === undefined ? (mode === 'exam' ? 120 * 60 : Math.max(15 * 60, candidates.length * 90)) : Number(input.durationSeconds);
@@ -3607,7 +3730,7 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
         const access = entitlement.get(course.id);
         return {
           ...course,
-          progress: progress.get(course.id) ?? course.progress,
+          progress: progress.get(course.id) ?? 0,
           hasAccess: Boolean(access),
           ...(access?.sourceOrderId ? {sourceOrderId: access.sourceOrderId} : {}),
           ...(access?.expiresAt ? {expiresAt: access.expiresAt} : {}),
@@ -3625,7 +3748,7 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       const sections = store.courseSections.filter(section => section.courseId === course.id).sort((a, b) => a.sortOrder - b.sortOrder).map(section => ({...section, lessons: store.courseLessons.filter(lesson => lesson.sectionId === section.id).sort((a, b) => a.sortOrder - b.sortOrder).map(lesson => { const live = lesson.mediaKind === 'live' ? store.liveSessions.find(item => item.lessonId === lesson.id) : undefined; if (!live) return lesson; const liveSession = {id: live.id, courseId: live.courseId, lessonId: live.lessonId, title: live.title, teacher: live.teacher, startsAt: live.startsAt, endsAt: live.endsAt, status: live.status, provider: live.provider ?? 'tencent', replayAvailable: Boolean(live.recordingVideoId), ...(entitlement ? {playUrl: live.playUrl, recordingUrl: live.recordingUrl} : {})}; return {...lesson, liveSession}; })}));
       return send(res, 200, {
         ...course,
-        progress: progress?.progress ?? course.progress,
+        progress: progress?.progress ?? 0,
         hasAccess: Boolean(entitlement),
         ...(entitlement?.sourceOrderId ? {sourceOrderId: entitlement.sourceOrderId} : {}),
         ...(entitlement?.expiresAt ? {expiresAt: entitlement.expiresAt} : {}),
@@ -3652,7 +3775,7 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       if (!course) throw new HttpError(404, 'NOT_FOUND', '课程不存在');
       if (!isPublishedCourse(course)) throw new HttpError(404, 'COURSE_NOT_AVAILABLE', '课程当前不可学习'); if (!store.entitlements.some(item => item.userId === userId && item.courseId === course.id && (!item.expiresAt || Date.parse(item.expiresAt) > Date.now()))) throw new HttpError(403, 'COURSE_ACCESS_REQUIRED', '请先开通该课程的学习权限');
       const input = await body(req); const current = store.courseProgress.find(item => item.userId === userId && item.courseId === course.id);
-      const rawProgress = input.progress === undefined ? current?.progress ?? course.progress : Number(input.progress);
+      const rawProgress = input.progress === undefined ? current?.progress ?? 0 : Number(input.progress);
       if (!Number.isFinite(rawProgress) || rawProgress < 0 || rawProgress > 100) throw new HttpError(422, 'VALIDATION_ERROR', '课程进度必须是 0 到 100 的数字');
       const nextProgress = Math.max(0, Math.min(100, rawProgress)); const updatedAt = new Date().toISOString();
       if (current) { current.progress = nextProgress; current.updatedAt = updatedAt; } else store.courseProgress.push({userId, courseId: course.id, progress: nextProgress, updatedAt});
@@ -3794,10 +3917,39 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       for (const task of tasks) {
         const plan = userPlans.find(item => item.id === task.planId);
         const config = plan?.stageId ? stagePlanConfig(plan.stageId) : undefined;
-        task.locked = !learningTaskIsUnlocked(task, tasks.filter(item => item.planId === task.planId), config);
+        // Existing prerequisite rules control normal access. An approved early
+        // access window is recorded for the client and admin workflow; it does
+        // not tighten the existing prerequisite behavior for scheduled tasks.
+        const dateUnlocked = true;
+        task.locked = !dateUnlocked || !learningTaskIsUnlocked(task, tasks.filter(item => item.planId === task.planId), config);
       }
       for (const task of tasks) { const previous = task.status; normalizeLearningTask(task, today); if (task.status !== previous) await persist('update learning_tasks set status = $1 where id = $2', [task.status, task.id]); }
       return send(res, 200, tasks, requestId);
+    }
+    if (req.method === 'GET' && path === '/v1/learning/early-access') {
+      const userId = requireAuth(req);
+      const plans = store.learningPlans.filter(item => item.userId === userId);
+      return send(res, 200, plans.map(plan => ({
+        planId: plan.id,
+        earlyUnlockedThrough: plan.earlyUnlockedThrough,
+        eligibleThrough: earlyAccessRequestTarget(plan, store.learningTasks),
+        request: store.learningEarlyAccessRequests.find(item => item.planId === plan.id && ['pending', 'approved'].includes(item.status)),
+      })), requestId);
+    }
+    const earlyAccessRequestMatch = path.match(/^\/v1\/learning\/plans\/([^/]+)\/early-access$/);
+    if (earlyAccessRequestMatch && req.method === 'POST') {
+      const userId = requireAuth(req);
+      const plan = store.learningPlans.find(item => item.id === decodePathSegment(earlyAccessRequestMatch[1]) && item.userId === userId);
+      if (!plan) throw new HttpError(404, 'NOT_FOUND', '学习计划不存在');
+      const target = earlyAccessRequestTarget(plan, store.learningTasks);
+      if (!target) throw new HttpError(409, 'EARLY_ACCESS_NOT_ELIGIBLE', '请先完成当天全部任务后再申请提前学习');
+      const existing = store.learningEarlyAccessRequests.find(item => item.planId === plan.id && item.status === 'pending');
+      if (existing) return send(res, 200, existing, requestId);
+      const id = `early-access-${randomUUID()}`; const now = new Date().toISOString(); const input = await body(req);
+      const request = {id, userId, planId: plan.id, requestedThrough: target, status: 'pending' as const, reason: String(input.reason ?? '').trim() || undefined, createdAt: now};
+      store.learningEarlyAccessRequests.unshift(request);
+      await persist('insert into learning_early_access_requests (id,user_id,plan_id,requested_through,status,reason,created_at) values ($1,$2,$3,$4,$5,$6,$7)', [id, dbUserId(userId), plan.id, target, request.status, request.reason ?? null, now]);
+      return send(res, 201, request, requestId);
     }
     const subjectiveQuestionMatch = path.match(/^\/v1\/learning\/questions\/subjective\/([^/]+)$/);
     if (subjectiveQuestionMatch && req.method === 'GET') {
@@ -3867,6 +4019,45 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       }
       return send(res, 200, task, requestId);
     }
+    if (path === '/v1/learning/inquiries' && req.method === 'GET') {
+      const userId = requireAuth(req);
+      return send(res, 200, store.learningInquiries.filter(item => item.userId === userId).map(({clientRequestId, repliedBy, userId: _, ...item}) => item), requestId);
+    }
+    if (path === '/v1/learning/inquiries' && req.method === 'POST') {
+      const userId = requireAuth(req); const input = await body(req);
+      const reportId = String(input.reportId ?? ''); const questionId = String(input.questionId ?? '');
+      const reason = String(input.reason ?? '').trim(); const clientRequestId = String(input.clientRequestId ?? '').trim();
+      if (reason.length < 2 || reason.length > 5000 || !clientRequestId || clientRequestId.length > 200) throw new HttpError(422, 'VALIDATION_ERROR', '请填写 2 到 5000 字的错因或疑问');
+      const report = store.objectiveReports.find(item => item.id === reportId && item.userId === userId);
+      const question = report?.results.find(item => item.questionId === questionId);
+      if (!report || !question) throw new HttpError(404, 'REPORT_QUESTION_NOT_FOUND', '答题报告中没有这道题');
+      const existing = store.learningInquiries.find(item => item.userId === userId && item.clientRequestId === clientRequestId);
+      if (existing) {
+        if (existing.reportId !== reportId || existing.questionId !== questionId || existing.reason !== reason) throw new HttpError(409, 'IDEMPOTENCY_CONFLICT', '请求内容已变化，请重新提交');
+        return send(res, 200, existing, requestId);
+      }
+      const item: Store['learningInquiries'][number] = {id: `inquiry-${randomUUID()}`, userId, reportId, questionId, question: structuredClone(question), reason, status: 'pending', createdAt: new Date().toISOString(), clientRequestId};
+      await persist('insert into learning_inquiries (id,user_id,report_id,question_id,question_snapshot,reason,status,created_at,client_request_id) values ($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9)', [item.id, dbUserId(userId), reportId, questionId, JSON.stringify(item.question), reason, item.status, item.createdAt, clientRequestId]);
+      store.learningInquiries.unshift(item);
+      return send(res, 201, item, requestId);
+    }
+    if (path === '/v1/admin/learning-inquiries' && req.method === 'GET') {
+      requireAdmin(req, 'learning.questions.read');
+      return send(res, 200, store.learningInquiries.map(item => ({...item, studentName: store.profiles.get(item.userId)?.name ?? '学员'})), requestId);
+    }
+    const inquiryReply = path.match(/^\/v1\/admin\/learning-inquiries\/([^/]+)\/reply$/);
+    if (inquiryReply && req.method === 'POST') {
+      const admin = requireAdmin(req, 'learning.questions.write');
+      const item = store.learningInquiries.find(item => item.id === decodePathSegment(inquiryReply[1]));
+      if (!item) throw new HttpError(404, 'INQUIRY_NOT_FOUND', '答疑不存在');
+      const input = await body(req); const reply = String(input.reply ?? '').trim();
+      const teacherName = String(input.teacherName ?? '').trim();
+      if (reply.length < 2 || reply.length > 10000 || teacherName.length < 1 || teacherName.length > 80) throw new HttpError(422, 'VALIDATION_ERROR', '请填写老师姓名及 2 到 10000 字回复');
+      const repliedAt = new Date().toISOString();
+      await persistAdminMutation([{text: 'update learning_inquiries set reply=$1,teacher_name=$2,replied_by=$3,replied_at=$4,status=$5 where id=$6', values: [reply, teacherName, admin.adminId, repliedAt, 'answered', item.id]}], [admin.adminId, 'learning.inquiry.reply', 'learning_inquiry', item.id, '回复学员错因答疑', requestId]);
+      Object.assign(item, {reply, teacherName, repliedBy: admin.adminId, repliedAt, status: 'answered'});
+      return send(res, 200, item, requestId);
+    }
     if (req.method === 'GET' && path === '/v1/learning/report') {
       const userId = requireAuth(req); const period = url.searchParams.get('period') ?? 'week'; const {start, end} = reportWindow(period);
       const startMs = start.getTime(); const endMs = end.getTime(); const inWindow = (value: string | undefined) => { const parsed = value ? Date.parse(value) : NaN; return Number.isFinite(parsed) && parsed >= startMs && parsed <= endMs; };
@@ -3878,7 +4069,8 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       for (const task of tasks) { const previous = task.status; normalizeLearningTask(task); if (task.status !== previous) await persist('update learning_tasks set status = $1 where id = $2', [task.status, task.id]); }
       const completedTasks = tasks.filter(item => item.status === 'done' && inWindow(item.completedAt ?? `${item.dueDate}T12:00:00.000Z`));
       const minutes = completedTasks.reduce((sum, item) => sum + item.minutes, 0);
-      const subjectMinutes = new Map<string, number>(); for (const task of completedTasks) if (task.subjectId) subjectMinutes.set(task.subjectId, (subjectMinutes.get(task.subjectId) ?? 0) + task.minutes);
+      const subjectSeconds = new Map<string, number>(); for (const activity of activities) if (activity.subjectId) subjectSeconds.set(activity.subjectId, (subjectSeconds.get(activity.subjectId) ?? 0) + activity.durationSeconds);
+      const subjectMinutes = new Map([...subjectSeconds.entries()].map(([id, seconds]) => [id, Math.floor(seconds / 60)]));
       const subjectStats = store.subjects.map(subject => { const items = submissions.filter(item => { const question = item.questionSnapshot ?? store.questions.find(candidate => candidate.id === item.questionId); return question?.subjectId === subject.id; }); const subjectCorrect = items.filter(item => item.correct).length; return {subjectId: subject.id, subjectName: subject.name, minutes: subjectMinutes.get(subject.id) ?? 0, answered: items.length, correctRate: items.length ? Math.round(subjectCorrect / items.length * 100) : 0}; });
       const assessmentReports = store.objectiveReports
         .filter(item => item.userId === userId && item.mode === 'exam' && inWindow(item.submittedAt))
@@ -3902,12 +4094,12 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
         .sort((left, right) => right.wrongCount - left.wrongCount || left.correctRate - right.correctRate)
         .slice(0, 8);
       const assessments = assessmentReports.map(report => ({id: report.id, sessionId: report.sessionId, title: report.title, submittedAt: report.submittedAt, score: report.score, maxScore: report.maxScore, correct: report.correct, total: report.total, correctRate: report.total ? Math.round(report.correct / report.total * 100) : 0, subjectStats: report.subjectStats}));
-      const trend = new Map<string, {minutes: number; answered: number; correct: number}>();
-      for (const activity of activities) { const day = activity.occurredAt.slice(0, 10); const current = trend.get(day) ?? {minutes: 0, answered: 0, correct: 0}; current.minutes += Math.floor(activity.durationSeconds / 60); if (activity.kind === 'question') current.answered += activity.quantity; trend.set(day, current); }
-      for (const submission of submissions) { const day = submission.createdAt.slice(0, 10); const current = trend.get(day) ?? {minutes: 0, answered: 0, correct: 0}; current.answered += 1; if (submission.correct) current.correct += 1; trend.set(day, current); }
-      const dailyTrend = [...trend.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([date, value]) => ({date, ...value, correctRate: value.answered ? Math.round(value.correct / value.answered * 100) : 0}));
+      const trend = new Map<string, {durationSeconds: number; answered: number; correct: number}>();
+      for (const activity of activities) { const day = activity.occurredAt.slice(0, 10); const current = trend.get(day) ?? {durationSeconds: 0, answered: 0, correct: 0}; current.durationSeconds += activity.durationSeconds; trend.set(day, current); }
+      for (const submission of submissions) { const day = submission.createdAt.slice(0, 10); const current = trend.get(day) ?? {durationSeconds: 0, answered: 0, correct: 0}; current.answered += 1; if (submission.correct) current.correct += 1; trend.set(day, current); }
+      const dailyTrend = [...trend.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([date, value]) => ({date, ...value, minutes: Math.floor(value.durationSeconds / 60), correctRate: value.answered ? Math.round(value.correct / value.answered * 100) : 0}));
       const weakSubjects = subjectStats.filter(item => item.answered > 0).sort((a, b) => a.correctRate - b.correctRate || b.answered - a.answered).slice(0, 3);
-      return send(res, 200, {period, minutes: minutes + Math.floor(activityDurationSeconds / 60), taskMinutes: minutes, durationSeconds: activityDurationSeconds, activities: activities.length, activityQuantity, answered: submissions.length, correctRate: submissions.length ? Math.round(correct / submissions.length * 100) : 0, subjects: subjectStats, weakSubjects, dailyTrend, assessments, weakKnowledgePoints}, requestId);
+      return send(res, 200, {period, minutes: Math.floor(activityDurationSeconds / 60), taskMinutes: minutes, durationSeconds: activityDurationSeconds, activities: activities.length, activityQuantity, answered: submissions.length, correctRate: submissions.length ? Math.round(correct / submissions.length * 100) : 0, subjects: subjectStats, weakSubjects, dailyTrend, assessments, weakKnowledgePoints}, requestId);
     }
     if (req.method === 'GET' && path === '/v1/mistakes') { const userId = requireAuth(req); return send(res, 200, store.mistakes.filter(item => item.userId === userId && !item.resolved).map(item => ({...item, question: store.questions.find(question => question.id === item.questionId)})), requestId); }
     const mistakeMatch = path.match(/^\/v1\/mistakes\/([^/]+)$/);
@@ -4060,7 +4252,7 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       return send(res, 200, {items: all.slice(cursor, cursor + pageSize), total: all.length, ...(cursor + pageSize < all.length ? {nextCursor: String(cursor + pageSize)} : {})}, requestId);
     }
     if (req.method === 'GET' && path === '/v1/home') {
-      const userId = requireAuth(req);
+      const userId = optionalUserId(req);
       const now = Date.now();
       const banners = store.banners.filter(item =>
         (!item.startsAt || Date.parse(item.startsAt) <= now) &&
@@ -4079,27 +4271,53 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
           likeCount: item.likes,
         }));
       const activeEntitlements = new Map(store.entitlements.filter(item => item.userId === userId && (!item.expiresAt || Date.parse(item.expiresAt) > now)).map(item => [item.courseId, item]));
-      const hotCourses = store.courses.filter(course => isPublishedCourse(course) && activeEntitlements.has(course.id)).slice(0, 3).map(course => {
+      const hotCourses = store.courses.filter(course => isPublishedCourse(course) && course.isHot === true).sort((a, b) => (a.hotSortOrder ?? 0) - (b.hotSortOrder ?? 0)).slice(0, 3).map(course => {
         const access = activeEntitlements.get(course.id);
         return {
           ...course,
+          progress: store.courseProgress.find(item => item.userId === userId && item.courseId === course.id)?.progress ?? 0,
           hasAccess: Boolean(access),
           ...(access?.sourceOrderId ? {sourceOrderId: access.sourceOrderId} : {}),
           ...(access?.expiresAt ? {expiresAt: access.expiresAt} : {}),
         };
       });
+      const settings = await adminSettingsView();
       return send(res, 200, {
         banners,
         announcements,
         hotCourses,
         hotPosts,
-        featuredProduct: store.products.find(isSellableProduct) ?? null,
-        exam: {year: '2026', daysRemaining: 42},
+        featuredProduct: (() => {const product = store.products.find(isSellableProduct); return product ? {...product, sold: productSales(product.id)} : null;})(),
+        exam: await configuredExam(),
+        featureFlags: settings.featureFlags,
       }, requestId);
     }
-    if (req.method === 'GET' && path === '/v1/products') { requireAuth(req); return send(res, 200, store.products.filter(isSellableProduct), requestId); }
+    if (req.method === 'GET' && path === '/v1/materials') { const items = store.courseLessons.filter(item => item.mediaKind === 'document' && Boolean(item.mediaReference || item.handoutReference)).map(item => ({id: item.id, title: item.title, category: item.materialCategory ?? '未分类', kind: item.materialKind ?? 'material', reference: item.mediaReference ?? item.handoutReference, content: item.articleContent ?? '', downloadable: item.materialKind === 'material' && item.downloadable === true})); return send(res, 200, items, requestId); }
+    const courseMaterialMatch = path.match(/^\/v1\/course-materials\/([a-f0-9-]+)\.(pdf|doc|docx|mp3|m4a|wav|ogg|mp4|webm|mov)$/);
+    if (courseMaterialMatch && req.method === 'GET') {
+      requireAuth(req);
+      const extension = courseMaterialMatch[2];
+      const contentTypes: Record<string, string> = {pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', mp3: 'audio/mpeg', m4a: 'audio/mp4', wav: 'audio/wav', ogg: 'audio/ogg', mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime'};
+      const filePath = join(process.env.DEBAO_UPLOAD_DIR ?? join(process.cwd(), 'uploads'), 'course-materials', `${courseMaterialMatch[1]}.${extension}`);
+      const lesson = store.courseLessons.find(item => item.mediaReference === `/v1/course-materials/${courseMaterialMatch[1]}.${extension}` || item.handoutReference === `/v1/course-materials/${courseMaterialMatch[1]}.${extension}`);
+      if (lesson && (lesson.materialKind === 'article' || lesson.downloadable !== true)) throw new HttpError(403, 'MATERIAL_DOWNLOAD_DISABLED', '该资料未开放下载');
+      let fileStat; try { fileStat = await stat(filePath); } catch { throw new HttpError(404, 'MATERIAL_NOT_FOUND', '课程资料不存在'); }
+      res.writeHead(200, {'content-type': contentTypes[extension], 'content-length': String(fileStat.size), 'content-disposition': extension === 'pdf' ? 'inline' : 'attachment', 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff'}); createReadStream(filePath).pipe(res); return;
+    }
+    if (req.method === 'POST' && path === '/v1/admin/course-materials/upload') {
+      const admin = requireAdmin(req, 'courses.write'); const contentType = String(req.headers['content-type'] ?? '').split(';')[0].toLowerCase();
+      const supported: Record<string, {extension: string; maxBytes: number}> = {'application/pdf': {extension: 'pdf', maxBytes: 100 * 1024 * 1024}, 'application/msword': {extension: 'doc', maxBytes: 100 * 1024 * 1024}, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {extension: 'docx', maxBytes: 100 * 1024 * 1024}, 'audio/mpeg': {extension: 'mp3', maxBytes: 500 * 1024 * 1024}, 'audio/mp4': {extension: 'm4a', maxBytes: 500 * 1024 * 1024}, 'audio/wav': {extension: 'wav', maxBytes: 500 * 1024 * 1024}, 'audio/ogg': {extension: 'ogg', maxBytes: 500 * 1024 * 1024}, 'video/mp4': {extension: 'mp4', maxBytes: 1024 * 1024 * 1024}, 'video/webm': {extension: 'webm', maxBytes: 1024 * 1024 * 1024}, 'video/quicktime': {extension: 'mov', maxBytes: 1024 * 1024 * 1024}};
+      const config = supported[contentType]; if (!config) throw new HttpError(422, 'MATERIAL_TYPE_INVALID', '仅支持 PDF、Word、音频或视频文件');
+      const declaredSize = Number(req.headers['content-length'] ?? 0); if (declaredSize > config.maxBytes) throw new HttpError(413, 'PAYLOAD_TOO_LARGE', '课程素材超过大小限制');
+      const id = randomUUID(); const directory = join(process.env.DEBAO_UPLOAD_DIR ?? join(process.cwd(), 'uploads'), 'course-materials'); await mkdir(directory, {recursive: true}); const sizeBytes = await storeBinaryBody(req, join(directory, `${id}.${config.extension}`), config.maxBytes);
+      let filename = `课程素材.${config.extension}`; try { filename = decodeURIComponent(String(req.headers['x-file-name'] ?? '')) || filename; } catch { /* fallback */ }
+      const reference = `/v1/course-materials/${id}.${config.extension}`;
+      await persist('insert into admin_audit_logs (admin_user_id, action, resource_type, resource_id, reason, request_id) values ($1,$2,$3,$4,$5,$6)', [admin.adminId, 'course.material.upload', 'course_material', id, `${filename}:${sizeBytes}`, requestId]);
+      return send(res, 201, {id, filename, sizeBytes, contentType, reference}, requestId);
+    }
+    if (req.method === 'GET' && path === '/v1/products') { return send(res, 200, store.products.filter(isSellableProduct).map(product => ({...product, sold: productSales(product.id)})), requestId); }
     const productMatch = path.match(/^\/v1\/products\/([^/]+)$/);
-    if (productMatch && req.method === 'GET') { requireAuth(req); return send(res, 200, productFor(productMatch[1], true), requestId); }
+    if (productMatch && req.method === 'GET') { return send(res, 200, {...productFor(productMatch[1], true), sold: productSales(productMatch[1])}, requestId); }
     if (req.method === 'GET' && path === '/v1/law/search') {
       requireAuth(req);
       const query = (url.searchParams.get('q') ?? '').trim();
@@ -4113,7 +4331,9 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       return send(res, 200, {items: results, total: results.length, query, ...(subjectId ? {subjectId} : {})}, requestId);
     }
     if (req.method === 'GET' && path === '/v1/forum/posts') {
-      const userId = requireAuth(req); const limit = forumLimit(url.searchParams.get('limit')); const cursor = decodeForumCursor(url.searchParams.get('cursor')); const category = url.searchParams.get('category'); const scope = url.searchParams.get('scope') ?? 'all';
+      const scope = url.searchParams.get('scope') ?? 'all';
+      const userId = scope === 'all' ? optionalUserId(req) : requireAuth(req);
+      const limit = forumLimit(url.searchParams.get('limit')); const cursor = decodeForumCursor(url.searchParams.get('cursor')); const category = url.searchParams.get('category');
       if (category && !FORUM_CATEGORIES.includes(category as ForumCategory)) throw new HttpError(422, 'VALIDATION_ERROR', '帖子分类不正确');
       if (!['all', 'mine', 'favorites'].includes(scope)) throw new HttpError(422, 'VALIDATION_ERROR', 'scope 必须是 all、mine 或 favorites');
       const filtered = store.forumPosts
@@ -4184,8 +4404,8 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       const userId = requireAuth(req); const comment = store.forumComments.find(item => item.id === forumCommentMatch[1] && !item.deletedAt); if (!comment) throw new HttpError(404, 'FORUM_COMMENT_NOT_FOUND', '评论不存在或已删除'); if (comment.userId !== userId) throw new HttpError(403, 'FORUM_DELETE_FORBIDDEN', '只能删除自己的评论');
       activeForumPost(comment.postId); comment.deletedAt = new Date().toISOString(); await persist('update forum_comments set deleted_at = $1 where id = $2 and user_id = $3 and deleted_at is null', [comment.deletedAt, comment.id, dbUserId(userId)]); return send(res, 200, {deleted: true}, requestId);
     }
-    if (req.method === 'POST' && path === '/v1/learning-admin/auth/login') { const input = await body(req); const username = String(input.username ?? '').trim(); const password = String(input.password ?? ''); if (username !== config.learningAdminUsername || password !== config.learningAdminPassword) throw new HttpError(401, 'LEARNING_ADMIN_INVALID_CREDENTIALS', '学习中心管理员账号或密码错误'); const account: AdminAccount = {id: '00000000-0000-0000-0000-000000000402', username, displayName: '学习中心管理员', role: 'learning_admin', permissions: ['dashboard.read', 'learning.diagnostics.read', 'learning.diagnostics.write', 'learning.diagnostics.publish', 'learning.questions.read', 'learning.questions.write', 'learning.questions.publish', 'learning.users.read', 'learning.stages.read', 'learning.stages.write'], passwordHash: config.learningAdminPassword, mfaEnabled: false}; return send(res, 200, await issueAdminSession(res, account, requestId, req), requestId); }
-    if (req.method === 'POST' && path === '/v1/grading-admin/auth/login') { const input = await body(req); const username = String(input.username ?? '').trim(); const password = String(input.password ?? ''); if (username !== config.gradingAdminUsername || password !== config.gradingAdminPassword) throw new HttpError(401, 'GRADING_ADMIN_INVALID_CREDENTIALS', '批改管理员账号或密码错误'); const account: AdminAccount = {id: '00000000-0000-0000-0000-000000000401', username, displayName: '批改管理员', role: 'grading_admin', permissions: ['dashboard.read', 'grading.read', 'grading.assign', 'grading.claim', 'grading.submit', 'grading.publish', 'grading.review'], passwordHash: config.gradingAdminPassword, mfaEnabled: false}; return send(res, 200, await issueAdminSession(res, account, requestId, req), requestId); }
+    if (req.method === 'POST' && path === '/v1/learning-admin/auth/login') { const input = await body(req); const username = String(input.username ?? '').trim(); const password = String(input.password ?? ''); if (username !== config.learningAdminUsername || password !== config.learningAdminPassword) throw new HttpError(401, 'LEARNING_ADMIN_INVALID_CREDENTIALS', '学习中心管理员账号或密码错误'); const account: AdminAccount = {id: learningAdminId, username, displayName: '学习中心管理员', role: 'learning_admin', permissions: ['dashboard.read', 'learning.diagnostics.read', 'learning.diagnostics.write', 'learning.diagnostics.publish', 'learning.questions.read', 'learning.questions.write', 'learning.questions.publish', 'learning.users.read', 'learning.stages.read', 'learning.stages.write'], passwordHash: config.learningAdminPassword, mfaEnabled: false}; return send(res, 200, await issueAdminSession(res, account, requestId, req), requestId); }
+    if (req.method === 'POST' && path === '/v1/grading-admin/auth/login') { const input = await body(req); const username = String(input.username ?? '').trim(); const password = String(input.password ?? ''); if (username !== config.gradingAdminUsername || password !== config.gradingAdminPassword) throw new HttpError(401, 'GRADING_ADMIN_INVALID_CREDENTIALS', '批改管理员账号或密码错误'); const account: AdminAccount = {id: gradingAdminId, username, displayName: '批改管理员', role: 'grading_admin', permissions: ['dashboard.read', 'grading.read', 'grading.assign', 'grading.claim', 'grading.submit', 'grading.publish', 'grading.review'], passwordHash: config.gradingAdminPassword, mfaEnabled: false}; return send(res, 200, await issueAdminSession(res, account, requestId, req), requestId); }
     if (req.method === 'POST' && path === '/v1/admin/auth/login') {
       const input = await body(req); const username = String(input.username ?? '').trim(); const password = String(input.password ?? '');
       if (!username || !password) throw new HttpError(422, 'VALIDATION_ERROR', '账号和密码不能为空');
@@ -4347,16 +4567,29 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
     if (req.method === 'GET' && path === '/v1/admin/content/subjects') {
       requireAdmin(req); return send(res, 200, adminSubjectCatalog.map(subject => ({...subject, status: 'published', objectiveQuestionCount: store.questions.filter(question => question.subjectId === subject.id).length, subjectiveQuestionCount: store.gradingRubrics.filter(rubric => rubric.subjectId === subject.id).length, questionCount: store.questions.filter(question => question.subjectId === subject.id).length + store.gradingRubrics.filter(rubric => rubric.subjectId === subject.id).length})), requestId);
     }
+    if (req.method === 'POST' && path === '/v1/admin/content/subjects') {
+      const admin = requireAdmin(req, 'content.questions.write');
+      const input = await body(req);
+      const name = String(input.name ?? '').trim();
+      if (!name || name.length > 80) throw new HttpError(422, 'VALIDATION_ERROR', '科目名称不正确');
+      const subject = {id: `subject-${randomUUID()}`, name, color: '#DDE9FF', questionCount: 0,
+        questionType: 'both' as const, chapters: []};
+      await persistSubject(subject);
+      adminSubjectCatalog.push(subject);
+      await persist('insert into admin_audit_logs (admin_user_id,action,resource_type,resource_id,request_id) values ($1,$2,$3,$4,$5)',
+        [admin.adminId, 'subject.create', 'subject', subject.id, requestId]);
+      return send(res, 201, subject, requestId);
+    }
     const adminSubjectMatch = path.match(/^\/v1\/admin\/content\/subjects\/([^/]+)$/);
-    if (adminSubjectMatch && req.method === 'PATCH') { const admin = requireAdmin(req, 'content.questions.write'); const subject = adminSubjectCatalog.find(item => item.id === adminSubjectMatch[1]); if (!subject) throw new HttpError(404, 'NOT_FOUND', '科目不存在'); const input = await body(req); const name = String(input.name ?? subject.name).trim(); const questionType = String(input.questionType ?? subject.questionType); if (name.length < 1 || !['objective', 'subjective', 'both'].includes(questionType)) throw new HttpError(422, 'VALIDATION_ERROR', '科目名称或题目分类不正确'); subject.name = name; subject.questionType = questionType as typeof subject.questionType; return send(res, 200, subject, requestId); }
+    if (adminSubjectMatch && req.method === 'PATCH') { const admin = requireAdmin(req, 'content.questions.write'); const subject = adminSubjectCatalog.find(item => item.id === adminSubjectMatch[1]); if (!subject) throw new HttpError(404, 'NOT_FOUND', '科目不存在'); const input = await body(req); const name = String(input.name ?? subject.name).trim(); const questionType = String(input.questionType ?? subject.questionType); if (name.length < 1 || !['objective', 'subjective', 'both'].includes(questionType)) throw new HttpError(422, 'VALIDATION_ERROR', '科目名称或题目分类不正确'); subject.name = name; subject.questionType = questionType as typeof subject.questionType; await persistSubject(subject); return send(res, 200, subject, requestId); }
     const adminChapterCreate = path.match(/^\/v1\/admin\/content\/subjects\/([^/]+)\/chapters$/);
-    if (adminChapterCreate && req.method === 'POST') { requireAdmin(req, 'content.questions.write'); const subject = adminSubjectCatalog.find(item => item.id === adminChapterCreate[1]); if (!subject) throw new HttpError(404, 'NOT_FOUND', '科目不存在'); const input = await body(req); const name = String(input.name ?? '').trim(); if (!name) throw new HttpError(422, 'VALIDATION_ERROR', '章节名称不能为空'); const chapter = {id: `chapter-${randomUUID()}`, name, questionType: (['objective', 'subjective', 'both'].includes(String(input.questionType)) ? String(input.questionType) : subject.questionType) as 'objective' | 'subjective' | 'both', points: [] as Array<{id: string; name: string}>}; subject.chapters.push(chapter); return send(res, 201, subject, requestId); }
+    if (adminChapterCreate && req.method === 'POST') { requireAdmin(req, 'content.questions.write'); const subject = adminSubjectCatalog.find(item => item.id === adminChapterCreate[1]); if (!subject) throw new HttpError(404, 'NOT_FOUND', '科目不存在'); const input = await body(req); const name = String(input.name ?? '').trim(); if (!name) throw new HttpError(422, 'VALIDATION_ERROR', '章节名称不能为空'); const chapter = {id: `chapter-${randomUUID()}`, name, questionType: (['objective', 'subjective', 'both'].includes(String(input.questionType)) ? String(input.questionType) : subject.questionType) as 'objective' | 'subjective' | 'both', points: [] as Array<{id: string; name: string}>}; subject.chapters.push(chapter); await persistSubject(subject); return send(res, 201, subject, requestId); }
     const adminChapterMatch = path.match(/^\/v1\/admin\/content\/subjects\/([^/]+)\/chapters\/([^/]+)$/);
-    if (adminChapterMatch && req.method === 'PATCH') { requireAdmin(req, 'content.questions.write'); const subject = adminSubjectCatalog.find(item => item.id === adminChapterMatch[1]); const chapter = subject?.chapters.find(item => item.id === adminChapterMatch[2]); if (!subject || !chapter) throw new HttpError(404, 'NOT_FOUND', '章节不存在'); const input = await body(req); if (input.name !== undefined) chapter.name = String(input.name).trim(); if (input.questionType !== undefined && ['objective', 'subjective', 'both'].includes(String(input.questionType))) chapter.questionType = String(input.questionType) as typeof chapter.questionType; if (!chapter.name) throw new HttpError(422, 'VALIDATION_ERROR', '章节名称不能为空'); return send(res, 200, subject, requestId); }
+    if (adminChapterMatch && req.method === 'PATCH') { requireAdmin(req, 'content.questions.write'); const subject = adminSubjectCatalog.find(item => item.id === adminChapterMatch[1]); const chapter = subject?.chapters.find(item => item.id === adminChapterMatch[2]); if (!subject || !chapter) throw new HttpError(404, 'NOT_FOUND', '章节不存在'); const input = await body(req); if (input.name !== undefined) chapter.name = String(input.name).trim(); if (input.questionType !== undefined && ['objective', 'subjective', 'both'].includes(String(input.questionType))) chapter.questionType = String(input.questionType) as typeof chapter.questionType; if (!chapter.name) throw new HttpError(422, 'VALIDATION_ERROR', '章节名称不能为空'); await persistSubject(subject); return send(res, 200, subject, requestId); }
     const adminPointCreate = path.match(/^\/v1\/admin\/content\/subjects\/([^/]+)\/chapters\/([^/]+)\/points$/);
     if (adminPointCreate && req.method === 'POST') { requireAdmin(req, 'content.questions.write'); const subject = adminSubjectCatalog.find(item => item.id === adminPointCreate[1]); const chapter = subject?.chapters.find(item => item.id === adminPointCreate[2]); if (!subject || !chapter) throw new HttpError(404, 'NOT_FOUND', '章节不存在'); const input = await body(req); const name = String(input.name ?? '').trim(); if (!name) throw new HttpError(422, 'VALIDATION_ERROR', '考点名称不能为空'); chapter.points.push({id: `point-${randomUUID()}`, name}); return send(res, 201, subject, requestId); }
     const adminPointMatch = path.match(/^\/v1\/admin\/content\/subjects\/([^/]+)\/chapters\/([^/]+)\/points\/([^/]+)$/);
-    if (adminPointMatch && req.method === 'PATCH') { requireAdmin(req, 'content.questions.write'); const subject = adminSubjectCatalog.find(item => item.id === adminPointMatch[1]); const chapter = subject?.chapters.find(item => item.id === adminPointMatch[2]); const point = chapter?.points.find(item => item.id === adminPointMatch[3]); if (!subject || !chapter || !point) throw new HttpError(404, 'NOT_FOUND', '考点不存在'); const input = await body(req); const name = String(input.name ?? '').trim(); if (!name) throw new HttpError(422, 'VALIDATION_ERROR', '考点名称不能为空'); point.name = name; return send(res, 200, subject, requestId); }
+    if (adminPointMatch && req.method === 'PATCH') { requireAdmin(req, 'content.questions.write'); const subject = adminSubjectCatalog.find(item => item.id === adminPointMatch[1]); const chapter = subject?.chapters.find(item => item.id === adminPointMatch[2]); const point = chapter?.points.find(item => item.id === adminPointMatch[3]); if (!subject || !chapter || !point) throw new HttpError(404, 'NOT_FOUND', '考点不存在'); const input = await body(req); const name = String(input.name ?? '').trim(); if (!name) throw new HttpError(422, 'VALIDATION_ERROR', '考点名称不能为空'); point.name = name; await persistSubject(subject); return send(res, 200, subject, requestId); }
     const normalizeObjectivePaper = (paper: typeof store.papers[number]) => ({...paper, questionKind: 'objective' as const, questionCount: paper.questionIds.length});
     const normalizeSubjectivePaper = (paper: typeof store.gradingPapers[number]) => ({
       id: paper.id,
@@ -4406,12 +4639,12 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       const volume = String(input.volume ?? '').trim();
       const mode = String(input.mode ?? 'real');
       const durationMinutes = Number(input.durationMinutes);
-      if (!volume || !['real', 'mock', 'chapter'].includes(mode) || !Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 600 || questionIds.some(id => !store.questions.some(question => question.id === id))) {
+      if (!volume || !['real', 'mock', 'chapter', 'marketing', 'advanced'].includes(mode) || !Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 600 || questionIds.some(id => !store.questions.some(question => question.id === id))) {
         throw new HttpError(422, 'VALIDATION_ERROR', '客观题试卷的卷别、模式、时长或所选题目不正确');
       }
-      const paper = {id: `paper-${randomUUID()}`, name, year, volume, mode, durationMinutes, totalScore, questionIds, status: 'draft' as const, version: 1, updatedAt: now};
+      const productId = mode === 'advanced' ? String(input.productId ?? '').trim() : undefined; if (mode === 'advanced' && (!productId || !store.products.some(item => item.id === productId))) throw new HttpError(422, 'VALIDATION_ERROR', '进阶考试必须绑定有效付费商品'); const paper = {id: `paper-${randomUUID()}`, name, year, volume, mode, durationMinutes, totalScore, questionIds, ...(productId ? {productId} : {}), status: 'draft' as const, version: 1, updatedAt: now};
       store.papers.unshift(paper);
-      await persist('insert into content_papers (id, name, exam_year, volume, mode, duration_minutes, total_score, question_ids, status, version, created_by, updated_at) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12)', [paper.id, name, year, volume, mode, durationMinutes, totalScore, JSON.stringify(questionIds), paper.status, paper.version, admin.adminId, now]);
+      await persist('insert into content_papers (id, name, exam_year, volume, mode, duration_minutes, total_score, question_ids, product_id, status, version, created_by, updated_at) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12, $13)', [paper.id, name, year, volume, mode, durationMinutes, totalScore, JSON.stringify(questionIds), paper.productId ?? null, paper.status, paper.version, admin.adminId, now]);
       await persist('insert into admin_audit_logs (admin_user_id, action, resource_type, resource_id, request_id) values ($1, $2, $3, $4, $5)', [admin.adminId, 'paper.create', 'paper', paper.id, requestId]);
       return send(res, 201, normalizeObjectivePaper(paper), requestId);
     }
@@ -4431,14 +4664,14 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
         objectivePaper.name = input.name === undefined ? objectivePaper.name : String(input.name).trim();
         objectivePaper.year = input.year === undefined ? objectivePaper.year : String(input.year).trim();
         objectivePaper.volume = input.volume === undefined ? objectivePaper.volume : String(input.volume).trim();
-        objectivePaper.mode = input.mode === undefined ? objectivePaper.mode : String(input.mode);
+        objectivePaper.mode = input.mode === undefined ? objectivePaper.mode : String(input.mode); const requestedProductId = input.productId === undefined ? objectivePaper.productId : String(input.productId).trim() || undefined; if (objectivePaper.mode === 'advanced' && (!requestedProductId || !store.products.some(item => item.id === requestedProductId))) throw new HttpError(422, 'VALIDATION_ERROR', '进阶考试必须绑定有效付费商品'); objectivePaper.productId = objectivePaper.mode === 'advanced' ? requestedProductId : undefined;
         objectivePaper.durationMinutes = input.durationMinutes === undefined ? objectivePaper.durationMinutes : Number(input.durationMinutes);
         objectivePaper.questionIds = questionIds;
         objectivePaper.totalScore = input.totalScore === undefined ? objectivePaper.totalScore : Number(input.totalScore);
-        if (objectivePaper.name.length < 3 || !/^20\d{2}$/.test(objectivePaper.year) || !objectivePaper.volume || !['real', 'mock', 'chapter'].includes(objectivePaper.mode) || !Number.isInteger(objectivePaper.durationMinutes) || objectivePaper.durationMinutes < 1 || objectivePaper.durationMinutes > 600 || !Number.isInteger(objectivePaper.totalScore) || objectivePaper.totalScore < 1) throw new HttpError(422, 'VALIDATION_ERROR', '客观题试卷信息不正确');
+        if (objectivePaper.name.length < 3 || !/^20\d{2}$/.test(objectivePaper.year) || !objectivePaper.volume || !['real', 'mock', 'chapter', 'marketing', 'advanced'].includes(objectivePaper.mode) || !Number.isInteger(objectivePaper.durationMinutes) || objectivePaper.durationMinutes < 1 || objectivePaper.durationMinutes > 600 || !Number.isInteger(objectivePaper.totalScore) || objectivePaper.totalScore < 1) throw new HttpError(422, 'VALIDATION_ERROR', '客观题试卷信息不正确');
         if (objectivePaper.status === 'published') { objectivePaper.status = 'draft'; objectivePaper.version += 1; }
         objectivePaper.updatedAt = new Date().toISOString();
-        await persist('update content_papers set name = $1, exam_year = $2, volume = $3, mode = $4, duration_minutes = $5, total_score = $6, question_ids = $7::jsonb, status = $8, version = $9, updated_at = $10 where id = $11', [objectivePaper.name, objectivePaper.year, objectivePaper.volume, objectivePaper.mode, objectivePaper.durationMinutes, objectivePaper.totalScore, JSON.stringify(objectivePaper.questionIds), objectivePaper.status, objectivePaper.version, objectivePaper.updatedAt, objectivePaper.id]);
+        await persist('update content_papers set name = $1, exam_year = $2, volume = $3, mode = $4, duration_minutes = $5, total_score = $6, question_ids = $7::jsonb, product_id = $8, status = $9, version = $10, updated_at = $11 where id = $12', [objectivePaper.name, objectivePaper.year, objectivePaper.volume, objectivePaper.mode, objectivePaper.durationMinutes, objectivePaper.totalScore, JSON.stringify(objectivePaper.questionIds), objectivePaper.productId ?? null, objectivePaper.status, objectivePaper.version, objectivePaper.updatedAt, objectivePaper.id]);
         await persist('insert into admin_audit_logs (admin_user_id, action, resource_type, resource_id, request_id) values ($1, $2, $3, $4, $5)', [admin.adminId, 'paper.edit', 'paper', objectivePaper.id, requestId]);
         return send(res, 200, normalizeObjectivePaper(objectivePaper), requestId);
       }
@@ -4573,13 +4806,14 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       return send(res, 200, {items, total: items.length}, requestId);
     }
     if (req.method === 'GET' && path === '/v1/admin/courses') { requireAdmin(req); return send(res, 200, {items: store.courses.map(course => ({...course, status: course.status ?? 'published', studentCount: store.entitlements.filter(item => item.courseId === course.id).length})), total: store.courses.length}, requestId); }
-    if (req.method === 'POST' && path === '/v1/admin/courses') { const admin = requireAdmin(req); const input = await body(req); const title = String(input.title ?? '').trim(); const teacher = String(input.teacher ?? '').trim(); const type = String(input.type ?? 'video'); const lessons = Number(input.lessons ?? 0); if (title.length < 2 || !teacher || !['video', 'audio', 'live', 'mixed'].includes(type) || !Number.isInteger(lessons) || lessons < 1) throw new HttpError(422, 'VALIDATION_ERROR', '课程信息不完整'); const now = new Date().toISOString(); const course = {id: `c-${randomUUID()}`, title, teacher, type: type as 'video' | 'audio' | 'live' | 'mixed', progress: 0, lessons, accent: '#4C4BEA', status: 'draft' as const, updatedAt: now}; store.courses.unshift(course); await persist('insert into courses (id, title, teacher, type, progress, lessons, accent, status, updated_at) values ($1, $2, $3, $4, 0, $5, $6, $7, $8)', [course.id, course.title, course.teacher, course.type, course.lessons, course.accent, course.status, now]); await persist('insert into admin_audit_logs (admin_user_id, action, resource_type, resource_id, request_id) values (, , , , )', [admin.adminId, 'course.create', 'course', course.id, requestId]); return send(res, 201, course, requestId); }
+    if (req.method === 'POST' && path === '/v1/admin/courses') { const admin = requireAdmin(req); const input = await body(req); const title = String(input.title ?? '').trim(); const teacher = String(input.teacher ?? '').trim(); const type = String(input.type ?? 'video'); const lessons = Number(input.lessons ?? 0); const productId = String(input.productId ?? '').trim() || undefined; if (title.length < 2 || !teacher || !['video', 'audio', 'live', 'mixed'].includes(type) || !Number.isInteger(lessons) || lessons < 1 || productId && !store.products.some(item => item.id === productId)) throw new HttpError(422, 'VALIDATION_ERROR', '课程信息不完整'); const now = new Date().toISOString(); const isHot = input.isHot === true; const hotSortOrder = Number(input.hotSortOrder ?? 0); if (!Number.isInteger(hotSortOrder) || hotSortOrder < 0) throw new HttpError(422, 'VALIDATION_ERROR', '热门排序必须是非负整数'); const course = {id: `c-${randomUUID()}`, title, teacher, type: type as 'video' | 'audio' | 'live' | 'mixed', progress: 0, lessons, accent: '#4C4BEA', ...(productId ? {productId} : {}), isHot, hotSortOrder, status: 'draft' as const, updatedAt: now}; store.courses.unshift(course); await persist('insert into courses (id, title, teacher, type, progress, lessons, accent, status, product_id, is_hot, hot_sort_order, updated_at) values ($1, $2, $3, $4, 0, $5, $6, $7, $8, $9, $10, $11)', [course.id, course.title, course.teacher, course.type, course.lessons, course.accent, course.status, course.productId ?? null, course.isHot, course.hotSortOrder, now]); await persist('insert into admin_audit_logs (admin_user_id, action, resource_type, resource_id, request_id) values ($1, $2, $3, $4, $5)', [admin.adminId, 'course.create', 'course', course.id, requestId]); return send(res, 201, course, requestId); }
+    const adminCourseEdit = path.match(/^\/v1\/admin\/courses\/([^/]+)$/); if (adminCourseEdit && req.method === 'PATCH') { const admin = requireAdmin(req); const course = store.courses.find(item => item.id === decodePathSegment(adminCourseEdit[1])); if (!course) throw new HttpError(404, 'NOT_FOUND', '课程不存在'); const input = await body(req); const isHot = input.isHot === undefined ? course.isHot === true : input.isHot === true; const hotSortOrder = input.hotSortOrder === undefined ? course.hotSortOrder ?? 0 : Number(input.hotSortOrder); if (!Number.isInteger(hotSortOrder) || hotSortOrder < 0) throw new HttpError(422, 'VALIDATION_ERROR', '热门排序必须是非负整数'); course.isHot = isHot; course.hotSortOrder = hotSortOrder; course.updatedAt = new Date().toISOString(); await persist('update courses set is_hot=$1, hot_sort_order=$2, updated_at=$3 where id=$4', [isHot, hotSortOrder, course.updatedAt, course.id]); await persist('insert into admin_audit_logs (admin_user_id, action, resource_type, resource_id, request_id) values ($1, $2, $3, $4, $5)', [admin.adminId, 'course.hot.update', 'course', course.id, requestId]); return send(res, 200, course, requestId); }
     const adminCoursePublish = path.match(/^\/v1\/admin\/courses\/([^/]+)\/publish$/); if (adminCoursePublish && req.method === 'POST') { const admin = requireAdmin(req); const course = store.courses.find(item => item.id === adminCoursePublish[1]); if (!course) throw new HttpError(404, 'NOT_FOUND', '课程不存在'); if (!store.courseSections.some(item => item.courseId === course.id)) throw new HttpError(422, 'COURSE_STRUCTURE_REQUIRED', '课程至少需要一个章节才能发布'); course.status = 'published'; course.updatedAt = new Date().toISOString(); await persist('update courses set status = $1, updated_at = $2 where id = $3', [course.status, course.updatedAt, course.id]); await persist('insert into admin_audit_logs (admin_user_id, action, resource_type, resource_id, request_id) values ($1, $2, $3, $4, $5)', [admin.adminId, 'course.publish', 'course', course.id, requestId]); return send(res, 200, course, requestId); }
     const adminCourseSections = path.match(/^\/v1\/admin\/courses\/([^/]+)\/sections$/);
     if (adminCourseSections && req.method === 'GET') { requireAdmin(req); return send(res, 200, {items: store.courseSections.filter(item => item.courseId === adminCourseSections[1]).map(section => ({...section, lessons: store.courseLessons.filter(lesson => lesson.sectionId === section.id)}))}, requestId); }
     if (adminCourseSections && req.method === 'POST') { const admin = requireAdmin(req); const course = store.courses.find(item => item.id === adminCourseSections[1]); const input = await body(req); const title = String(input.title ?? '').trim(); if (!course || title.length < 2) throw new HttpError(422, 'VALIDATION_ERROR', '课程或章节名称不正确'); const now = new Date().toISOString(); const section = {id: `section-${randomUUID()}`, courseId: course.id, title, sortOrder: Number(input.sortOrder ?? store.courseSections.filter(item => item.courseId === course.id).length), updatedAt: now}; store.courseSections.push(section); await persist('insert into course_sections (id, course_id, title, sort_order, updated_at) values ($1, $2, $3, $4, $5)', [section.id, section.courseId, section.title, section.sortOrder, now]); await persist('insert into admin_audit_logs (admin_user_id, action, resource_type, resource_id, request_id) values ($1, $2, $3, $4, $5)', [admin.adminId, 'course.section.create', 'course_section', section.id, requestId]); return send(res, 201, section, requestId); }
     const adminCourseLessons = path.match(/^\/v1\/admin\/courses\/([^/]+)\/lessons$/);
-    if (adminCourseLessons && req.method === 'POST') { const admin = requireAdmin(req); const input = await body(req); const sectionId = String(input.sectionId ?? ''); const section = store.courseSections.find(item => item.id === sectionId && item.courseId === adminCourseLessons[1]); const title = String(input.title ?? '').trim(); const mediaKind = String(input.mediaKind ?? 'video'); if (!section || title.length < 2 || !['video', 'audio', 'live', 'document'].includes(mediaKind)) throw new HttpError(422, 'VALIDATION_ERROR', '课时信息不正确'); const handoutReference = typeof input.handoutReference === 'string' ? input.handoutReference.trim() : undefined; const now = new Date().toISOString(); const lesson = {id: `lesson-${randomUUID()}`, sectionId, title, mediaKind: mediaKind as 'video' | 'audio' | 'live' | 'document', mediaReference: typeof input.mediaReference === 'string' ? input.mediaReference.trim() : undefined, handoutReference, durationSeconds: Number(input.durationSeconds ?? 0), trialEnabled: input.trialEnabled === true, sortOrder: Number(input.sortOrder ?? store.courseLessons.filter(item => item.sectionId === sectionId).length), updatedAt: now}; store.courseLessons.push(lesson); await persist('insert into course_lessons (id, section_id, title, media_kind, media_reference, handout_reference, duration_seconds, trial_enabled, sort_order, updated_at) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)', [lesson.id, lesson.sectionId, lesson.title, lesson.mediaKind, lesson.mediaReference ?? null, lesson.handoutReference ?? null, lesson.durationSeconds, lesson.trialEnabled, lesson.sortOrder, now]); await persist('insert into admin_audit_logs (admin_user_id, action, resource_type, resource_id, request_id) values ($1, $2, $3, $4, $5)', [admin.adminId, 'course.lesson.create', 'course_lesson', lesson.id, requestId]); return send(res, 201, lesson, requestId); }
+    if (adminCourseLessons && req.method === 'POST') { const admin = requireAdmin(req); const input = await body(req); const sectionId = String(input.sectionId ?? ''); const section = store.courseSections.find(item => item.id === sectionId && item.courseId === adminCourseLessons[1]); const title = String(input.title ?? '').trim(); const mediaKind = String(input.mediaKind ?? 'video'); if (!section || title.length < 2 || !['video', 'audio', 'live', 'document'].includes(mediaKind)) throw new HttpError(422, 'VALIDATION_ERROR', '课时信息不正确'); const handoutReference = typeof input.handoutReference === 'string' ? input.handoutReference.trim() : undefined; const now = new Date().toISOString(); const materialKind: 'article' | 'material' = input.materialKind === 'article' ? 'article' : 'material'; const materialCategory = typeof input.materialCategory === 'string' ? input.materialCategory.trim() || undefined : undefined; const downloadable = materialKind === 'material' && input.downloadable === true; const articleContent = typeof input.articleContent === 'string' ? input.articleContent.trim() : undefined; const lesson = {id: `lesson-${randomUUID()}`, sectionId, title, mediaKind: mediaKind as 'video' | 'audio' | 'live' | 'document', mediaReference: typeof input.mediaReference === 'string' ? input.mediaReference.trim() : undefined, handoutReference, durationSeconds: Number(input.durationSeconds ?? 0), trialEnabled: input.trialEnabled === true, sortOrder: Number(input.sortOrder ?? store.courseLessons.filter(item => item.sectionId === sectionId).length), materialCategory, materialKind, downloadable, articleContent, updatedAt: now}; store.courseLessons.push(lesson); await persist('insert into course_lessons (id, section_id, title, media_kind, media_reference, handout_reference, duration_seconds, trial_enabled, sort_order, material_category, material_kind, downloadable, article_content, updated_at) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)', [lesson.id, lesson.sectionId, lesson.title, lesson.mediaKind, lesson.mediaReference ?? null, lesson.handoutReference ?? null, lesson.durationSeconds, lesson.trialEnabled, lesson.sortOrder, lesson.materialCategory ?? null, lesson.materialKind, lesson.downloadable, lesson.articleContent ?? null, now]); await persist('insert into admin_audit_logs (admin_user_id, action, resource_type, resource_id, request_id) values ($1, $2, $3, $4, $5)', [admin.adminId, 'course.lesson.create', 'course_lesson', lesson.id, requestId]); return send(res, 201, lesson, requestId); }
     const adminCourseLesson = path.match(/^\/v1\/admin\/courses\/([^/]+)\/lessons\/([^/]+)$/);
     if (adminCourseLesson && req.method === 'PATCH') {
       const admin = requireAdmin(req);
@@ -4640,6 +4874,24 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
     if (req.method === 'POST' && path === '/v1/webhooks/tencent/live') { const secret = process.env.TENCENT_LIVE_CALLBACK_SECRET; if (!secret || req.headers['x-live-callback-secret'] !== secret) throw new HttpError(401, 'UNAUTHORIZED', '直播回调鉴权失败'); const input = await body(req); const providerRoomId = String(input.providerRoomId ?? input.streamName ?? '').trim(); const session = store.liveSessions.find(item => item.providerRoomId === providerRoomId); if (!session) return send(res, 202, {accepted: true, matched: false}, requestId); const event = String(input.event ?? input.status ?? ''); if (['publish', 'online', 'live'].includes(event)) session.status = 'live'; else if (['record', 'recorded', 'completed', 'offline'].includes(event)) { session.status = 'completed'; if (typeof input.recordingUrl === 'string') session.recordingUrl = input.recordingUrl.trim() || undefined; } session.updatedAt = new Date().toISOString(); await persist('update live_sessions set status = $1, recording_url = $2, updated_at = $3 where id = $4', [session.status, session.recordingUrl ?? null, session.updatedAt, session.id]); return send(res, 200, {accepted: true, matched: true, status: session.status}, requestId); }
     if (req.method === 'POST' && path === '/v1/admin/courses/live-sessions') { const admin = requireAdmin(req); const input = await body(req); const courseId = String(input.courseId ?? '').trim(); const lessonId = String(input.lessonId ?? '').trim(); const course = store.courses.find(item => item.id === courseId); const lesson = store.courseLessons.find(item => item.id === lessonId); const section = lesson && store.courseSections.find(item => item.id === lesson.sectionId && item.courseId === courseId); const title = String(input.title ?? '').trim(); const teacher = String(input.teacher ?? '').trim(); const startsAt = String(input.startsAt ?? ''); const endsAt = String(input.endsAt ?? ''); if (!course || !lesson || !section || lesson.mediaKind !== 'live' || title.length < 2 || teacher.length < 2 || !Number.isFinite(Date.parse(startsAt)) || !Number.isFinite(Date.parse(endsAt)) || Date.parse(endsAt) <= Date.parse(startsAt)) throw new HttpError(422, 'VALIDATION_ERROR', '直播场次或直播课件信息不正确'); const now = new Date().toISOString(); const session = {id: `live-${randomUUID()}`, courseId, lessonId, title, teacher, startsAt: new Date(startsAt).toISOString(), endsAt: new Date(endsAt).toISOString(), providerRoomId: typeof input.providerRoomId === 'string' ? input.providerRoomId.trim() || undefined : undefined, status: 'scheduled' as const, notificationStatus: 'unavailable' as const, playUrl: typeof input.playUrl === 'string' ? input.playUrl.trim() || undefined : undefined, recordingUrl: undefined, updatedAt: now}; store.liveSessions.unshift(session); await persist('insert into live_sessions (id, course_id, lesson_id, title, teacher, starts_at, ends_at, provider_room_id, play_url, recording_url, status, notification_status, created_by, updated_at) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)', [session.id, courseId, lessonId, title, teacher, session.startsAt, session.endsAt, session.providerRoomId ?? null, session.playUrl ?? null, null, session.status, session.notificationStatus, admin.adminId, now]); await persist('insert into admin_audit_logs (admin_user_id, action, resource_type, resource_id, request_id) values ($1,$2,$3,$4,$5)', [admin.adminId, 'course.live_session.create', 'live_session', session.id, requestId]); return send(res, 201, session, requestId); }
     if (req.method === 'GET' && path === '/v1/admin/learning/records') { requireAdmin(req); const items = store.submissions.map(item => ({...item, eventType: 'question_submission'})); return send(res, 200, {items, total: items.length}, requestId); }
+    if (req.method === 'GET' && path === '/v1/admin/learning/early-access') {
+      requireAdmin(req, 'learning.stages.read');
+      return send(res, 200, {items: store.learningEarlyAccessRequests.map(item => ({...item, plan: store.learningPlans.find(plan => plan.id === item.planId)})), total: store.learningEarlyAccessRequests.length}, requestId);
+    }
+    const adminEarlyAccessMatch = path.match(/^\/v1\/admin\/learning\/early-access\/([^/]+)\/(approve|reject)$/);
+    if (adminEarlyAccessMatch && req.method === 'POST') {
+      const admin = requireAdmin(req, 'learning.stages.write');
+      const request = store.learningEarlyAccessRequests.find(item => item.id === decodePathSegment(adminEarlyAccessMatch[1]));
+      if (!request) throw new HttpError(404, 'NOT_FOUND', '提前学习申请不存在');
+      if (request.status !== 'pending') throw new HttpError(409, 'EARLY_ACCESS_ALREADY_REVIEWED', '该申请已经处理');
+      const input = await body(req); const reason = String(input.reason ?? '').trim();
+      request.status = adminEarlyAccessMatch[2] === 'approve' ? 'approved' : 'rejected'; request.reviewedBy = admin.adminId; request.reviewedAt = new Date().toISOString();
+      const plan = store.learningPlans.find(item => item.id === request.planId);
+      if (request.status === 'approved' && plan) { plan.earlyUnlockedThrough = request.requestedThrough; await persist('update learning_plans set early_unlocked_through=$1,updated_at=$2 where id=$3', [plan.earlyUnlockedThrough, request.reviewedAt, plan.id]); }
+      await persist('update learning_early_access_requests set status=$1,reviewed_by=$2,reviewed_at=$3,reason=coalesce(nullif($4,\'\'),reason) where id=$5', [request.status, admin.adminId, request.reviewedAt, reason, request.id]);
+      await persist('insert into admin_audit_logs (admin_user_id,action,resource_type,resource_id,reason,request_id) values ($1,$2,$3,$4,$5,$6)', [admin.adminId, `learning.early_access.${request.status}`, 'learning_early_access_request', request.id, reason || request.status, requestId]);
+      return send(res, 200, {...request, plan}, requestId);
+    }
     if (req.method === 'GET' && path === '/v1/admin/learning/plans') { requireAdmin(req, 'learning.stages.read'); return send(res, 200, {items: store.learningPlans.map(plan => ({...plan, taskCount: store.learningTasks.filter(task => task.planId === plan.id).length})), total: store.learningPlans.length}, requestId); }
     const adminLearningPlanDetail = path.match(/^\/v1\/admin\/learning\/plans\/([^/]+)$/);
     if (adminLearningPlanDetail && req.method === 'GET') {
@@ -4788,6 +5040,16 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       const taxonomyNodes = store.learningQuestionTaxonomyNodes.filter(node => !category || node.category === category);
       return send(res, 200, {items, total: items.length, stats: {total: all.length, objective: all.filter(item => item.category === 'objective').length, subjective: all.filter(item => item.category === 'subjective').length, draft: all.filter(item => item.status === 'draft').length, published: all.filter(item => item.status === 'published').length, disabled: all.filter(item => item.status === 'disabled').length}, taxonomy: {subjects: unique(items.map(item => item.subject)), columns: unique(items.map(item => item.columnName)), knowledgePoints: unique(items.map(item => item.knowledgePoint)), subKnowledgePoints: unique(items.map(item => item.subKnowledgePoint ?? ''))}, taxonomyNodes}, requestId);
     }
+    if (req.method === 'GET' && path === '/v1/admin/learning-assessment-papers') { requireAdmin(req, 'learning.questions.read'); return send(res, 200, {items: store.learningAssessmentPapers, total: store.learningAssessmentPapers.length}, requestId); }
+    if (req.method === 'POST' && path === '/v1/admin/learning-assessment-papers') {
+      const admin = requireAdmin(req, 'learning.questions.write'); const input = await body(req); const title = String(input.title ?? '').trim(); const subjectId = String(input.subjectId ?? '').trim(); const questionIds = Array.isArray(input.questionIds) ? [...new Set(input.questionIds.map(String).map(id => id.trim()).filter(Boolean))] : []; const durationMinutes = Number(input.durationMinutes ?? 60);
+      if (title.length < 2 || !subjectId || !questionIds.length || !Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 300) throw new HttpError(422, 'VALIDATION_ERROR', '学习中心试卷信息不完整');
+      if (questionIds.some(id => !store.learningQuestionBankQuestions.some(q => q.id === id && q.category === 'objective' && q.status === 'published'))) throw new HttpError(422, 'LEARNING_CONTENT_NOT_FOUND', '试卷只能选择已发布的学习中心客观题');
+      const now = new Date().toISOString(); const paper = {id: `learning-paper-${randomUUID()}`, title, subjectId, questionIds, durationMinutes, status: 'draft' as const, createdAt: now, updatedAt: now};
+      await persistAdminMutation([{text: 'insert into learning_assessment_papers (id,title,subject_id,question_ids,duration_minutes,status,created_by,created_at,updated_at) values ($1,$2,$3,$4::jsonb,$5,$6,$7,$8,$8)', values: [paper.id, paper.title, paper.subjectId, JSON.stringify(paper.questionIds), paper.durationMinutes, paper.status, admin.adminId, now]}], [admin.adminId, 'learning_assessment_paper.create', 'learning_assessment_paper', paper.id, '创建学习中心单科测试试卷', requestId]); store.learningAssessmentPapers.unshift(paper); return send(res, 201, paper, requestId);
+    }
+    const learningAssessmentPaperAction = path.match(/^\/v1\/admin\/learning-assessment-papers\/([^/]+)\/(publish|archive)$/);
+    if (learningAssessmentPaperAction && req.method === 'POST') { const admin = requireAdmin(req, 'learning.questions.publish'); const paper = store.learningAssessmentPapers.find(item => item.id === decodePathSegment(learningAssessmentPaperAction[1])); if (!paper) throw new HttpError(404, 'NOT_FOUND', '学习中心试卷不存在'); paper.status = learningAssessmentPaperAction[2] === 'publish' ? 'published' : 'archived'; paper.updatedAt = new Date().toISOString(); await persistAdminMutation([{text: 'update learning_assessment_papers set status=$1,updated_at=$2 where id=$3', values: [paper.status, paper.updatedAt, paper.id]}], [admin.adminId, `learning_assessment_paper.${paper.status}`, 'learning_assessment_paper', paper.id, '更新学习中心试卷状态', requestId]); return send(res, 200, paper, requestId); }
     if (req.method === 'GET' && path === '/v1/admin/learning-question-bank/taxonomy') {
       requireAdmin(req);
       const category = url.searchParams.get('category') as LearningQuestionCategory | null;
@@ -5355,19 +5617,32 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
     const adminExportRetry = path.match(/^\/v1\/admin\/exports\/([^/]+)\/retry$/); if (adminExportRetry && req.method === 'POST') { const admin = requireAdmin(req, 'analytics.export'); const job = adminExportJobs.map(exportJobRecord).find(item => item.id === decodePathSegment(adminExportRetry[1])); if (!job) throw new HttpError(404, 'NOT_FOUND', '导出任务不存在'); await expireAdminExportIfNeeded(job); if (!['failed', 'expired'].includes(job.status)) throw new HttpError(409, 'EXPORT_NOT_RETRYABLE', '当前状态不可重试'); job.status = 'queued'; job.errorMessage = undefined; job.content = undefined; job.fileUrl = undefined; job.expiresAt = undefined; job.completedAt = undefined; job.updatedAt = new Date().toISOString(); await persist('update admin_export_jobs set status = $1, file_url = null, expires_at = null, error_message = null, completed_at = null, updated_at = $2 where id = $3', [job.status, job.updatedAt, job.id]); await persist('insert into admin_audit_logs (admin_user_id, action, resource_type, resource_id, reason, request_id) values ($1, $2, $3, $4, $5, $6)', [admin.adminId, 'export.retry', 'admin_export_job', job.id, 'manual retry', requestId]); queueMicrotask(() => { void processAdminExportJob(job.id); }); return send(res, 202, publicExportJob(job), requestId); }
     const adminExportDownload = path.match(/^\/v1\/admin\/exports\/([^/]+)\/download$/); if (adminExportDownload && req.method === 'GET') { const admin = requireAdmin(req, 'analytics.export'); const job = adminExportJobs.map(exportJobRecord).find(item => item.id === decodePathSegment(adminExportDownload[1])); if (!job) throw new HttpError(404, 'NOT_FOUND', '导出任务不存在'); await expireAdminExportIfNeeded(job); if (job.status === 'expired') throw new HttpError(410, 'EXPORT_EXPIRED', '导出文件已过期，请重新生成'); if (job.status !== 'completed' || !job.content) throw new HttpError(409, 'EXPORT_NOT_READY', '导出文件尚未生成', {status: job.status}); await persist('insert into admin_audit_logs (admin_user_id, action, resource_type, resource_id, reason, request_id) values ($1, $2, $3, $4, $5, $6)', [admin.adminId, 'export.download', 'admin_export_job', job.id, 'downloaded', requestId]); const headers = (res as ServerResponse & {debaoHeaders?: Record<string, string>}).debaoHeaders ?? {}; res.writeHead(200, {'content-type': job.contentType ?? 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="debao-${job.resourceType}-${job.id}.csv"`, 'cache-control': 'no-store', 'x-request-id': requestId, 'access-control-allow-origin': '*', ...headers}); res.end(job.content); return;
     }
-    if (req.method === 'GET' && path === '/v1/admin/overview') { requireAdmin(req); return send(res, 200, {users: 1, courses: store.courses.length, products: store.products.length, orders: store.orders.length, submissions: store.submissions.length, gradingQueue: store.grading.filter(item => item.status === 'queued').length}, requestId); }
+    if (req.method === 'GET' && path === '/v1/admin/overview') { requireAdmin(req); return send(res, 200, {users: store.profiles.size, courses: store.courses.length, products: store.products.length, orders: store.orders.length, submissions: store.submissions.length, gradingQueue: store.grading.filter(item => item.status === 'queued').length}, requestId); }
     if (req.method === 'GET' && path === '/v1/admin/audit-logs') { requireAdmin(req, 'audit.read'); return send(res, 200, {items: adminAuditLogs, total: adminAuditLogs.length}, requestId); }
-    if (req.method === 'GET' && path === '/v1/admin/settings') { requireAdmin(req, 'system.settings.read'); return send(res, 200, {examYear: '2026', refundReviewThreshold: adminRefundDualReviewThreshold, featureFlags: {ai: true, forum: true}}, requestId); }
+    if (req.method === 'GET' && path === '/v1/admin/settings') { requireAdmin(req, 'system.settings.read'); return send(res, 200, await adminSettingsView(), requestId); }
     if (req.method === 'PATCH' && path === '/v1/admin/settings') {
       const admin = requireAdmin(req, 'system.settings.write');
       const input = await body(req);
-      if (input.refundReviewThreshold === undefined) throw new HttpError(422, 'VALIDATION_ERROR', '至少提供退款复核金额阈值');
+      if (input.refundReviewThreshold === undefined && input.examDate === undefined && input.featureFlags === undefined) throw new HttpError(422, 'VALIDATION_ERROR', '至少提供一项配置');
+      if (input.featureFlags !== undefined) {
+        if (!input.featureFlags || typeof input.featureFlags !== 'object' || Array.isArray(input.featureFlags)) throw new HttpError(422, 'VALIDATION_ERROR', '功能开关格式不正确');
+        const flags = input.featureFlags as Record<string, unknown>;
+        const allowed = ['objectiveBank', 'objectiveExam', 'studyMaterials', 'hotCourses'];
+        const statements = allowed.filter(key => flags[key] !== undefined).map(key => ({text: 'insert into admin_system_settings (setting_key, setting_value, updated_by, updated_at) values ($1, $2, $3, now()) on conflict (setting_key) do update set setting_value = excluded.setting_value, updated_by = excluded.updated_by, updated_at = now()', values: [`feature.${key}`, flags[key] === true ? 'true' : 'false', admin.adminId]}));
+        if (statements.length) await persistAdminMutation(statements, [admin.adminId, 'settings.feature_flags.update', 'admin_system_setting', 'feature-flags', JSON.stringify(flags), requestId]);
+      }
+      if (input.examDate !== undefined) {
+        const date = String(input.examDate);
+        if (date && (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date)))) throw new HttpError(422, 'VALIDATION_ERROR', '考试日期不正确');
+        await persistAdminMutation([{text: 'insert into admin_system_settings (setting_key, setting_value, updated_by) values ($1,$2,$3) on conflict (setting_key) do update set setting_value=excluded.setting_value, updated_by=excluded.updated_by, updated_at=now()', values: ['exam_date', date, admin.adminId]}], [admin.adminId, 'settings.exam_date.update', 'admin_system_setting', 'exam_date', date, requestId]);
+      }
+      if (input.refundReviewThreshold === undefined) return send(res, 200, await adminSettingsView(), requestId);
       const threshold = normalizeRefundReviewThreshold(input.refundReviewThreshold);
       const previous = adminRefundDualReviewThreshold;
       await persist('insert into admin_system_settings (setting_key, setting_value, updated_by, updated_at) values ($1, $2, $3, now()) on conflict (setting_key) do update set setting_value = excluded.setting_value, updated_by = excluded.updated_by, updated_at = now()', ['refund_review_threshold', String(threshold), admin.adminId]);
       adminRefundDualReviewThreshold = threshold;
       await persist('insert into admin_audit_logs (admin_user_id, action, resource_type, resource_id, reason, before_summary, after_summary, request_id) values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8)', [admin.adminId, 'settings.refund_review_threshold.update', 'admin_system_setting', 'refund_review_threshold', `退款复核阈值由 ${previous} 调整为 ${threshold}`, JSON.stringify({refundReviewThreshold: previous}), JSON.stringify({refundReviewThreshold: threshold}), requestId]);
-      return send(res, 200, {examYear: '2026', refundReviewThreshold: adminRefundDualReviewThreshold, featureFlags: {ai: true, forum: true}}, requestId);
+      return send(res, 200, await adminSettingsView(), requestId);
     }
     if (req.method === 'GET' && path === '/v1/admin/health') { requireAdmin(req, 'system.health.read'); const status = await infrastructure.status(); return send(res, 200, {api: 'ok', database: status.postgresConfigured ? (status.postgresReachable ? 'available' : 'unreachable') : 'unconfigured', redis: status.redisConfigured ? (status.redisReachable ? 'available' : 'unreachable') : 'unconfigured', providers: {ai: aiAdapter.name, push: pushAdapter.name}}, requestId); }
     if (req.method === 'POST' && path === '/v1/admin/push/test') { requireAdmin(req); const input = await body(req); const token = String(input.deviceToken ?? ''); if (!token) throw new HttpError(422, 'VALIDATION_ERROR', 'deviceToken 不能为空'); try { return send(res, 200, await pushAdapter.send(token, String(input.title ?? '得宝通知'), String(input.body ?? '测试推送')), requestId); } catch (error) { throw adapterFailure(pushAdapter.name, error); } }

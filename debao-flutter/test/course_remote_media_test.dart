@@ -26,7 +26,7 @@ void main() {
     expect(find.byKey(const ValueKey('video-media-retry')), findsOneWidget);
   });
 
-  testWidgets('远端音频未配置时支持重试并显示授权后的播放器', (tester) async {
+  testWidgets('远端音频重试成功后提供真实地址且不展示模拟播放器', (tester) async {
     var available = false;
     await tester.pumpWidget(ProviderScope(
       overrides: [
@@ -46,9 +46,10 @@ void main() {
     available = true;
     await tester.tap(find.byKey(const ValueKey('audio-media-retry')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('audio-player-screen')), findsOneWidget);
-    expect(
-        find.byKey(const ValueKey('media-authorized-notice')), findsOneWidget);
+    expect(find.text('已获取真实媒体授权'), findsOneWidget);
+    expect(find.text('打开课程媒体'), findsOneWidget);
+    expect(find.byKey(const ValueKey('audio-player-screen')), findsNothing);
+    expect(find.text('民法典第208条：不动产登记生效'), findsNothing);
   });
 
   testWidgets('远端直播未配置时显示服务端原因且倒计时不继续运行', (tester) async {

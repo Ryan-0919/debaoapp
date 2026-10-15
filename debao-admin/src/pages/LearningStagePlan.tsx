@@ -5,13 +5,13 @@ import {useParams} from 'react-router-dom';
 import {createLearningStagePlanItem, deleteLearningStagePlanItem, getLearningQuestionTaxonomy, getLearningStagePlan, previewLearningStagePlanWeek, publishLearningStagePlan, updateLearningStagePlan, updateLearningStagePlanItem, type AdminLearningPlanContentType, type AdminLearningStagePlanConfig, type AdminLearningStagePlanItem, type AdminLearningStageWeeklyPreview, type AdminLearningTaxonomyNode} from '@/services/api';
 
 type ItemValues = Pick<AdminLearningStagePlanItem, 'contentType' | 'contentId' | 'knowledgePointIds' | 'title' | 'description' | 'weekDay' | 'questionCount' | 'sortOrder' | 'required'>;
-const contentLabels: Record<AdminLearningPlanContentType, string> = {course: '站外课程（回来打卡）', question: '客观题训练', subjective: '主观题训练', assessment: '周考/阶段测验', card: '学习卡片', task: '其他学习任务'};
+const contentLabels: Record<AdminLearningPlanContentType, string> = {course: '站外课程（回来打卡）', question: '客观题训练', subjective: '主观题训练', assessment: '单科测试（科目结束后）', card: '学习卡片', task: '其他学习任务'};
 const contentHints: Record<AdminLearningPlanContentType, string> = {
   course: '站外课程不上传视频，也不关联站内课程；用户按文案完成外部课程后回到 App 打卡。',
   card: '选择已经发布的学习卡片，并关联前面听课覆盖的考点；完成课程打卡后解锁。',
   question: '选择题库中的题目或题组，并关联前面听课覆盖的考点；留空时只从这些考点按用户画像自动抽题。',
   subjective: '填写已发布主观题题库题目 ID，并关联前面听课覆盖的考点。',
-  assessment: '填写已发布客观题试卷 ID，前置学习内容完成后进入限时测验。',
+  assessment: '老师先在试卷管理中创建并发布该科目试卷，再把试卷 ID 放在这里。系统会在该科目之前的学习内容全部完成后，自动把限时单科测试提供给用户。',
   task: '用于记录其他需要用户完成的学习事项。',
 };
 
@@ -54,7 +54,7 @@ export default function LearningStagePlan() {
   const publish = async () => { setPublishLoading(true); try { const updated = await publishLearningStagePlan(stageId); setConfig(updated); message.success('一周任务模板已发布'); } catch (error) { message.error(error instanceof Error ? error.message : '发布失败'); } finally { setPublishLoading(false); } };
 
   return <Space direction="vertical" size={20} style={{display: 'flex'}}>
-    <div><Space align="center"><Typography.Title level={3} style={{margin: 0}}>{stageName} · 阶段学习内容</Typography.Title>{config ? <Tag color={config.status === 'published' ? 'green' : 'orange'}>{config.status === 'published' ? '已发布' : '草稿'}</Tag> : null}</Space><Typography.Paragraph type="secondary" style={{margin: '6px 0 0'}}>这里维护团队给用户安排的“一周模板”。每天的任务由列表顺序或“本周第几天”决定，用户报班后从起始日期生成未来 7 天任务。</Typography.Paragraph></div>
+    <div><Space align="center"><Typography.Title level={3} style={{margin: 0}}>{stageName} · 阶段学习内容</Typography.Title>{config ? <Tag color={config.status === 'published' ? 'green' : 'orange'}>{config.status === 'published' ? '已发布' : '草稿'}</Tag> : null}</Space><Typography.Paragraph type="secondary" style={{margin: '6px 0 0'}}>这里维护团队给用户安排的“一周模板”。单科测试放在该科目最后一项内容之后，用户完成前置内容后系统会自动生成并展示试卷。</Typography.Paragraph></div>
     <Card title="解锁与抽题规则" extra={<Space><Button icon={<EyeOutlined />} loading={previewLoading} onClick={() => void openWeeklyPreview()}>预览本周任务</Button><Button type="primary" icon={<RocketOutlined />} loading={publishLoading} disabled={!items.length} onClick={() => void publish()}>发布模板</Button></Space>}>
       {config ? <Form form={rulesForm} layout="inline" onFinish={saveRules}><Form.Item label="卡片出现规则" name="cardUnlockRule"><Select style={{width: 190}} options={[{value: 'after_course_checkin', label: '站外课程打卡后'}, {value: 'after_previous_content', label: '上一项内容完成后'}, {value: 'immediate', label: '立即出现'}]} /></Form.Item><Form.Item label="全局题目数量" name="questionPushCount" rules={[{required: true, min: 1, max: 50}]}><InputNumber min={1} max={50} precision={0} /></Form.Item><Button type="primary" htmlType="submit">保存规则</Button></Form> : null}
       <Alert showIcon type="info" style={{marginTop: 12}} message="题目会根据首次诊断画像自动选择难度；每个题目任务可在编辑时单独覆盖题目数量。" />

@@ -1,3 +1,4 @@
+import '../../core/config/app_environment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +10,7 @@ import '../../data/providers.dart';
 import '../../shared/route_back_button.dart';
 import '../tools/study_tools_screens.dart';
 import 'learning_task_screen.dart';
+import 'learning_inquiries_screen.dart';
 export 'learning_task_screen.dart';
 
 /// The learner-facing entry for 得恩私教.  The screen deliberately keeps the
@@ -16,7 +18,8 @@ export 'learning_task_screen.dart';
 /// what the next action is, while the server remains the source of truth for
 /// purchase access, task ordering and unlock state.
 class LearningCenterScreen extends StatelessWidget {
-  const LearningCenterScreen({super.key, this.remoteEnabled = false});
+  const LearningCenterScreen(
+      {super.key, this.remoteEnabled = remoteDataDefault});
   final bool remoteEnabled;
 
   @override
@@ -209,6 +212,16 @@ class _CompletedCenter extends ConsumerWidget {
                   assignment: state.result!.assignment!,
                   className: state.classTypeName),
             const SizedBox(height: 12),
+            ListTile(
+              leading: const Icon(Icons.question_answer_outlined),
+              title: const Text('我的答疑'),
+              subtitle: const Text('查看错因提问和老师回复'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const LearningInquiriesScreen())),
+            ),
             Row(children: [
               const Expanded(
                   child: Text('本周学习任务',

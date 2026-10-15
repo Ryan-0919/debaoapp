@@ -18,12 +18,6 @@
 @import integration_test;
 #endif
 
-#if __has_include(<polyv_live_scenes/PolyvLiveScenesPlugin.h>)
-#import <polyv_live_scenes/PolyvLiveScenesPlugin.h>
-#else
-@import polyv_live_scenes;
-#endif
-
 #if __has_include(<url_launcher_ios/URLLauncherPlugin.h>)
 #import <url_launcher_ios/URLLauncherPlugin.h>
 #else
@@ -41,7 +35,6 @@
 + (void)registerWithRegistry:(NSObject<FlutterPluginRegistry>*)registry {
   [FlutterSecureStoragePlugin registerWithRegistrar:[registry registrarForPlugin:@"FlutterSecureStoragePlugin"]];
   [IntegrationTestPlugin registerWithRegistrar:[registry registrarForPlugin:@"IntegrationTestPlugin"]];
-  [PolyvLiveScenesPlugin registerWithRegistrar:[registry registrarForPlugin:@"PolyvLiveScenesPlugin"]];
   [URLLauncherPlugin registerWithRegistrar:[registry registrarForPlugin:@"URLLauncherPlugin"]];
   [WebViewFlutterPlugin registerWithRegistrar:[registry registrarForPlugin:@"WebViewFlutterPlugin"]];
 }

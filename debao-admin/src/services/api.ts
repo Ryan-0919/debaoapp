@@ -1,6 +1,20 @@
 import type { paths } from "./openapi";
 
 export type AdminApiPaths = paths;
+export interface LearningInquiry {
+  id: string; userId: string; reportId: string; questionId: string;
+  studentName: string; question: {stem: string; options: string[]; answers: string[]; correctAnswers: string[]; analysis: string};
+  reason: string; status: "pending" | "answered"; reply?: string;
+  teacherName?: string; createdAt: string; repliedAt?: string;
+}
+export const getLearningInquiries = () =>
+  request<LearningInquiry[]>("/v1/admin/learning-inquiries");
+export const replyLearningInquiry = (id: string, reply: string, teacherName: string) =>
+  request<LearningInquiry>(`/v1/admin/learning-inquiries/${encodeURIComponent(id)}/reply`,
+    {method: "POST", body: JSON.stringify({reply, teacherName})});
+export interface EarlyAccessRequest { id: string; userId: string; planId: string; requestedThrough: string; status: "pending" | "approved" | "rejected"; reason?: string; createdAt: string; plan?: {title?: string}; }
+export const getEarlyAccessRequests = () => request<{items: EarlyAccessRequest[]; total: number}>('/v1/admin/learning/early-access');
+export const reviewEarlyAccessRequest = (id: string, approved: boolean, reason = '') => request<EarlyAccessRequest>(`/v1/admin/learning/early-access/${encodeURIComponent(id)}/${approved ? 'approve' : 'reject'}`, {method: 'POST', body: JSON.stringify({reason})});
 
 export interface AdminUser {
   id: string;
@@ -175,6 +189,7 @@ export interface AdminPaper {
   questionIds: string[];
   questionKind: "objective" | "subjective";
   subjectId?: string;
+  productId?: string;
   questionCount?: number;
   status?: string;
   version?: number;
@@ -217,6 +232,9 @@ export interface AdminCourse {
   lessons: number;
   studentCount?: number;
   status?: string;
+  productId?: string;
+  isHot?: boolean;
+  hotSortOrder?: number;
 }
 export interface AdminCourseLesson {
   id: string;
@@ -227,6 +245,10 @@ export interface AdminCourseLesson {
   handoutReference?: string;
   durationSeconds: number;
   trialEnabled: boolean;
+  materialCategory?: string;
+  materialKind?: "article" | "material";
+  downloadable?: boolean;
+  articleContent?: string;
   sortOrder: number;
   updatedAt: string;
 }
@@ -417,6 +439,7 @@ export interface AdminAuditLog {
 }
 export interface AdminSettings {
   examYear: string;
+  examDate?: string;
   refundReviewThreshold: number;
   featureFlags: Record<string, boolean>;
 }
@@ -683,6 +706,7 @@ export interface AdminLearningQuestion {
   analysis: string;
   explanationMediaType?: "audio" | "video";
   explanationMediaReference?: string;
+  explanationMediaVisible?: boolean;
   caseMaterial?: string;
   subQuestions: AdminLearningSubQuestion[];
   estimatedMinutes: number;
@@ -783,6 +807,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         `请求失败（${response.status}）`,
     );
   return payload.data ?? payload;
+}
+
+export async function uploadAdminCourseMaterial(file: File) {
+  const csrf = typeof window !== "undefined" ? window.sessionStorage.getItem("debao_admin_csrf") : null;
+  const response = await fetch("/v1/admin/course-materials/upload", {
+    method: "POST",
+    credentials: "include",
+    body: file,
+    headers: {
+      "content-type": file.type || "application/octet-stream",
+      "x-file-name": encodeURIComponent(file.name),
+      ...(csrf ? {"x-csrf-token": csrf} : {}),
+    },
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error?.message ?? payload?.message ?? `上传失败（${response.status}）`);
+  return (payload.data ?? payload) as {id: string; filename: string; sizeBytes: number; contentType: string; reference: string};
 }
 
 export function getCurrentAdmin() {
@@ -1058,6 +1099,10 @@ export function deleteLearningStage(id: string) {
 export function getLearningStagePlan(stageId: string) {
   return request<{stage: AdminLearningStage; config: AdminLearningStagePlanConfig; items: AdminLearningStagePlanItem[]}>(`/v1/admin/learning-coach/stages/${encodeURIComponent(stageId)}/plan`);
 }
+export interface LearningAssessmentPaper { id: string; title: string; subjectId: string; questionIds: string[]; durationMinutes: number; status: 'draft' | 'published' | 'archived'; createdAt: string; updatedAt: string; }
+export function getLearningAssessmentPapers() { return request<{items: LearningAssessmentPaper[]; total: number}>('/v1/admin/learning-assessment-papers'); }
+export function createLearningAssessmentPaper(input: Pick<LearningAssessmentPaper, 'title' | 'subjectId' | 'questionIds' | 'durationMinutes'>) { return request<LearningAssessmentPaper>('/v1/admin/learning-assessment-papers', {method: 'POST', body: JSON.stringify(input)}); }
+export function publishLearningAssessmentPaper(id: string) { return request<LearningAssessmentPaper>(`/v1/admin/learning-assessment-papers/${encodeURIComponent(id)}/publish`, {method: 'POST'}); }
 export function updateLearningStagePlan(stageId: string, input: Pick<AdminLearningStagePlanConfig, "totalMinutes" | "dailyMinutes" | "minDailyMinutes" | "maxDailyMinutes" | "weekdayMinMinutes" | "weekdayMaxMinutes" | "weekendMinMinutes" | "weekendMaxMinutes" | "holidayMinMinutes" | "holidayMaxMinutes" | "holidayDates" | "studyDays" | "durationDays" | "makeupPolicy" | "cardUnlockRule" | "questionPushCount" | "questionSelectionStrategy">) {
   return request<AdminLearningStagePlanConfig>(`/v1/admin/learning-coach/stages/${encodeURIComponent(stageId)}/plan`, {method: "PATCH", body: JSON.stringify(input)});
 }
@@ -1540,6 +1585,11 @@ export function adjustAdminUserEntitlement(
 export function getAdminSubjects() {
   return request<AdminSubject[]>("/v1/admin/content/subjects");
 }
+export function createAdminSubject(input: {name: string}) {
+  return request<AdminSubject>("/v1/admin/content/subjects", {
+    method: "POST", body: JSON.stringify(input),
+  });
+}
 export function updateAdminSubject(
   id: string,
   input: { name?: string; questionType?: "objective" | "subjective" | "both" },
@@ -1785,12 +1835,15 @@ export function getAdminCourses() {
   return request<{ items: AdminCourse[]; total: number }>("/v1/admin/courses");
 }
 export function createAdminCourse(
-  input: Pick<AdminCourse, "title" | "teacher" | "type" | "lessons">,
+  input: Pick<AdminCourse, "title" | "teacher" | "type" | "lessons"> & {productId?: string; isHot?: boolean; hotSortOrder?: number},
 ) {
   return request<AdminCourse>("/v1/admin/courses", {
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+export function updateAdminCourse(id: string, input: {isHot?: boolean; hotSortOrder?: number}) {
+  return request<AdminCourse>(`/v1/admin/courses/${encodeURIComponent(id)}`, {method: "PATCH", body: JSON.stringify(input)});
 }
 export function publishAdminCourse(id: string) {
   return request<AdminCourse>(
@@ -1822,6 +1875,10 @@ export function createAdminCourseLesson(
     handoutReference?: string;
     durationSeconds?: number;
     trialEnabled?: boolean;
+    materialCategory?: string;
+    materialKind?: "article" | "material";
+    downloadable?: boolean;
+    articleContent?: string;
     sortOrder?: number;
   },
 ) {
@@ -2441,7 +2498,7 @@ export function getAdminSettings() {
   return request<AdminSettings>("/v1/admin/settings");
 }
 export function updateAdminSettings(
-  input: Pick<AdminSettings, "refundReviewThreshold">,
+  input: Pick<AdminSettings, "refundReviewThreshold" | "examDate"> & {featureFlags?: Record<string, boolean>},
 ) {
   return request<AdminSettings>("/v1/admin/settings", {
     method: "PATCH",

@@ -1,9 +1,9 @@
 import {ReloadOutlined, SaveOutlined} from '@ant-design/icons';
-import {Alert, Button, Descriptions, Form, InputNumber, Space, Spin, Tag, Typography, message} from 'antd';
+import {Alert, Button, Checkbox, Descriptions, Form, Input, InputNumber, Space, Spin, Tag, Typography, message} from 'antd';
 import {useCallback, useEffect, useState} from 'react';
 import {getAdminSettings, updateAdminSettings, type AdminSettings} from '@/services/api';
 
-type SettingsValues = {refundReviewThreshold: number};
+type SettingsValues = {refundReviewThreshold: number; examDate?: string; featureFlags?: Record<string, boolean>};
 
 export default function SystemSettings() {
   const [data, setData] = useState<AdminSettings>();
@@ -18,7 +18,7 @@ export default function SystemSettings() {
     try {
       const next = await getAdminSettings();
       setData(next);
-      form.setFieldsValue({refundReviewThreshold: next.refundReviewThreshold});
+      form.setFieldsValue({refundReviewThreshold: next.refundReviewThreshold, examDate: next.examDate, featureFlags: next.featureFlags});
     } catch (cause) {
       const text = cause instanceof Error ? cause.message : '加载系统配置失败';
       setData(undefined);
@@ -36,10 +36,10 @@ export default function SystemSettings() {
   const save = async (values: SettingsValues) => {
     setSaving(true);
     try {
-      const next = await updateAdminSettings({refundReviewThreshold: values.refundReviewThreshold});
+      const next = await updateAdminSettings(values);
       setData(next);
-      form.setFieldsValue({refundReviewThreshold: next.refundReviewThreshold});
-      message.success('退款复核阈值已更新并写入审计日志');
+      form.setFieldsValue({refundReviewThreshold: next.refundReviewThreshold, examDate: next.examDate, featureFlags: next.featureFlags});
+      message.success('系统配置已保存');
     } catch (cause) {
       message.error(cause instanceof Error ? cause.message : '保存系统配置失败');
     } finally {
@@ -60,15 +60,19 @@ export default function SystemSettings() {
       {loading && !data && <Spin />}
       {data && <>
         <Descriptions bordered column={1}>
-          <Descriptions.Item label="考试年份">{data.examYear}</Descriptions.Item>
+          <Descriptions.Item label="考试日期">{data.examDate || '未配置'}</Descriptions.Item>
           <Descriptions.Item label="当前退款复核金额阈值">¥{data.refundReviewThreshold}</Descriptions.Item>
           <Descriptions.Item label="功能开关"><Space>{Object.entries(data.featureFlags).map(([key, enabled]) => <Tag key={key} color={enabled ? 'green' : 'default'}>{key}：{enabled ? '开启' : '关闭'}</Tag>)}</Space></Descriptions.Item>
         </Descriptions>
-        <Form form={form} layout="inline" onFinish={save} initialValues={{refundReviewThreshold: data.refundReviewThreshold}}>
+        <Form form={form} layout="inline" onFinish={save} initialValues={{refundReviewThreshold: data.refundReviewThreshold, examDate: data.examDate, featureFlags: data.featureFlags}}>
+          <Form.Item name="examDate" label="考试日期">
+            <Input type="date" />
+          </Form.Item>
           <Form.Item name="refundReviewThreshold" label="退款复核阈值（元）" rules={[{required: true, message: '请输入阈值'}, {type: 'number', min: 0, max: 1_000_000_000, message: '阈值必须在 0 到 1000000000 之间'}]}>
             <InputNumber min={0} max={1_000_000_000} precision={2} style={{width: 220}} />
           </Form.Item>
-          <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving}>保存阈值</Button>
+          <Form.Item label="首页功能"><Space direction="vertical"><Form.Item name={['featureFlags', 'objectiveBank']} valuePropName="checked" noStyle><Checkbox>题库入口</Checkbox></Form.Item><Form.Item name={['featureFlags', 'objectiveExam']} valuePropName="checked" noStyle><Checkbox>考试入口</Checkbox></Form.Item><Form.Item name={['featureFlags', 'studyMaterials']} valuePropName="checked" noStyle><Checkbox>学习资料入口</Checkbox></Form.Item><Form.Item name={['featureFlags', 'hotCourses']} valuePropName="checked" noStyle><Checkbox>热门课程</Checkbox></Form.Item></Space></Form.Item>
+          <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving}>保存配置</Button>
         </Form>
       </>}
     </Space>

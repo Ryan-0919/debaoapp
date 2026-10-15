@@ -1,3 +1,4 @@
+import '../../core/config/app_environment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,12 +7,12 @@ import '../../data/models.dart';
 import '../../data/providers.dart';
 import '../commerce/commerce_detail_screens.dart';
 import '../tools/study_tools_screens.dart';
-import '../learning/learning_center_screens.dart';
 import '../account/account_service_screens.dart';
 import '../courses/courses_screen.dart';
+import '../learning/learning_inquiries_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key, this.remoteEnabled = false});
+  const ProfileScreen({super.key, this.remoteEnabled = remoteDataDefault});
   final bool remoteEnabled;
 
   @override
@@ -141,7 +142,7 @@ class _ProfileContent extends StatelessWidget {
                   [
                     _ProfileItem(Icons.event_note_outlined, '学习计划',
                         Color(0xFFF0F0FF), Color(0xFF4C4BEA)),
-                    _ProfileItem(Icons.auto_awesome_outlined, '得恩私教',
+                    _ProfileItem(Icons.auto_awesome_outlined, '得恩私教学习中心',
                         Color(0xFFF0F0FF), Color(0xFF4C4BEA)),
                     _ProfileItem(Icons.description_outlined, '学习报告',
                         Color(0xFFEAF6EF), Color(0xFF3A7A46)),
@@ -149,26 +150,22 @@ class _ProfileContent extends StatelessWidget {
                         Color(0xFFEDF5FF), Color(0xFF1A5FA8)),
                     _ProfileItem(Icons.error_outline, '错题本', Color(0xFFFFF1E8),
                         Color(0xFFD2691E)),
-                    _ProfileItem(Icons.star_border, '收藏夹', Color(0xFFFFF5DD),
-                        Color(0xFFA87000)),
                   ],
                   remoteEnabled: remoteEnabled),
               _Group(
                   '课程与服务',
                   [
-                    _ProfileItem(Icons.play_circle_outline, '我的课程',
-                        Color(0xFFF0F0FF), Color(0xFF4C4BEA)),
                     _ProfileItem(Icons.shopping_bag_outlined, '订单与已购',
                         Color(0xFFFFF0F5), Color(0xFFC0385A)),
-                    _ProfileItem(Icons.edit_note_outlined, '批改服务',
-                        Color(0xFFEAF7F7), Color(0xFF1A8B8B)),
                   ],
                   remoteEnabled: remoteEnabled),
               _Group(
                   '应用管理',
                   [
-                    _ProfileItem(Icons.notifications_none, '消息通知',
+                    _ProfileItem(Icons.notifications_none, '重要通知',
                         Color(0xFFFFF5DD), Color(0xFFA87000)),
+                    _ProfileItem(Icons.support_agent_outlined, '客服',
+                        Color(0xFFEAF7F7), Color(0xFF1A8B8B)),
                     _ProfileItem(Icons.settings_outlined, '设置与隐私',
                         Color(0xFFF4F5F7), Color(0xFF707684)),
                   ],
@@ -482,8 +479,8 @@ class _Group extends StatelessWidget {
                     final Widget? tool = switch (item.icon) {
                       Icons.event_note_outlined =>
                         LearningPlanScreen(remoteEnabled: remoteEnabled),
-                      Icons.auto_awesome_outlined =>
-                        LearningCenterScreen(remoteEnabled: remoteEnabled),
+                      Icons.auto_awesome_outlined => PrivateCoachOverviewScreen(
+                          remoteEnabled: remoteEnabled),
                       Icons.description_outlined =>
                         LearningReportScreen(remoteEnabled: remoteEnabled),
                       Icons.menu_book_outlined =>
@@ -500,6 +497,7 @@ class _Group extends StatelessWidget {
                         GradingServiceScreen(remoteEnabled: remoteEnabled),
                       Icons.notifications_none =>
                         NotificationsScreen(remoteEnabled: remoteEnabled),
+                      Icons.support_agent_outlined => null,
                       Icons.settings_outlined =>
                         SettingsScreen(remoteEnabled: remoteEnabled),
                       Icons.play_circle_outline =>
@@ -517,6 +515,13 @@ class _Group extends StatelessWidget {
                           MaterialPageRoute(
                               builder: (_) => OrderListScreen(
                                   remoteEnabled: remoteEnabled)));
+                    }
+                    if (item.label == '客服') {
+                      showDialog<void>(
+                          context: context,
+                          builder: (_) => const AlertDialog(
+                              title: Text('联系客服'),
+                              content: Text('客服通道将根据后台配置显示。')));
                     }
                   },
                   child: Container(
@@ -551,4 +556,276 @@ class _Group extends StatelessWidget {
           ),
         ]),
       );
+}
+
+class PrivateCoachOverviewScreen extends ConsumerStatefulWidget {
+  const PrivateCoachOverviewScreen({super.key, this.remoteEnabled = true});
+  final bool remoteEnabled;
+  @override
+  ConsumerState<PrivateCoachOverviewScreen> createState() =>
+      _PrivateCoachOverviewState();
+}
+
+class _PrivateCoachOverviewState
+    extends ConsumerState<PrivateCoachOverviewScreen> {
+  String? selectedSubjectId;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.remoteEnabled) return const _PrivateCoachEmpty();
+    final plans = ref.watch(learningPlansProvider);
+    final tasks = ref.watch(learningTasksProvider);
+    final report = ref.watch(learningReportProvider('month'));
+    final records = ref.watch(typedQuestionRecordsProvider);
+    final inquiries = ref.watch(learningInquiriesProvider);
+    final orders = ref.watch(ordersProvider);
+    final loading = [plans, tasks, report, records, inquiries, orders];
+    if (loading.any((state) => state.isLoading && !state.hasValue)) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    final failed = loading.where((state) => state.hasError && !state.hasValue);
+    if (failed.isNotEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('得恩私教学习中心')),
+        body: Center(
+            child: TextButton(
+          onPressed: () {
+            ref.invalidate(learningPlansProvider);
+            ref.invalidate(learningTasksProvider);
+            ref.invalidate(learningReportProvider('month'));
+            ref.invalidate(typedQuestionRecordsProvider);
+            ref.invalidate(learningInquiriesProvider);
+            ref.invalidate(ordersProvider);
+          },
+          child: const Text('加载失败，点击重试'),
+        )),
+      );
+    }
+    final planItems = plans.valueOrNull ?? const <LearningPlan>[];
+    final paid = (orders.valueOrNull ?? const <Order>[]).any(
+        (item) => ['paid', 'completed', 'fulfilled'].contains(item.status));
+    if (!paid && planItems.isEmpty) return const _PrivateCoachEmpty();
+    final taskItems = tasks.valueOrNull ?? const <LearningTask>[];
+    final examTasks =
+        taskItems.where((item) => item.contentType == 'assessment').toList();
+    final cardTasks =
+        taskItems.where((item) => item.contentType == 'card').toList();
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final completedPlans = planItems
+        .where((item) =>
+            item.status == 'completed' ||
+            (item.endDate.isNotEmpty && item.endDate.compareTo(today) < 0))
+        .length;
+    final doneTasks = taskItems.where((item) => item.status == 'done').length;
+    final courses = ref.watch(coursesProvider).valueOrNull ?? const <Course>[];
+    final subjects =
+        ref.watch(subjectsProvider).valueOrNull ?? const <Subject>[];
+    final monthReport = report.valueOrNull;
+    final visibleSubjects = monthReport?.subjects ??
+        const <({String subjectId, int minutes, int correctRate})>[];
+    final selected = selectedSubjectId == null
+        ? visibleSubjects
+        : visibleSubjects
+            .where((item) => item.subjectId == selectedSubjectId)
+            .toList();
+    return Scaffold(
+      backgroundColor: DebaoColors.page,
+      appBar:
+          AppBar(title: const Text('得恩私教学习中心'), backgroundColor: Colors.white),
+      body: ListView(padding: const EdgeInsets.all(16), children: [
+        Card(
+            child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(children: [
+                  const Icon(Icons.workspace_premium_outlined,
+                      color: Color(0xFF4C4BEA), size: 30),
+                  const SizedBox(width: 10),
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        const Text('付费学习中心数据',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 4),
+                        Text('${planItems.length} 个学习计划 · 已完成 $doneTasks 项任务',
+                            style: const TextStyle(
+                                color: DebaoColors.muted, fontSize: 12))
+                      ]))
+                ]))),
+        Card(
+            margin: const EdgeInsets.only(top: 10),
+            child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('学习数据可视化',
+                          style: TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 4),
+                      const Text('全部科目与单个科目均来自真实学习报告接口',
+                          style: TextStyle(
+                              color: DebaoColors.muted, fontSize: 11)),
+                      const SizedBox(height: 10),
+                      DropdownButtonFormField<String>(
+                          initialValue: selectedSubjectId ?? '',
+                          decoration: const InputDecoration(
+                              labelText: '查看范围', border: OutlineInputBorder()),
+                          items: [
+                            const DropdownMenuItem(
+                                value: '', child: Text('全部科目')),
+                            ...visibleSubjects.map((item) => DropdownMenuItem(
+                                value: item.subjectId,
+                                child: Text(subjects
+                                    .firstWhere(
+                                        (subject) =>
+                                            subject.id == item.subjectId,
+                                        orElse: () => Subject(
+                                            id: item.subjectId,
+                                            name: item.subjectId))
+                                    .name)))
+                          ],
+                          onChanged: (value) => setState(() =>
+                              selectedSubjectId = value == null || value.isEmpty
+                                  ? null
+                                  : value)),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                          height: 180,
+                          child: _LearningDataChart(
+                              subjects: selected,
+                              labelFor: (id) => subjects
+                                  .firstWhere((subject) => subject.id == id,
+                                      orElse: () => Subject(id: id, name: id))
+                                  .name)),
+                      const SizedBox(height: 8),
+                      Text(
+                          '月度学习 ${monthReport?.minutes ?? 0} 分钟 · 做题 ${monthReport?.answered ?? 0} 题 · 正确率 ${monthReport?.correctRate ?? 0}%',
+                          style: const TextStyle(
+                              color: DebaoColors.body, fontSize: 12))
+                    ]))),
+        _privateSection(
+            context,
+            '学习进度',
+            Icons.timeline_outlined,
+            '${report.valueOrNull?.minutes ?? 0} 分钟学习时长 · $completedPlans 个历史完成计划',
+            () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => LearningPlanScreen(remoteEnabled: true)))),
+        _privateSection(
+            context,
+            '听课完成进度',
+            Icons.play_circle_outline,
+            '已开通课程 ${courses.length} 门',
+            () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => CoursesScreen(remoteEnabled: true)))),
+        _privateSection(
+            context,
+            '我的考试',
+            Icons.assignment_outlined,
+            examTasks.isEmpty
+                ? '暂无已安排的单科测试'
+                : '${examTasks.where((item) => item.status == 'done').length}/${examTasks.length} 场已完成',
+            () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => LearningPlanScreen(remoteEnabled: true)))),
+        _privateSection(
+            context,
+            '背诵卡片',
+            Icons.style_outlined,
+            cardTasks.isEmpty
+                ? '暂无背诵卡片任务'
+                : '${cardTasks.where((item) => item.status == 'done').length}/${cardTasks.length} 张已完成',
+            () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => LearningPlanScreen(remoteEnabled: true)))),
+        _privateSection(
+            context,
+            '做题数据',
+            Icons.bar_chart_outlined,
+            '${records.valueOrNull?.length ?? 0} 条做题记录',
+            () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) =>
+                        QuestionRecordsScreen(remoteEnabled: true)))),
+        _privateSection(
+            context,
+            '答疑记录',
+            Icons.question_answer_outlined,
+            '${inquiries.valueOrNull?.where((item) => item.status == 'answered').length ?? 0} 条已回复',
+            () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const LearningInquiriesScreen()))),
+      ]),
+    );
+  }
+
+  Widget _privateSection(BuildContext context, String title, IconData icon,
+          String summary, VoidCallback onTap) =>
+      Card(
+          margin: const EdgeInsets.only(top: 10),
+          child: ListTile(
+              leading: Icon(icon, color: const Color(0xFF4C4BEA)),
+              title: Text(title,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text(summary),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: onTap));
+}
+
+class _PrivateCoachEmpty extends StatelessWidget {
+  const _PrivateCoachEmpty();
+  @override
+  Widget build(BuildContext context) =>
+      const Scaffold(body: Center(child: Text('登录并购买学习中心服务后，这里会显示你的学习数据')));
+}
+
+class _LearningDataChart extends StatelessWidget {
+  const _LearningDataChart({required this.subjects, required this.labelFor});
+  final List<({String subjectId, int minutes, int correctRate})> subjects;
+  final String Function(String) labelFor;
+  @override
+  Widget build(BuildContext context) {
+    if (subjects.isEmpty)
+      return const Center(
+          child: Text('暂无科目学习数据', style: TextStyle(color: DebaoColors.muted)));
+    final maxMinutes = subjects
+        .map((item) => item.minutes)
+        .fold<int>(1, (max, value) => value > max ? value : max);
+    return Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: subjects.take(8).map((item) {
+          final height = 30 + 110 * item.minutes / maxMinutes;
+          return Expanded(
+              child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text('${item.correctRate}%',
+                            style: const TextStyle(
+                                fontSize: 10, color: DebaoColors.body)),
+                        const SizedBox(height: 4),
+                        Container(
+                            height: height,
+                            decoration: BoxDecoration(
+                                color: const Color(0xFF4C4BEA),
+                                borderRadius: BorderRadius.circular(6))),
+                        const SizedBox(height: 5),
+                        Text(labelFor(item.subjectId),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 10, color: DebaoColors.muted))
+                      ])));
+        }).toList());
+  }
 }

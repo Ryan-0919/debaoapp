@@ -129,7 +129,9 @@ export class LocalGradingAdapter implements GradingAdapter {
 }
 export class UnconfiguredGradingAdapter implements GradingAdapter {
   readonly name = 'unconfigured';
-  async enqueue(_submissionId: string) { return {status: 'queued' as const}; }
+  async enqueue(_submissionId: string): Promise<{status: 'queued' | 'processing'}> {
+    throw new Error('GRADING_PROVIDER_NOT_CONFIGURED');
+  }
 }
 export class HttpGradingAdapter implements GradingAdapter {
   readonly name = 'http';
@@ -211,33 +213,33 @@ function options(prefix: string, env: ProviderEnv): HttpProviderOptions {
 }
 
 export function createPaymentAdapter(env: ProviderEnv = process.env): PaymentAdapter {
-  const mode = env.PAYMENT_ADAPTER ?? 'local';
-  return mode === 'local' ? new LocalPaymentAdapter() : mode === 'http' ? new HttpPaymentAdapter(options('PAYMENT', env)) : new UnconfiguredPaymentAdapter();
+  const mode = env.PAYMENT_ADAPTER ?? (env.DEBAO_TEST_FIXTURES === 'true' ? 'local' : 'unconfigured');
+  return mode === 'local' && env.DEBAO_TEST_FIXTURES === 'true' ? new LocalPaymentAdapter() : mode === 'http' ? new HttpPaymentAdapter(options('PAYMENT', env)) : new UnconfiguredPaymentAdapter();
 }
 export function createSmsAdapter(env: ProviderEnv = process.env): SmsAdapter {
-  const mode = env.SMS_ADAPTER ?? 'local';
-  return mode === 'local' ? new LocalSmsAdapter() : mode === 'http' ? new HttpSmsAdapter(options('SMS', env)) : new UnconfiguredSmsAdapter();
+  const mode = env.SMS_ADAPTER ?? (env.DEBAO_TEST_FIXTURES === 'true' ? 'local' : 'unconfigured');
+  return mode === 'local' && env.DEBAO_TEST_FIXTURES === 'true' ? new LocalSmsAdapter() : mode === 'http' ? new HttpSmsAdapter(options('SMS', env)) : new UnconfiguredSmsAdapter();
 }
 export function createPushAdapter(env: ProviderEnv = process.env): PushAdapter {
   const mode = env.PUSH_ADAPTER ?? 'unconfigured';
-  return mode === 'local' ? new LocalPushAdapter() : mode === 'http' ? new HttpPushAdapter(options('PUSH', env)) : new UnconfiguredPushAdapter();
+  return mode === 'local' && env.DEBAO_TEST_FIXTURES === 'true' ? new LocalPushAdapter() : mode === 'http' ? new HttpPushAdapter(options('PUSH', env)) : new UnconfiguredPushAdapter();
 }
 export function createGradingAdapter(env: ProviderEnv = process.env): GradingAdapter {
-  const mode = env.GRADING_ADAPTER ?? 'local';
-  return mode === 'local' ? new LocalGradingAdapter() : mode === 'http' ? new HttpGradingAdapter(options('GRADING', env)) : new UnconfiguredGradingAdapter();
+  const mode = env.GRADING_ADAPTER ?? (env.DEBAO_TEST_FIXTURES === 'true' ? 'local' : 'unconfigured');
+  return mode === 'local' && env.DEBAO_TEST_FIXTURES === 'true' ? new LocalGradingAdapter() : mode === 'http' ? new HttpGradingAdapter(options('GRADING', env)) : new UnconfiguredGradingAdapter();
 }
 export function createAIAdapter(env: ProviderEnv = process.env): AIAdapter {
-  const mode = env.AI_ADAPTER ?? 'local';
-  return mode === 'local' ? new LocalAIAdapter() : mode === 'http' ? new HttpAIAdapter(options('AI', env)) : new UnconfiguredAIAdapter();
+  const mode = env.AI_ADAPTER ?? (env.DEBAO_TEST_FIXTURES === 'true' ? 'local' : 'unconfigured');
+  return mode === 'local' && env.DEBAO_TEST_FIXTURES === 'true' ? new LocalAIAdapter() : mode === 'http' ? new HttpAIAdapter(options('AI', env)) : new UnconfiguredAIAdapter();
 }
 export function createMediaAdapter(env: ProviderEnv = process.env): MediaAdapter {
   return (env.MEDIA_ADAPTER ?? 'unconfigured') === 'http' ? new HttpMediaAdapter(options('MEDIA', env)) : new UnconfiguredMediaAdapter();
 }
 export function createWechatAuthAdapter(env: ProviderEnv = process.env): WechatAuthAdapter {
-  const mode = env.WECHAT_AUTH_ADAPTER ?? (env.NODE_ENV === 'production' ? 'unconfigured' : 'local');
-  return mode === 'local' ? new LocalWechatAuthAdapter() : mode === 'http' ? new HttpWechatAuthAdapter(options('WECHAT_AUTH', env)) : new UnconfiguredWechatAuthAdapter();
+  const mode = env.WECHAT_AUTH_ADAPTER ?? (env.DEBAO_TEST_FIXTURES === 'true' ? 'local' : 'unconfigured');
+  return mode === 'local' && env.DEBAO_TEST_FIXTURES === 'true' ? new LocalWechatAuthAdapter() : mode === 'http' ? new HttpWechatAuthAdapter(options('WECHAT_AUTH', env)) : new UnconfiguredWechatAuthAdapter();
 }
 export function createCarrierAuthAdapter(env: ProviderEnv = process.env): CarrierAuthAdapter {
-  const mode = env.CARRIER_AUTH_ADAPTER ?? (env.NODE_ENV === 'production' ? 'unconfigured' : 'local');
-  return mode === 'local' ? new LocalCarrierAuthAdapter() : mode === 'http' ? new HttpCarrierAuthAdapter(options('CARRIER_AUTH', env)) : new UnconfiguredCarrierAuthAdapter();
+  const mode = env.CARRIER_AUTH_ADAPTER ?? (env.DEBAO_TEST_FIXTURES === 'true' ? 'local' : 'unconfigured');
+  return mode === 'local' && env.DEBAO_TEST_FIXTURES === 'true' ? new LocalCarrierAuthAdapter() : mode === 'http' ? new HttpCarrierAuthAdapter(options('CARRIER_AUTH', env)) : new UnconfiguredCarrierAuthAdapter();
 }

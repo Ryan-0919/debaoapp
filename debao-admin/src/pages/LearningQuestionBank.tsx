@@ -24,6 +24,7 @@ import {
   Select,
   Space,
   Statistic,
+  Switch,
   Table,
   Tag,
   Typography,
@@ -340,6 +341,7 @@ export default function LearningQuestionBank({
       correctAnswers,
       subQuestions: objective ? [] : values.subQuestions,
       analysis: values.analysis ?? "",
+      explanationMediaReference: values.explanationMediaReference ?? "",
     };
     delete (input as AdminLearningQuestionInput & { singleAnswer?: string })
       .singleAnswer;
@@ -1162,6 +1164,11 @@ export default function LearningQuestionBank({
             />
           </Form.Item>
           <Typography.Title level={5}>讲解音视频（选填）</Typography.Title>
+          <Form.Item name="explanationMediaVisible" label="向学员显示微课"
+            valuePropName="checked" initialValue={true}
+            extra="不上传不显示；上传后默认显示，关闭可暂时隐藏微课。">
+            <Switch checkedChildren="显示" unCheckedChildren="隐藏" />
+          </Form.Item>
           <Alert
             type="info"
             showIcon

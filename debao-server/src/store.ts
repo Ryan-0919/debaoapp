@@ -97,7 +97,18 @@ export function restoreDevelopmentGradingShowcase(store: Store) {
   store.gradingAiRuns = replaceShowcase(store.gradingAiRuns, demoAiRuns);
 }
 
-export function createStore(): Store {
+export function createStore(withFixtures = false): Store {
+  if (!withFixtures) {
+    const empty = createStore(true);
+    const collections = empty as unknown as Record<string, unknown>;
+    for (const key of Object.keys(collections)) {
+      const value = collections[key];
+      if (Array.isArray(value)) collections[key] = [];
+      else if (value instanceof Map) collections[key] = new Map();
+      else if (value instanceof Set) collections[key] = new Set();
+    }
+    return empty;
+  }
   return {
     profiles: new Map([['u-demo', {
       id: 'u-demo',
@@ -156,6 +167,7 @@ export function createStore(): Store {
     ],
     objectiveSessions: [],
     objectiveReports: [],
+    learningInquiries: [],
     papers: [],
     drafts: new Map(),
     sessions: new Map([['demo-token', {userId: 'u-demo', refreshToken: 'demo-refresh-token', deviceId: 'demo-device', expiresAt: '2099-01-01T00:00:00.000Z'}]]),
@@ -166,6 +178,8 @@ export function createStore(): Store {
     devices: [{id: 'demo-device', userId: 'u-demo', platform: 'android', name: '本地演示设备', lastSeenAt: new Date().toISOString()}],
     submissions: [],
     learningPlans: [{id: 'plan-demo', userId: 'u-demo', title: '2026 法考冲刺计划', dailyMinutes: 120, startDate: demoDate(-30), endDate: demoDate(30), status: 'active', stageId: 'stage-foundation', version: 1, updatedAt: demoNow}],
+    learningEarlyAccessRequests: [],
+    learningAssessmentPapers: [],
     learningTasks: [
       {id: 'task-demo-course', planId: 'plan-demo', title: '完成民法体系精讲第 18 讲', dueDate: demoDate(0), minutes: 45, status: 'todo', contentType: 'course', contentId: 'course-lesson-civil-18'},
       {id: 'task-demo-card', planId: 'plan-demo', title: '完成民法精讲·物权变动背诵卡片', dueDate: demoDate(0), minutes: 15, status: 'todo', contentType: 'card', contentId: 'card-civil-18'},

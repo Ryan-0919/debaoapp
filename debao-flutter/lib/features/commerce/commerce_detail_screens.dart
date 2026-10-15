@@ -1,3 +1,4 @@
+import '../../core/config/app_environment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -456,7 +457,7 @@ class ProductDetailScreen extends StatefulWidget {
     required this.coverColor,
     required this.icon,
     this.productId,
-    this.remoteEnabled = false,
+    this.remoteEnabled = remoteDataDefault,
     this.remoteProduct,
     this.resolved = false,
     this.remoteError,
@@ -667,7 +668,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   String get category {
     final remote = widget.remoteProduct?.category.trim();
-    return remote != null && remote.isNotEmpty ? remote : copy.category;
+    return widget.remoteEnabled ? (remote ?? '') : copy.category;
   }
 
   String get type {
@@ -694,7 +695,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   String get stage {
     final remote = widget.remoteProduct?.stage?.trim();
-    return remote != null && remote.isNotEmpty ? remote : copy.stage;
+    return widget.remoteEnabled ? (remote ?? '未配置适用阶段') : copy.stage;
   }
 
   Color get typeColor => type == '音频课程'
@@ -710,7 +711,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   List<String> get includes => widget.remoteProduct?.benefits.isNotEmpty == true
       ? widget.remoteProduct!.benefits
-      : copy.includes;
+      : widget.remoteEnabled ? const [] : copy.includes;
 
   List<String> get syllabus => copy.syllabus;
 
@@ -788,7 +789,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         SizedBox(
             height: 210,
             width: double.infinity,
-            child: Image.asset(image,
+            child: widget.remoteEnabled
+                ? ColoredBox(color: widget.coverColor,
+                    child: Icon(widget.icon, color: Colors.white, size: 56))
+                : Image.asset(image,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => ColoredBox(
                     color: widget.coverColor,
@@ -1615,7 +1619,7 @@ class PurchaseSuccessScreen extends StatelessWidget {
     required this.productName,
     this.productId,
     this.orderId,
-    this.remoteEnabled = false,
+    this.remoteEnabled = remoteDataDefault,
   });
   final String productName;
   final String? productId;
@@ -1802,7 +1806,7 @@ class PurchasePendingScreen extends StatelessWidget {
 }
 
 class OrderListScreen extends StatelessWidget {
-  const OrderListScreen({super.key, this.remoteEnabled = false});
+  const OrderListScreen({super.key, this.remoteEnabled = remoteDataDefault});
   final bool remoteEnabled;
   @override
   Widget build(BuildContext context) =>
@@ -1976,7 +1980,7 @@ class _OrderRow extends StatelessWidget {
       required this.orderNo,
       this.productId,
       this.courseId,
-      this.remoteEnabled = false});
+      this.remoteEnabled = remoteDataDefault});
   final String status, title, date, amount, orderNo;
   final String? productId;
   final String? courseId;
@@ -2079,7 +2083,7 @@ class OrderDetailScreen extends StatelessWidget {
       this.createdAt = '2024-08-27 10:24',
       this.productId,
       this.courseId,
-      this.remoteEnabled = false,
+      this.remoteEnabled = remoteDataDefault,
       this.resolved = false});
   final String title, amount;
   final String status, orderNo, createdAt;

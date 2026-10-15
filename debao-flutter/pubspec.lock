@@ -423,14 +423,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.8"
-  polyv_live_scenes:
-    dependency: "direct main"
-    description:
-      name: polyv_live_scenes
-      sha256: c811cc27d7546eff65d1e524b3534a7a7c1679cb0baf88eff6579223852766bd
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.0.3"
   process:
     dependency: transitive
     description:

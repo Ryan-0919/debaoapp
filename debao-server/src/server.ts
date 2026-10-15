@@ -1,7 +1,7 @@
 import {createServer} from 'node:http';
 import {config, handle, hydrateStore, infrastructure, processAdminWorkers} from './main.js';
 
-if (config.nodeEnv === 'production') await infrastructure.assertReady();
+await infrastructure.assertReady();
 await hydrateStore();
 // Resume any export/push jobs that were left queued by a previous process.
 // The call is best-effort in development; production startup still exposes

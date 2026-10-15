@@ -43,8 +43,8 @@ class ApiClient
         _tokenStore = tokenStore ?? SecureTokenStore() {
     _dio.options = BaseOptions(
       baseUrl: AppEnvironment.current.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 1),
-      receiveTimeout: const Duration(seconds: 2),
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 30),
       headers: <String, String>{'Accept': 'application/json'},
     );
     _dio.interceptors.add(InterceptorsWrapper(
@@ -53,10 +53,7 @@ class ApiClient
         final publicAuthPath = _publicAuthPaths.contains(options.uri.path);
         if (options.extra['skipAuth'] != true && !publicAuthPath) {
           final token = await _tokenStore.readAccessToken();
-          final accessToken = token ??
-              (AppEnvironment.current == AppEnvironment.development
-                  ? 'demo-token'
-                  : null);
+          final accessToken = token;
           if (accessToken != null && accessToken.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $accessToken';
           }

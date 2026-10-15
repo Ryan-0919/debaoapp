@@ -145,6 +145,7 @@ class HomeData {
     this.featuredProduct,
     this.examYear,
     this.daysRemaining,
+    this.featureFlags = const {},
   });
 
   final List<HomeBanner> banners;
@@ -154,6 +155,7 @@ class HomeData {
   final Product? featuredProduct;
   final String? examYear;
   final int? daysRemaining;
+  final Map<String, bool> featureFlags;
 
   factory HomeData.fromJson(JsonMap json) => HomeData(
         banners: (json['banners'] as List<dynamic>? ?? const [])
@@ -178,6 +180,8 @@ class HomeData {
         examYear: (json['exam'] as JsonMap?)?['year'] as String?,
         daysRemaining:
             ((json['exam'] as JsonMap?)?['daysRemaining'] as num?)?.toInt(),
+        featureFlags: (json['featureFlags'] as JsonMap? ?? const {})
+            .map((key, value) => MapEntry(key, value == true)),
       );
 }
 
@@ -400,6 +404,8 @@ class ObjectiveReportResult {
     required this.analysis,
     this.subjectId,
     this.questionType,
+    this.explanationMediaType,
+    this.explanationMediaReference,
   });
 
   final String questionId;
@@ -412,6 +418,8 @@ class ObjectiveReportResult {
   final bool correct;
   final String analysis;
   final String? questionType;
+  final String? explanationMediaType;
+  final String? explanationMediaReference;
 
   factory ObjectiveReportResult.fromJson(JsonMap json) => ObjectiveReportResult(
         questionId: '${json['questionId'] ?? ''}',
@@ -430,6 +438,39 @@ class ObjectiveReportResult {
         correct: json['correct'] == true,
         analysis: '${json['analysis'] ?? ''}',
         questionType: json['questionType'] as String?,
+        explanationMediaType: json['explanationMediaType'] as String?,
+        explanationMediaReference: json['explanationMediaReference'] as String?,
+      );
+}
+
+class LearningInquiry {
+  const LearningInquiry({
+    required this.id,
+    required this.reportId,
+    required this.questionId,
+    required this.question,
+    required this.reason,
+    required this.status,
+    required this.createdAt,
+    this.reply,
+    this.teacherName,
+    this.repliedAt,
+  });
+  final String id, reportId, questionId, reason, status, createdAt;
+  final ObjectiveReportResult question;
+  final String? reply, teacherName, repliedAt;
+  factory LearningInquiry.fromJson(JsonMap json) => LearningInquiry(
+        id: '${json['id']}',
+        reportId: '${json['reportId']}',
+        questionId: '${json['questionId']}',
+        question: ObjectiveReportResult.fromJson(
+            (json['question'] as JsonMap?) ?? <String, dynamic>{}),
+        reason: '${json['reason'] ?? ''}',
+        status: '${json['status'] ?? 'pending'}',
+        createdAt: '${json['createdAt'] ?? ''}',
+        reply: json['reply'] as String?,
+        teacherName: json['teacherName'] as String?,
+        repliedAt: json['repliedAt'] as String?,
       );
 }
 
@@ -1165,20 +1206,40 @@ class LearningPlan {
       required this.dailyMinutes,
       required this.startDate,
       required this.endDate,
-      required this.status});
+      required this.status,
+      this.earlyUnlockedThrough});
   final String id;
   final String title;
   final int dailyMinutes;
   final String startDate;
   final String endDate;
   final String status;
+  final String? earlyUnlockedThrough;
   factory LearningPlan.fromJson(JsonMap json) => LearningPlan(
       id: '${json['id'] ?? ''}',
       title: '${json['title'] ?? ''}',
       dailyMinutes: (json['dailyMinutes'] as num?)?.toInt() ?? 0,
       startDate: '${json['startDate'] ?? ''}',
       endDate: '${json['endDate'] ?? ''}',
-      status: '${json['status'] ?? ''}');
+      status: '${json['status'] ?? ''}',
+      earlyUnlockedThrough: json['earlyUnlockedThrough'] as String?);
+}
+
+class EarlyAccessRequest {
+  const EarlyAccessRequest(
+      {required this.id,
+      required this.planId,
+      required this.requestedThrough,
+      required this.status,
+      this.reason});
+  final String id, planId, requestedThrough, status;
+  final String? reason;
+  factory EarlyAccessRequest.fromJson(JsonMap json) => EarlyAccessRequest(
+      id: '${json['id'] ?? ''}',
+      planId: '${json['planId'] ?? ''}',
+      requestedThrough: '${json['requestedThrough'] ?? ''}',
+      status: '${json['status'] ?? 'pending'}',
+      reason: json['reason'] as String?);
 }
 
 class LearningTask {
@@ -1614,17 +1675,26 @@ class LearningReport {
       required this.minutes,
       required this.answered,
       required this.correctRate,
-      required this.subjects});
+      required this.subjects,
+      this.dailyTrend = const []});
   final String period;
   final int minutes;
   final int answered;
   final int correctRate;
   final List<({String subjectId, int minutes, int correctRate})> subjects;
+  final List<({String date, int minutes})> dailyTrend;
   factory LearningReport.fromJson(JsonMap json) => LearningReport(
       period: '${json['period'] ?? 'week'}',
       minutes: (json['minutes'] as num?)?.toInt() ?? 0,
       answered: (json['answered'] as num?)?.toInt() ?? 0,
       correctRate: (json['correctRate'] as num?)?.toInt() ?? 0,
+      dailyTrend: (json['dailyTrend'] as List<dynamic>? ?? const [])
+          .whereType<JsonMap>()
+          .map((item) => (
+                date: '${item['date'] ?? ''}',
+                minutes: (item['minutes'] as num?)?.toInt() ?? 0,
+              ))
+          .toList(growable: false),
       subjects: (json['subjects'] as List<dynamic>? ?? const [])
           .whereType<JsonMap>()
           .map((item) => (

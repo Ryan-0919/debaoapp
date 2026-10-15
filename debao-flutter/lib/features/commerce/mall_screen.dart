@@ -1,3 +1,4 @@
+import '../../core/config/app_environment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,7 +13,7 @@ const _muted = Color(0xFF707684);
 const _line = Color(0xFFE5E7ED);
 
 class MallScreen extends StatelessWidget {
-  const MallScreen({super.key, this.remoteEnabled = false});
+  const MallScreen({super.key, this.remoteEnabled = remoteDataDefault});
   final bool remoteEnabled;
 
   @override
@@ -50,6 +51,7 @@ class _MallScreenState extends ConsumerState<_MallScreenBody> {
         : _products;
     final filtered = source
         .where((product) =>
+            product.type != '直播课程' &&
             (category == '全部' || product.category == category) &&
             (type == '全部' || product.type == type))
         .toList();
@@ -95,7 +97,7 @@ class _MallScreenState extends ConsumerState<_MallScreenBody> {
                   selectedStyle: _FilterStyle.underline,
                   onChanged: (value) => setState(() => category = value)),
               _FilterRow(
-                  items: const ['全部', '视频课程', '直播课程', '音频课程', '书籍'],
+                  items: const ['全部', '视频课程', '音频课程', '书籍'],
                   selected: type,
                   selectedStyle: _FilterStyle.pill,
                   onChanged: (value) => setState(() => type = value))
@@ -156,7 +158,7 @@ class _MallScreenState extends ConsumerState<_MallScreenBody> {
         product.price.toString(),
         (product.originalPrice ?? product.price).toString(),
         product.sold.toString(),
-        product.benefits.isEmpty ? '得宝法考配套学习内容' : product.benefits.first,
+        product.benefits.isEmpty ? '暂无商品简介' : product.benefits.first,
         _color(product.accent),
         Icons.menu_book_outlined,
         _productImage(product.name),
@@ -175,7 +177,7 @@ class _MallScreenState extends ConsumerState<_MallScreenBody> {
       return product.name.contains('主观') ? '主观题' : '客观题';
     }
     if (raw.isEmpty) {
-      return product.name.contains('主观') ? '主观题' : '客观题';
+      return '未分类';
     }
     return raw;
   }
@@ -190,7 +192,7 @@ class _MallScreenState extends ConsumerState<_MallScreenBody> {
     if (name.contains('音频')) return '音频课程';
     if (name.contains('直播')) return '直播课程';
     if (name.contains('书')) return '书籍';
-    return '视频课程';
+    return '未分类';
   }
 
   String _productImage(String name) {
@@ -275,7 +277,7 @@ class _FilterRow extends StatelessWidget {
 }
 
 class _ProductCard extends StatelessWidget {
-  const _ProductCard({required this.product, this.remoteEnabled = false});
+  const _ProductCard({required this.product, this.remoteEnabled = remoteDataDefault});
   final _Product product;
   final bool remoteEnabled;
 
@@ -303,7 +305,11 @@ class _ProductCard extends StatelessWidget {
             child: Row(children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(6),
-                child: Image.asset(
+                child: remoteEnabled
+                  ? SizedBox(width: 110, height: 80,
+                      child: ColoredBox(color: product.coverColor,
+                        child: Icon(product.icon, color: Colors.white, size: 30)))
+                  : Image.asset(
                   product.image,
                   width: 110,
                   height: 80,

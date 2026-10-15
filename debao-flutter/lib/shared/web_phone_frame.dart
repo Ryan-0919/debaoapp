@@ -14,6 +14,7 @@ class DebaoWebPhoneFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!kIsWeb) return child;
+    if (Uri.base.queryParameters['embedded'] == '1') return child;
 
     // MaterialApp.builder can receive loose constraints on Flutter Web. Use
     // the view metrics as the authoritative viewport so the phone canvas never
@@ -81,13 +82,13 @@ class _ReferenceStatusBar extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              '9:41',
+            const DefaultTextStyle(
               style: TextStyle(
                 color: Color(0xFF171925),
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
+              child: Text('9:41'),
             ),
             Row(
               mainAxisSize: MainAxisSize.min,

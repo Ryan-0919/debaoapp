@@ -1,12 +1,12 @@
+import '../../core/config/app_environment.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:polyv_live_scenes/polyv_live_scenes.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/design_tokens.dart';
-import '../../core/network/api_client.dart';
 import '../../data/models.dart';
 import '../../data/providers.dart';
 import '../commerce/commerce_detail_screens.dart';
@@ -21,9 +21,6 @@ const _line = DebaoColors.line;
 const _headingStyle =
     TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.w700);
 const _paragraphStyle = TextStyle(color: _body, fontSize: 13, height: 1.65);
-const _polyvAppId = String.fromEnvironment('POLYV_APP_ID');
-const _polyvAppSecret = String.fromEnvironment('POLYV_APP_SECRET');
-const _polyvAccountUserId = String.fromEnvironment('POLYV_USER_ID');
 
 /// The RC has a stable, local course catalog.  Keeping this small catalog in
 /// the screen lets the media pages remain useful in local/mock mode while the
@@ -165,6 +162,7 @@ _CourseData _localCourseFromRemote(Course remote) {
       .map((section) => _ChapterData(
             section.title,
             section.lessons
+                .where((lesson) => lesson.mediaKind != 'live')
                 .map((lesson) => _LessonData(
                       lesson.id,
                       lesson.title,
@@ -178,11 +176,9 @@ _CourseData _localCourseFromRemote(Course remote) {
           ))
       .toList(growable: false);
   final lessons = sections.expand((section) => section.lessons).toList();
-  final total = remote.lessons > 0 ? remote.lessons : lessons.length;
+  final total = lessons.length;
   final progress = remote.progress.clamp(0, 100).round();
-  final completed = lessons.isEmpty
-      ? (progress / 100 * total).round()
-      : lessons.where((lesson) => lesson.done).length;
+  final completed = lessons.where((lesson) => lesson.done).length;
   return _CourseData(
     id: remote.id,
     name: remote.title,
@@ -190,7 +186,7 @@ _CourseData _localCourseFromRemote(Course remote) {
     progress: progress,
     completed: completed.clamp(0, total),
     total: total,
-    lastStudied: '最近学习',
+    lastStudied: '',
     currentLesson: lessons
         .firstWhere((lesson) => lesson.current,
             orElse: () => lessons.isNotEmpty
@@ -209,7 +205,7 @@ class CourseDetailScreen extends StatefulWidget {
     this.courseId = 'c1',
     this.title,
     this.audio = false,
-    this.remoteEnabled = false,
+    this.remoteEnabled = remoteDataDefault,
     this.remoteCourse,
     this.remoteEntitlement,
     this.resolved = false,
@@ -249,7 +245,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
         : (widget.title?.trim().isNotEmpty == true
             ? widget.title!
             : course.name);
-    final owned = widget.remoteEntitlement?.hasAccess ?? course.id == 'c1';
+    final owned = widget.remoteEntitlement?.hasAccess ??
+        (!widget.remoteEnabled && course.id == 'c1');
     final allLessons = course.chapters.expand((chapter) => chapter.lessons);
     final current = allLessons.isEmpty
         ? null
@@ -272,7 +269,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
           SizedBox(
             height: 200,
             width: double.infinity,
-            child: Image.asset(_coverFor(title), fit: BoxFit.cover),
+            child: widget.remoteEnabled
+                ? const ColoredBox(color: Color(0xFFE5E7ED),
+                    child: Center(child: Icon(Icons.menu_book_outlined, size: 48)))
+                : Image.asset(_coverFor(title), fit: BoxFit.cover),
           ),
           Container(
             color: Colors.white,
@@ -751,9 +751,38 @@ class _RemoteMediaBody extends ConsumerWidget {
         onRetry: () => ref.invalidate(mediaAvailabilityProvider(providerKey)),
       );
     }
-    return builder(media);
+    // The legacy player is a UI fixture, including its timer, subtitles and
+    // notes. A server authorization must never make that fixture reachable.
+    return _realMediaScreen(context, pageTitle, dark, media);
   }
 }
+
+Widget _realMediaScreen(BuildContext context, String pageTitle, bool dark,
+    MediaAvailability? media) => _mediaStatusScaffold(pageTitle, dark, Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(media?.available == true ? '已获取真实媒体授权' : '尚未获取媒体授权',
+              style: TextStyle(color: dark ? Colors.white : _ink)),
+          const SizedBox(height: 12),
+          if (Uri.tryParse(media?.url ?? '') case final Uri uri
+              when media?.available == true && ['https', 'http'].contains(uri.scheme))
+            FilledButton(
+              onPressed: () async {
+                final opened = await launchUrl(uri);
+                if (!opened && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('无法打开媒体地址，请稍后重试')));
+                }
+              },
+              child: const Text('打开课程媒体'),
+            )
+          else
+            Text('服务端未提供可播放地址',
+                style: TextStyle(color: dark ? Colors.white70 : _muted)),
+        ]),
+      ),
+    ));
 
 Widget _mediaStatusScaffold(String title, bool dark, Widget body) => Scaffold(
       backgroundColor: dark ? const Color(0xFF0A0A0F) : _page,
@@ -857,7 +886,7 @@ class VideoPlayerScreen extends StatefulWidget {
     this.lessonId,
     this.title,
     this.remoteCourse,
-    this.remoteEnabled = false,
+    this.remoteEnabled = remoteDataDefault,
     this.mediaAvailability,
     this.mediaResolved = false,
   });
@@ -932,6 +961,9 @@ class _VideoPlayerState extends State<VideoPlayerScreen> {
           ),
         ),
       );
+    }
+    if (widget.remoteEnabled) {
+      return _realMediaScreen(context, '视频课程', true, widget.mediaAvailability);
     }
     final title = _lessonTitle(course, widget.lessonId, widget.title);
     return Scaffold(
@@ -1428,7 +1460,7 @@ class AudioPlayerScreen extends StatefulWidget {
     this.lessonId,
     this.title,
     this.remoteCourse,
-    this.remoteEnabled = false,
+    this.remoteEnabled = remoteDataDefault,
     this.mediaAvailability,
     this.mediaResolved = false,
   });
@@ -1512,6 +1544,9 @@ class _AudioPlayerState extends State<AudioPlayerScreen> {
           ),
         ),
       );
+    }
+    if (widget.remoteEnabled) {
+      return _realMediaScreen(context, '音频课程', false, widget.mediaAvailability);
     }
     return Scaffold(
       key: const ValueKey('audio-player-screen'),
@@ -1920,7 +1955,7 @@ class LiveCourseScreen extends StatefulWidget {
     this.courseId = 'c3',
     this.title,
     this.session,
-    this.remoteEnabled = false,
+    this.remoteEnabled = remoteDataDefault,
     this.mediaAvailability,
     this.mediaResolved = false,
   });
@@ -2265,44 +2300,7 @@ class _LiveCourseScreenState extends State<LiveCourseScreen> {
   }
 
   Future<void> _enterLiveRoom() async {
-    final session = widget.session;
-    if (session == null) return;
-    if (_polyvAppId.isEmpty ||
-        _polyvAppSecret.isEmpty ||
-        _polyvAccountUserId.isEmpty) {
-      _showUnavailable(context, '客户端未配置保利威参数，请用 dart-define 启动');
-      return;
-    }
-    setState(() => joining = true);
-    try {
-      final repository =
-          ProviderScope.containerOf(context).read(courseRepositoryProvider);
-      final mode = session.status == 'completed' ? 'replay' : 'live';
-      final authorization =
-          await repository.joinLiveSession(session.id, mode: mode);
-      if (authorization.provider != 'polyv' ||
-          authorization.channelId.isEmpty) {
-        throw const ApiError('LIVE_PROVIDER_INVALID', '直播平台返回信息不完整');
-      }
-      await PolyvLiveScenes().loginLiveRoom(
-        channelType: 0,
-        channelId: authorization.channelId,
-        userId: _polyvAccountUserId,
-        appId: _polyvAppId,
-        appSecret: _polyvAppSecret,
-        viewerName: '得宝学员',
-      );
-    } on PlatformException catch (error) {
-      if (mounted) {
-        _showUnavailable(context, error.message ?? '保利威直播间打开失败');
-      }
-    } on ApiError catch (error) {
-      if (mounted) _showUnavailable(context, error.message);
-    } catch (_) {
-      if (mounted) _showUnavailable(context, '直播间暂时无法打开，请稍后重试');
-    } finally {
-      if (mounted) setState(() => joining = false);
-    }
+    _showUnavailable(context, '直播暂未开放');
   }
 
   String _formatLiveTime(DateTime value) =>

@@ -1,3 +1,4 @@
+import '../../core/config/app_environment.dart';
 // Legacy RC helper widgets remain available for alternate tool states; some
 // are intentionally not referenced by the default route yet.
 // ignore_for_file: unused_element, unused_element_parameter
@@ -125,7 +126,7 @@ class _ToolEmptyState extends StatelessWidget {
 }
 
 class LearningPlanScreen extends StatelessWidget {
-  const LearningPlanScreen({super.key, this.remoteEnabled = false});
+  const LearningPlanScreen({super.key, this.remoteEnabled = remoteDataDefault});
   final bool remoteEnabled;
 
   @override
@@ -167,6 +168,7 @@ class _LearningPlanScreenState extends ConsumerState<_LearningPlanBody> {
   ];
   final completed = <int>{1};
   bool _mutatingPlan = false;
+  bool _requestingEarlyAccess = false;
   final _completingTaskIds = <String>{};
   final _completedRemoteTaskIds = <String>{};
   final _planOverrides = <String, LearningPlan>{};
@@ -344,6 +346,15 @@ class _LearningPlanScreenState extends ConsumerState<_LearningPlanBody> {
         .where(_isTaskDone)
         .fold<int>(0, (sum, task) => sum + task.minutes);
     final progress = planTasks.isEmpty ? 0.0 : done / planTasks.length;
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final todayTasks =
+        planTasks.where((task) => task.dueDate == today).toList();
+    final todayDone = todayTasks.isNotEmpty && todayTasks.every(_isTaskDone);
+    final earlyRequests = ref.watch(earlyAccessProvider).valueOrNull ??
+        const <EarlyAccessRequest>[];
+    final pendingRequests = earlyRequests
+        .where((item) => item.planId == plan?.id && item.status == 'pending');
+    final earlyRequest = pendingRequests.isEmpty ? null : pendingRequests.first;
     return _screen(
         '学习计划',
         ListView(padding: const EdgeInsets.only(bottom: 24), children: [
@@ -416,6 +427,34 @@ class _LearningPlanScreenState extends ConsumerState<_LearningPlanBody> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(color: _muted, fontSize: 11)),
+                    if (plan != null && todayDone) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          key: const ValueKey('learning-plan-early-access'),
+                          onPressed:
+                              _requestingEarlyAccess || earlyRequest != null
+                                  ? null
+                                  : () => _requestEarlyAccess(plan),
+                          icon: _requestingEarlyAccess
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white))
+                              : const Icon(Icons.rocket_launch_outlined),
+                          label:
+                              Text(earlyRequest != null ? '提前学习申请审核中' : '提前学习'),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                          earlyRequest != null
+                              ? '后台同意后可学习后续内容'
+                              : '今日任务已完成，可申请学习后续内容',
+                          style: const TextStyle(color: _muted, fontSize: 11)),
+                    ],
                   ])),
           if (planTasks.isEmpty)
             _ToolEmptyState(
@@ -441,16 +480,43 @@ class _LearningPlanScreenState extends ConsumerState<_LearningPlanBody> {
                           duration: '${task.minutes}分钟',
                           done: _isTaskDone(task),
                           busy: _completingTaskIds.contains(task.id),
-                          onTap: _isTaskDone(task) || task.locked ||
+                          onTap: _isTaskDone(task) ||
+                                  task.locked ||
                                   _completingTaskIds.contains(task.id)
                               ? null
-                              : task.contentType != null ? () async {
-                                  await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => LearningTaskScreen(task: task)));
-                                  if (mounted) { ref.invalidate(learningTasksProvider); }
-                                } : () => _completeRemoteTask(task.id),
+                              : task.contentType != null
+                                  ? () async {
+                                      await Navigator.push<void>(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                                  LearningTaskScreen(
+                                                      task: task)));
+                                      if (mounted) {
+                                        ref.invalidate(learningTasksProvider);
+                                      }
+                                    }
+                                  : () => _completeRemoteTask(task.id),
                         ))
                     .toList(growable: false)),
         ]));
+  }
+
+  Future<void> _requestEarlyAccess(LearningPlan plan) async {
+    setState(() => _requestingEarlyAccess = true);
+    try {
+      await ref.read(courseRepositoryProvider).requestEarlyAccess(plan.id);
+      ref.invalidate(earlyAccessProvider);
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('申请已提交，请等待后台审核')));
+    } catch (error) {
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(_errorMessage(error))));
+    } finally {
+      if (mounted) setState(() => _requestingEarlyAccess = false);
+    }
   }
 
   List<LearningPlan> _effectivePlans(List<LearningPlan> source) {
@@ -1010,7 +1076,8 @@ class _SubjectMetric extends StatelessWidget {
 }
 
 class QuestionRecordsScreen extends StatelessWidget {
-  const QuestionRecordsScreen({super.key, this.remoteEnabled = false});
+  const QuestionRecordsScreen(
+      {super.key, this.remoteEnabled = remoteDataDefault});
   final bool remoteEnabled;
 
   @override
@@ -1364,51 +1431,116 @@ class _QuestionRecordsState extends ConsumerState<_QuestionRecordsBody> {
     ]);
   }
 
-  Widget _recordFilters(List<Subject> subjects) => Row(children: [
-        Expanded(
-          child: DropdownButtonFormField<String>(
-            value: _subjectId ?? '',
-            isExpanded: true,
-            decoration: const InputDecoration(
-                labelText: '\u79d1\u76ee',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(borderSide: BorderSide.none)),
-            items: [
-              const DropdownMenuItem<String>(
-                  value: '', child: Text('\u5168\u90e8\u79d1\u76ee')),
-              ...subjects.map((subject) => DropdownMenuItem<String>(
-                  value: subject.id, child: Text(subject.name))),
-            ],
-            onChanged: (value) => _changeFilter(
-                subjectId: value == null || value.isEmpty ? null : value,
-                mode: _mode),
+  Widget _recordFilters(List<Subject> subjects) {
+    final selectedSubject = subjects
+        .where((subject) => subject.id == _subjectId)
+        .map((subject) => subject.name)
+        .toList(growable: false);
+    final subjectLabel =
+        selectedSubject.isEmpty ? '全部科目' : selectedSubject.first;
+    final modeLabel = switch (_mode) {
+      'objective' => '客观题',
+      'subjective' => '主观题',
+      _ => '全部模式',
+    };
+    final active = _subjectId != null || _mode != null;
+
+    Widget dropdown({
+      required Key key,
+      required String label,
+      required String value,
+      required List<DropdownMenuItem<String>> items,
+      required ValueChanged<String?> onChanged,
+    }) =>
+        DropdownButtonFormField<String>(
+          key: key,
+          initialValue: value,
+          isExpanded: true,
+          menuMaxHeight: 360,
+          itemHeight: 48,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+          decoration: InputDecoration(
+            labelText: label,
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: _line)),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: _line)),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: _brand, width: 1.5)),
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: DropdownButtonFormField<String>(
-            value: _mode ?? '',
-            isExpanded: true,
-            decoration: const InputDecoration(
-                labelText: '\u6a21\u5f0f',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(borderSide: BorderSide.none)),
-            items: const [
-              DropdownMenuItem<String>(
-                  value: '', child: Text('\u5168\u90e8\u6a21\u5f0f')),
-              DropdownMenuItem<String>(
-                  value: 'objective', child: Text('\u5ba2\u89c2\u9898')),
-              DropdownMenuItem<String>(
-                  value: 'subjective', child: Text('\u4e3b\u89c2\u9898')),
-            ],
-            onChanged: (value) => _changeFilter(
-                subjectId: _subjectId,
-                mode: value == null || value.isEmpty ? null : value),
-          ),
-        ),
-      ]);
+          items: items,
+          onChanged: onChanged,
+        );
+
+    final subjectItems = <DropdownMenuItem<String>>[
+      const DropdownMenuItem<String>(
+          value: '', child: Text('全部科目', overflow: TextOverflow.ellipsis)),
+      ...subjects.map((subject) => DropdownMenuItem<String>(
+            value: subject.id,
+            child: Text(subject.name, overflow: TextOverflow.ellipsis),
+          )),
+    ];
+    final modeItems = const <DropdownMenuItem<String>>[
+      DropdownMenuItem<String>(
+          value: '', child: Text('全部模式', overflow: TextOverflow.ellipsis)),
+      DropdownMenuItem<String>(value: 'objective', child: Text('客观题')),
+      DropdownMenuItem<String>(value: 'subjective', child: Text('主观题')),
+    ];
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      LayoutBuilder(builder: (context, constraints) {
+        final narrow = constraints.maxWidth < 420;
+        final subject = dropdown(
+          key: const ValueKey('question-record-subject-filter'),
+          label: '科目 · $subjectLabel',
+          value: _subjectId ?? '',
+          items: subjectItems,
+          onChanged: (value) => _changeFilter(
+              subjectId: value == null || value.isEmpty ? null : value,
+              mode: _mode),
+        );
+        final mode = dropdown(
+          key: const ValueKey('question-record-mode-filter'),
+          label: '模式 · $modeLabel',
+          value: _mode ?? '',
+          items: modeItems,
+          onChanged: (value) => _changeFilter(
+              subjectId: _subjectId,
+              mode: value == null || value.isEmpty ? null : value),
+        );
+        if (narrow) {
+          return Column(children: [subject, const SizedBox(height: 10), mode]);
+        }
+        return Row(children: [
+          Expanded(child: subject),
+          const SizedBox(width: 10),
+          Expanded(child: mode),
+        ]);
+      }),
+      if (active) ...[
+        const SizedBox(height: 8),
+        Row(children: [
+          const Icon(Icons.filter_alt_outlined, size: 14, color: _brand),
+          const SizedBox(width: 4),
+          Expanded(
+              child: Text('当前筛选：$subjectLabel · $modeLabel',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: _body, fontSize: 12))),
+          TextButton(
+              key: const ValueKey('question-record-clear-filters'),
+              onPressed: () => _changeFilter(),
+              child: const Text('清除筛选')),
+        ]),
+      ],
+    ]);
+  }
 }
 
 class _InlineRetry extends StatelessWidget {
@@ -1910,7 +2042,7 @@ class _Record extends StatelessWidget {
 }
 
 class MistakeBookScreen extends StatelessWidget {
-  const MistakeBookScreen({super.key, this.remoteEnabled = false});
+  const MistakeBookScreen({super.key, this.remoteEnabled = remoteDataDefault});
   final bool remoteEnabled;
 
   @override
@@ -2153,7 +2285,7 @@ class _MistakeBookScreenState extends ConsumerState<_MistakeBookBody> {
 }
 
 class FavoritesScreen extends StatelessWidget {
-  const FavoritesScreen({super.key, this.remoteEnabled = false});
+  const FavoritesScreen({super.key, this.remoteEnabled = remoteDataDefault});
   final bool remoteEnabled;
 
   @override
@@ -2917,7 +3049,7 @@ class _LawCard extends StatelessWidget {
 class LawSearchScreen extends StatelessWidget {
   const LawSearchScreen({
     super.key,
-    this.remoteEnabled = false,
+    this.remoteEnabled = remoteDataDefault,
     this.source,
     this.subject,
   });
@@ -4646,7 +4778,8 @@ class _NoticeCard extends StatelessWidget {
 }
 
 class LearningReportScreen extends StatelessWidget {
-  const LearningReportScreen({super.key, this.remoteEnabled = false});
+  const LearningReportScreen(
+      {super.key, this.remoteEnabled = remoteDataDefault});
   final bool remoteEnabled;
 
   @override
@@ -4715,7 +4848,6 @@ class _LearningReportBody extends ConsumerWidget {
 
   Widget _reportBody(BuildContext context, LearningReport report,
       {bool local = false}) {
-    final hasActivity = report.minutes > 0 || report.answered > 0;
     final subjectRows = report.subjects
         .map((item) => _ReportSubject(
             name: _subjectName(item.subjectId),
@@ -4741,7 +4873,7 @@ class _LearningReportBody extends ConsumerWidget {
           child: Padding(
               padding: const EdgeInsets.all(16),
               child: _ReportOverview(
-                  minutes: report.minutes, active: hasActivity))),
+                  minutes: report.minutes, dailyTrend: report.dailyTrend))),
       Container(
           constraints: const BoxConstraints(minHeight: 90),
           margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -4885,16 +5017,30 @@ class _ReportSubject {
 }
 
 class _ReportOverview extends StatelessWidget {
-  const _ReportOverview({required this.minutes, required this.active});
+  const _ReportOverview({required this.minutes, required this.dailyTrend});
 
   final int minutes;
-  final bool active;
+  final List<({String date, int minutes})> dailyTrend;
 
   @override
   Widget build(BuildContext context) {
-    const days = ['一', '二', '三', '四', '五', '六', '日'];
-    const activeBars = [13.0, 32.0, 2.0, 22.0, 32.0, 13.0, 2.0];
-    final bars = active ? activeBars : List<double>.filled(7, 2);
+    final now = DateTime.now().toUtc();
+    final weekStart = DateTime(now.year, now.month, now.day)
+        .subtract(Duration(days: now.weekday - 1));
+    final dates = List.generate(7, (i) => weekStart.add(Duration(days: i)));
+    final days = dates.map((date) => '${date.month}/${date.day}').toList();
+    final values = dates.map((date) {
+      final key =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      return dailyTrend
+          .where((item) => item.date == key)
+          .fold<int>(0, (sum, item) => sum + item.minutes);
+    }).toList();
+    final maxMinutes =
+        values.fold<int>(0, (max, value) => value > max ? value : max);
+    final bars = values
+        .map((value) => maxMinutes == 0 ? 0.0 : value / maxMinutes * 32)
+        .toList();
     final hours = (minutes / 60).toStringAsFixed(1);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Text('本周学习时长',
@@ -4934,7 +5080,7 @@ class _ReportOverview extends StatelessWidget {
                             width: double.infinity,
                             height: bars[index],
                             decoration: BoxDecoration(
-                              color: active ? _brand : _line,
+                              color: _brand,
                               borderRadius: const BorderRadius.vertical(
                                 top: Radius.circular(4),
                               ),

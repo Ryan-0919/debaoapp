@@ -96,6 +96,9 @@ export default defineConfig({
           component: "@/pages/LearningQuestionTaxonomy",
         },
         { path: "/learning-admin/cards", component: "@/pages/LearningCards" },
+        { path: "/learning-admin/inquiries", component: "@/pages/LearningInquiries" },
+        { path: "/learning-admin/assessment-papers", component: "@/pages/LearningAssessmentPapers" },
+        { path: "/learning-admin/early-access", component: "@/pages/LearningEarlyAccess" },
         {
           path: "/learning-admin/classes",
           component: "@/pages/LearningClassTypes",
@@ -121,6 +124,7 @@ export default defineConfig({
       routes: [
         { path: "/", redirect: "/dashboard" },
         { path: "/dashboard", component: "@/pages/Dashboard" },
+        { path: "/learning/inquiries", component: "@/pages/LearningInquiries" },
         { path: "/users", component: "@/pages/Users", name: "用户与权益" },
         {
           path: "/content/questions",

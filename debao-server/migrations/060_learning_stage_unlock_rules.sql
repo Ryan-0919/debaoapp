@@ -15,6 +15,8 @@ alter table learning_stage_plan_items
 alter table learning_stage_plan_items
   add constraint learning_stage_plan_items_minutes_check check (minutes between 0 and 1440);
 alter table learning_stage_plan_items
+  drop constraint if exists learning_stage_plan_items_week_day_check;
+alter table learning_stage_plan_items
   add constraint learning_stage_plan_items_week_day_check check (week_day is null or week_day between 1 and 7);
 
 update learning_stage_plan_configs

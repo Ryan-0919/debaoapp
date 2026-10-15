@@ -1,5 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+// Only widget tests explicitly built with this flag may use legacy fixtures.
+const remoteDataDefault =
+    !bool.fromEnvironment('DEBAO_TEST_FIXTURES', defaultValue: false);
+
 enum AppEnvironment {
   development('开发', 'http://127.0.0.1:4000'),
   staging('预发布', 'https://staging-api.example.invalid'),
@@ -31,5 +35,5 @@ enum AppEnvironment {
 
   static AppEnvironment get current => AppEnvironment.development;
 
-  bool get allowsMocks => this != AppEnvironment.production;
+  bool get allowsMocks => false;
 }

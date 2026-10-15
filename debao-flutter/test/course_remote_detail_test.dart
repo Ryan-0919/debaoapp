@@ -70,7 +70,7 @@ void main() {
     expect(find.text('民法精讲课（2024版）'), findsNothing);
   });
 
-  testWidgets('远端课程授权后可进入视频播放器', (tester) async {
+  testWidgets('远端课程授权后只提供真实媒体入口', (tester) async {
     await tester.pumpWidget(ProviderScope(
       overrides: [
         courseProvider('remote-1').overrideWith((ref) async => remoteCourse),
@@ -87,7 +87,9 @@ void main() {
     await tester
         .tap(find.byKey(const ValueKey('course-detail-primary-action')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('video-player-screen')), findsOneWidget);
+    expect(find.text('打开课程媒体'), findsOneWidget);
+    expect(find.byKey(const ValueKey('video-player-screen')), findsNothing);
+    expect(find.text('物权变动的生效要件：动产交付，不动产登记'), findsNothing);
   });
 
   testWidgets('远端课程没有章节时媒体页显示占位而不抛异常', (tester) async {
@@ -108,8 +110,8 @@ void main() {
       ),
     ));
     await tester.pump();
-    expect(find.byKey(const ValueKey('video-player-screen')), findsOneWidget);
-    expect(find.byKey(const ValueKey('video-lesson-title')), findsOneWidget);
+    expect(find.text('尚未获取媒体授权'), findsOneWidget);
+    expect(find.byKey(const ValueKey('video-player-screen')), findsNothing);
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const MaterialApp(
@@ -121,8 +123,8 @@ void main() {
       ),
     ));
     await tester.pump();
-    expect(find.byKey(const ValueKey('audio-player-screen')), findsOneWidget);
-    expect(find.byKey(const ValueKey('audio-lesson-title')), findsOneWidget);
+    expect(find.text('尚未获取媒体授权'), findsOneWidget);
+    expect(find.byKey(const ValueKey('audio-player-screen')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

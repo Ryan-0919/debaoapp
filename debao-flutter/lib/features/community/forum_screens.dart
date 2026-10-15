@@ -1,3 +1,4 @@
+import '../../core/config/app_environment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,7 +26,7 @@ const forumCategories = <String>[
 /// The forum is an independent community surface reached from the home-page
 /// community section or its public route.
 class CommunityForumScreen extends StatelessWidget {
-  const CommunityForumScreen({super.key, this.remoteEnabled = false});
+  const CommunityForumScreen({super.key, this.remoteEnabled = remoteDataDefault});
 
   final bool remoteEnabled;
 
@@ -438,7 +439,7 @@ class _CommunityForumState extends ConsumerState<_CommunityForumBody> {
 }
 
 class ForumComposeScreen extends StatelessWidget {
-  const ForumComposeScreen({super.key, this.remoteEnabled = false});
+  const ForumComposeScreen({super.key, this.remoteEnabled = remoteDataDefault});
 
   final bool remoteEnabled;
 
@@ -685,7 +686,7 @@ class ForumDetailScreen extends ConsumerStatefulWidget {
     required this.body,
     required this.category,
     this.postId,
-    this.remoteEnabled = false,
+    this.remoteEnabled = remoteDataDefault,
     this.initialPost,
   });
 

@@ -1,0 +1,7 @@
+{
+  "name": "debao-preview",
+  "version": "0.1.0",
+  "modelVersion": "6.0.0",
+  "description": "得宝 Flutter Web 鸿蒙预览容器",
+  "dependencies": {}
+}

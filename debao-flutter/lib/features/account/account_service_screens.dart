@@ -1,3 +1,4 @@
+import '../../core/config/app_environment.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -61,7 +62,7 @@ final notificationReadOverridesProvider =
     StateProvider<Set<String>>((ref) => <String>{});
 
 class UserProfileScreen extends StatelessWidget {
-  const UserProfileScreen({super.key, this.remoteEnabled = false});
+  const UserProfileScreen({super.key, this.remoteEnabled = remoteDataDefault});
   final bool remoteEnabled;
 
   @override
@@ -746,7 +747,7 @@ class _UserProfileState extends ConsumerState<_UserProfileBody> {
 }
 
 class SettingsScreen extends ConsumerStatefulWidget {
-  const SettingsScreen({super.key, this.remoteEnabled = false});
+  const SettingsScreen({super.key, this.remoteEnabled = remoteDataDefault});
   final bool remoteEnabled;
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsState();
@@ -936,7 +937,7 @@ class _SettingsState extends ConsumerState<SettingsScreen> {
 }
 
 class NotificationsScreen extends StatelessWidget {
-  const NotificationsScreen({super.key, this.remoteEnabled = false});
+  const NotificationsScreen({super.key, this.remoteEnabled = remoteDataDefault});
   final bool remoteEnabled;
   @override
   Widget build(BuildContext context) =>
@@ -1178,7 +1179,7 @@ class _NoticeRow extends StatelessWidget {
 /// service are not available in the local build; [remoteEnabled] only opts in
 /// to the one-shot `/v1/ai/reply` adapter and exposes its unavailable state.
 class AIChatScreen extends StatelessWidget {
-  const AIChatScreen({super.key, this.remoteEnabled = false, this.repository});
+  const AIChatScreen({super.key, this.remoteEnabled = remoteDataDefault, this.repository});
 
   final bool remoteEnabled;
   final AiRepository? repository;
@@ -2005,7 +2006,7 @@ const _demoGradingRecords = <GradingSubmission>[
 ];
 
 class GradingServiceScreen extends StatelessWidget {
-  const GradingServiceScreen({super.key, this.remoteEnabled = false});
+  const GradingServiceScreen({super.key, this.remoteEnabled = remoteDataDefault});
   final bool remoteEnabled;
 
   @override
@@ -2530,7 +2531,7 @@ class GradingPaperDetailScreen extends StatelessWidget {
     super.key,
     required this.title,
     this.paperId,
-    this.remoteEnabled = false,
+    this.remoteEnabled = remoteDataDefault,
   });
 
   final String title;
@@ -2707,7 +2708,7 @@ class GradingReportScreen extends StatelessWidget {
     super.key,
     required this.title,
     this.submissionId,
-    this.remoteEnabled = false,
+    this.remoteEnabled = remoteDataDefault,
   });
 
   final String title;
@@ -2979,7 +2980,7 @@ String _accountErrorMessage(Object error) =>
     error is ApiError ? error.message : '请求失败，请稍后重试';
 
 class ForumScreen extends StatelessWidget {
-  const ForumScreen({super.key, this.remoteEnabled = false});
+  const ForumScreen({super.key, this.remoteEnabled = remoteDataDefault});
   final bool remoteEnabled;
 
   @override

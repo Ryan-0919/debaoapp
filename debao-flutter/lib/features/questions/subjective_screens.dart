@@ -1,3 +1,4 @@
+import '../../core/config/app_environment.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -211,7 +212,7 @@ class SubjectiveSelectScreen extends StatelessWidget {
     super.key,
     required this.subject,
     this.subjectId,
-    this.remoteEnabled = false,
+    this.remoteEnabled = remoteDataDefault,
   });
 
   final String subject;
@@ -579,7 +580,7 @@ class SubjectiveAnswerScreen extends StatelessWidget {
     this.questionIndex = 0,
     this.questionId,
     this.paperId,
-    this.remoteEnabled = false,
+    this.remoteEnabled = remoteDataDefault,
   });
 
   final String subject;
@@ -1056,7 +1057,7 @@ class SubjectiveSubmitSuccessScreen extends StatelessWidget {
     this.status,
     this.reportTitle,
     this.paperId,
-    this.remoteEnabled = false,
+    this.remoteEnabled = remoteDataDefault,
   });
 
   final String? submissionId;

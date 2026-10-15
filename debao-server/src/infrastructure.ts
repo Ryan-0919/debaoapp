@@ -29,14 +29,14 @@ export class Infrastructure {
   }
   async query<T extends Record<string, unknown> = Record<string, unknown>>(text: string, values: unknown[] = []): Promise<{rows: T[]; rowCount: number} | null> {
     if (!this.pool) {
-      if (this.config.nodeEnv === 'production') throw new Error('PostgreSQL is not configured');
+      if (process.env.DEBAO_TEST_FIXTURES !== 'true') throw new Error('PostgreSQL is not configured');
       return null;
     }
     try {
       const result = await this.pool.query<T>(text, values);
       return {rows: result.rows, rowCount: result.rowCount ?? result.rows.length};
     } catch (error) {
-      if (this.config.nodeEnv === 'production') throw error;
+      if (process.env.DEBAO_TEST_FIXTURES !== 'true') throw error;
       console.warn('database query skipped:', error instanceof Error ? error.message : error);
       return null;
     }
@@ -44,7 +44,7 @@ export class Infrastructure {
 
   async transaction(statements: SqlStatement[]): Promise<void> {
     if (!this.pool) {
-      if (this.config.nodeEnv === 'production') throw new Error('PostgreSQL is not configured');
+      if (process.env.DEBAO_TEST_FIXTURES !== 'true') throw new Error('PostgreSQL is not configured');
       return;
     }
     const client = await this.pool.connect();

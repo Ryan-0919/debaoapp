@@ -4,19 +4,19 @@ import {createServer} from 'node:http';
 import {createAIAdapter, createCarrierAuthAdapter, createGradingAdapter, createMediaAdapter, createPaymentAdapter, createPushAdapter, createSmsAdapter, createWechatAuthAdapter} from '../adapters.js';
 
 test('adapter factories keep local and unconfigured behavior explicit', async () => {
-  assert.equal(createPaymentAdapter({PAYMENT_ADAPTER: 'local'}).name, 'local');
+  assert.equal(createPaymentAdapter({PAYMENT_ADAPTER: 'local', DEBAO_TEST_FIXTURES: 'true'}).name, 'local');
   assert.equal((await createPaymentAdapter({PAYMENT_ADAPTER: 'unconfigured'}).pay('o1', 100)).status, 'pending');
   assert.equal((await createSmsAdapter({SMS_ADAPTER: 'unconfigured'}).sendCode('13800138000', 'login')).accepted, false);
   assert.equal(createPushAdapter({}).name, 'unconfigured');
-  assert.equal(createPushAdapter({PUSH_ADAPTER: 'local'}).name, 'local');
+  assert.equal(createPushAdapter({PUSH_ADAPTER: 'local', DEBAO_TEST_FIXTURES: 'true'}).name, 'local');
   assert.equal(createPushAdapter({PUSH_ADAPTER: 'unconfigured'}).name, 'unconfigured');
   assert.equal(createGradingAdapter({GRADING_ADAPTER: 'unconfigured'}).name, 'unconfigured');
   assert.equal(createAIAdapter({AI_ADAPTER: 'unconfigured'}).name, 'unconfigured');
   assert.equal((await createMediaAdapter({}).prepare('c1', 'video')).available, false);
   assert.equal(createWechatAuthAdapter({NODE_ENV: 'production'}).name, 'unconfigured');
   assert.equal(createCarrierAuthAdapter({NODE_ENV: 'production'}).name, 'unconfigured');
-  assert.equal((await createWechatAuthAdapter({WECHAT_AUTH_ADAPTER: 'local'}).exchangeCode('local-wechat-test')).providerUserId, 'wx-local-demo');
-  assert.equal((await createCarrierAuthAdapter({CARRIER_AUTH_ADAPTER: 'local'}).verifyToken('local-one-click:13800138000')).phone, '13800138000');
+  assert.equal((await createWechatAuthAdapter({WECHAT_AUTH_ADAPTER: 'local', DEBAO_TEST_FIXTURES: 'true'}).exchangeCode('local-wechat-test')).providerUserId, 'wx-local-demo');
+  assert.equal((await createCarrierAuthAdapter({CARRIER_AUTH_ADAPTER: 'local', DEBAO_TEST_FIXTURES: 'true'}).verifyToken('local-one-click:13800138000')).phone, '13800138000');
 });
 
 test('http adapters forward payloads and bearer credentials to a sandbox provider', async () => {

@@ -185,14 +185,13 @@ void main() {
   testWidgets('学习中心不提供本地全部课程回退入口', (tester) async {
     await tester.pumpWidget(ProviderScope(
       overrides: [
+        learningInquiriesProvider.overrideWith((ref) async => []),
         coursesProvider.overrideWith((ref) async => const <Course>[]),
-        learningTasksProvider.overrideWith((ref) async => const <LearningTask>[]),
+        learningTasksProvider
+            .overrideWith((ref) async => const <LearningTask>[]),
         learningDiagnosticProvider.overrideWith((ref) async =>
             const LearningDiagnosticState(
-                access: 'none',
-                productId: '',
-                completed: true,
-                questions: [])),
+                access: 'none', productId: '', completed: true, questions: [])),
       ],
       child: const MaterialApp(home: CoursesScreen(remoteEnabled: true)),
     ));
@@ -200,6 +199,12 @@ void main() {
     expect(find.text('全部课程'), findsNothing);
     expect(find.text('请求权基础答题训练'), findsNothing);
     expect(find.text('法考全科音频串讲班'), findsNothing);
+    await tester.pumpAndSettle();
+    expect(find.text('我的答疑'), findsOneWidget);
+    await tester.tap(find.text('题目'));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('question-tab-my-inquiries')),
+        findsOneWidget);
   });
 
   testWidgets('远端批改套卷缺少编号时不回退本地演示页', (tester) async {

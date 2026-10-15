@@ -25,6 +25,10 @@ test('learning activities are idempotent and included in period aggregates', asy
   assert.equal(list.status, 200); assert.equal(listJson.data.items.some((item: any) => item.id === firstJson.data.id), true);
   const report = await fetch(`${base}/v1/learning/report?period=day`, {headers: auth}); const reportJson = await report.json() as any;
   assert.equal(report.status, 200); assert.equal(reportJson.data.durationSeconds >= 125, true); assert.equal(Array.isArray(reportJson.data.dailyTrend), true);
+  assert.equal(reportJson.data.minutes, Math.floor(reportJson.data.durationSeconds / 60));
+  const today = reportJson.data.dailyTrend.find((item: any) => item.date === firstJson.data.occurredAt.slice(0, 10));
+  assert.ok(today);
+  assert.equal(today.minutes, Math.floor(today.durationSeconds / 60));
   store.learningActivities = store.learningActivities.filter(item => item.id !== firstJson.data.id); store.learningActivityKeys.delete(`u-demo\u0000${key}`);
 }));
 

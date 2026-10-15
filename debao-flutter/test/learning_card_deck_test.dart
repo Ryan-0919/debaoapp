@@ -52,6 +52,36 @@ class Transport implements ApiTransport {
 }
 
 void main() {
+  testWidgets('卡片使用上下翻页，阅读时可手动放大缩小和还原', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: LearningCardDeck(
+      card: const LearningCard(
+          id: 'zoom',
+          title: '缩放测试',
+          contentType: 'text',
+          assets: [(type: 'text', reference: '需要阅读的实际内容', filename: '正文')]),
+      onComplete: () {},
+    ))));
+    expect(tester.widget<PageView>(find.byType(PageView)).scrollDirection,
+        Axis.vertical);
+    await tester.tap(find.text('放大阅读'));
+    await tester.pumpAndSettle();
+    final viewer =
+        tester.widget<InteractiveViewer>(find.byType(InteractiveViewer));
+    expect(viewer.transformationController!.value.getMaxScaleOnAxis(), 1);
+    await tester.tap(find.byKey(const ValueKey('card-zoom-in')));
+    await tester.pump();
+    expect(viewer.transformationController!.value.getMaxScaleOnAxis(),
+        greaterThan(1));
+    await tester.tap(find.byKey(const ValueKey('card-zoom-out')));
+    await tester.pump();
+    expect(viewer.transformationController!.value.getMaxScaleOnAxis(),
+        closeTo(1, .001));
+    await tester.tap(find.text('还原'));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('一张素材多个挖空：先背诵、逐项核对、最后才提交', (tester) async {
     var writes = 0;
     Map<int, String> ratings = {};
@@ -120,7 +150,7 @@ void main() {
             home: LearningTaskScreen(task: LearningTask.fromJson(task)))));
     await tester.pumpAndSettle();
     expect(find.text('后台配置的卡片'), findsWidgets);
-    await tester.drag(find.byType(PageView), const Offset(-600, 0));
+    await tester.drag(find.byType(PageView), const Offset(0, -600));
     await tester.pumpAndSettle();
     expect(find.text('第 2 / 2 张'), findsOneWidget);
     await tester.tap(find.text('本张已背诵'));

@@ -6,11 +6,5 @@ import 'app/app.dart';
 
 void main() {
   usePathUrlStrategy();
-  // Keep the default browser build deterministic and aligned with the RC
-  // prototype. Real API mode remains explicit so a remote dataset cannot
-  // silently change the visual acceptance surface; use
-  // `--dart-define=DEBAO_REMOTE=true` for a connected environment.
-  const remoteEnabled =
-      bool.fromEnvironment('DEBAO_REMOTE', defaultValue: false);
-  runApp(ProviderScope(child: DebaoApp(remoteEnabled: remoteEnabled)));
+  runApp(const ProviderScope(child: DebaoApp(remoteEnabled: true)));
 }

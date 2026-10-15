@@ -1,3 +1,4 @@
+import '../core/config/app_environment.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,8 +19,11 @@ import '../features/courses/course_detail_screens.dart';
 import '../features/commerce/commerce_detail_screens.dart';
 import '../features/auth/login_screen.dart';
 import '../features/learning/learning_center_screens.dart';
+import '../features/learning/learning_inquiries_screen.dart';
 import '../shared/web_phone_frame.dart';
 import '../data/models.dart';
+import '../data/providers.dart';
+import '../core/network/api_client.dart';
 
 String _query(GoRouterState state, String key, [String fallback = '']) =>
     state.uri.queryParameters[key] ?? fallback;
@@ -49,7 +53,7 @@ List<int?> _queryAnswers(GoRouterState state) {
   }).toList();
 }
 
-GoRouter _createRouter({bool remoteEnabled = false}) => GoRouter(
+GoRouter _createRouter({bool remoteEnabled = remoteDataDefault}) => GoRouter(
       initialLocation: '/',
       routes: <RouteBase>[
         GoRoute(
@@ -208,7 +212,7 @@ GoRouter _createRouter({bool remoteEnabled = false}) => GoRouter(
         GoRoute(
           path: '/courses/:courseId/live',
           name: 'live-course',
-          builder: (context, state) => LiveCourseScreen(
+          builder: (context, state) => CourseDetailScreen(
               courseId: state.pathParameters['courseId'] ?? 'c3',
               title: _query(state, 'title'),
               remoteEnabled: remoteEnabled),
@@ -221,6 +225,8 @@ GoRouter _createRouter({bool remoteEnabled = false}) => GoRouter(
           builder: (context, state) =>
               LearningCenterScreen(remoteEnabled: remoteEnabled),
         ),
+        GoRoute(path: '/learning/inquiries',
+          builder: (context, state) => const LearningInquiriesScreen()),
         GoRoute(
           path: '/learning/diagnostic',
           name: 'learning-diagnostic',
@@ -410,14 +416,14 @@ int _tabIndex(GoRouterState state) {
 
 /// Creates an isolated router for deep-link and integration tests. The
 /// production entry point uses the same route table with remote data enabled.
-GoRouter createAppRouter({bool remoteEnabled = false}) =>
+GoRouter createAppRouter({bool remoteEnabled = remoteDataDefault}) =>
     _createRouter(remoteEnabled: remoteEnabled);
 
 /// Local fixture router retained for deterministic widget previews.
-final GoRouter appRouter = createAppRouter();
+final GoRouter appRouter = createAppRouter(remoteEnabled: false);
 
 class DebaoApp extends StatelessWidget {
-  const DebaoApp({super.key, this.remoteEnabled = false});
+  const DebaoApp({super.key, this.remoteEnabled = remoteDataDefault});
   final bool remoteEnabled;
 
   @override
@@ -449,20 +455,20 @@ class DebaoApp extends StatelessWidget {
   }
 }
 
-class AppShell extends StatefulWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({
     super.key,
-    this.remoteEnabled = false,
+    this.remoteEnabled = remoteDataDefault,
     this.initialTab = 0,
   });
   final bool remoteEnabled;
   final int initialTab;
 
   @override
-  State<AppShell> createState() => _AppShellState();
+  ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _AppShellState extends ConsumerState<AppShell> {
   int tabIndex = 0;
 
   @override
@@ -481,6 +487,12 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    final privateTab = tabIndex == 3 || tabIndex == 4;
+    final user = widget.remoteEnabled && privateTab
+        ? ref.watch(currentUserProvider)
+        : null;
+    final needsLogin = user?.error is ApiError &&
+        (user!.error as ApiError).statusCode == 401;
     final screens = <Widget>[
       HomeScreen(
         onOpenQuestionBank: () => setState(() => tabIndex = 1),
@@ -510,13 +522,15 @@ class _AppShellState extends State<AppShell> {
       QuestionBankScreen(remoteEnabled: widget.remoteEnabled),
       // Only fetch tab-specific remote data once its tab is visible. This
       // keeps the shell from starting duplicate requests for hidden tabs.
-      MallScreen(remoteEnabled: widget.remoteEnabled && tabIndex == 2),
-      CoursesScreen(remoteEnabled: widget.remoteEnabled && tabIndex == 3),
+      MallScreen(remoteEnabled: widget.remoteEnabled),
+      CoursesScreen(remoteEnabled: widget.remoteEnabled),
       ProfileScreen(remoteEnabled: widget.remoteEnabled),
     ];
 
     return Scaffold(
-      body: IndexedStack(index: tabIndex, children: screens),
+      body: needsLogin
+          ? LoginScreen(remoteEnabled: true)
+          : screens[tabIndex],
       bottomNavigationBar: _BottomNav(
         index: tabIndex,
         onChanged: (index) => setState(() => tabIndex = index),

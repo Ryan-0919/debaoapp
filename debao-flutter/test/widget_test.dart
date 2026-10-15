@@ -63,7 +63,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('第 2 / 2 张'), findsOneWidget);
     await tester.drag(
-        find.byKey(const ValueKey('card-deck-pages')), const Offset(500, 0));
+        find.byKey(const ValueKey('card-deck-pages')), const Offset(0, 500));
     await tester.pumpAndSettle();
     expect(find.text('第 1 / 2 张'), findsOneWidget);
     await tester.tap(find.byTooltip('下一张'));

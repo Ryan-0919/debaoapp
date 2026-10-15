@@ -5,6 +5,7 @@ import {
   createAdminPaper,
   getAdminPapers,
   getAdminQuestions,
+  getAdminProducts,
   getAdminSubjects,
   getAdminSubjectiveQuestions,
   publishAdminPaper,
@@ -24,12 +25,13 @@ type Values = {
   mode?: string;
   durationMinutes?: number;
   totalScore: number;
+  productId?: string;
 };
 type PoolQuestion = (AdminQuestion & {kind: 'objective'}) | (AdminSubjectiveQuestion & {kind: 'subjective'});
 
 const typeLabels: Record<PaperType, string> = {objective: '客观题', subjective: '主观题'};
 const statusLabels: Record<string, string> = {published: '已发布', draft: '草稿', review: '审核中', disabled: '已停用', archived: '已归档'};
-const modeLabels: Record<string, string> = {real: '真题', mock: '模拟', chapter: '章节练习'};
+const modeLabels: Record<string, string> = {real: '真题', mock: '模拟', chapter: '章节练习', marketing: '营销考试', advanced: '进阶考试（付费）'};
 
 function questionKey(question: PoolQuestion) {
   return question.kind === 'subjective' ? question.questionId : question.id;
@@ -38,6 +40,7 @@ function questionKey(question: PoolQuestion) {
 export default function Papers() {
   const [items, setItems] = useState<AdminPaper[]>([]);
   const [subjects, setSubjects] = useState<AdminSubject[]>([]);
+  const [products, setProducts] = useState<Array<{id: string; name: string; status?: string}>>([]);
   const [loading, setLoading] = useState(false);
   const [activeType, setActiveType] = useState<PaperType>('objective');
   const [paperType, setPaperType] = useState<PaperType>('objective');
@@ -66,6 +69,7 @@ export default function Papers() {
   useEffect(() => {
     void load();
     getAdminSubjects().then(setSubjects).catch(error => message.error(error instanceof Error ? error.message : '加载科目失败'));
+    getAdminProducts().then(result => setProducts(result.items.filter(item => item.status === 'on_sale' || !item.status))).catch(error => message.error(error instanceof Error ? error.message : '加载商品失败'));
   }, [load]);
 
   const subjectName = (id?: string) => subjects.find(subject => subject.id === id)?.name ?? id ?? '-';
@@ -114,6 +118,7 @@ export default function Papers() {
       mode: record.mode,
       durationMinutes: record.durationMinutes,
       totalScore: record.totalScore,
+      productId: record.productId,
     });
     setOpen(true);
   };
@@ -134,6 +139,7 @@ export default function Papers() {
         ? values.durationMinutes ?? 180
         : pool.reduce((sum, item) => sum + (item.kind === 'subjective' ? item.suggestedMinutes : 0), 0),
       totalScore: values.totalScore,
+      productId: paperType === 'objective' && values.mode === 'advanced' ? values.productId : undefined,
       questionIds: pool.map(questionKey),
     };
     try {
@@ -320,7 +326,12 @@ export default function Papers() {
             <Input placeholder="客观题卷一" />
           </Form.Item>
           <Form.Item name="mode" label="模式" rules={[{required: true, message: '请选择试卷模式'}]} style={{flex: 1}}>
-            <Select options={[{value: 'real', label: '真题'}, {value: 'mock', label: '模拟'}, {value: 'chapter', label: '章节练习'}]} />
+            <Select options={[{value: 'real', label: '真题'}, {value: 'mock', label: '模拟'}, {value: 'chapter', label: '章节练习'}, {value: 'marketing', label: '营销考试'}, {value: 'advanced', label: '进阶考试（付费）'}]} />
+          </Form.Item>
+          <Form.Item noStyle shouldUpdate={(prev, next) => prev.mode !== next.mode}>
+            {({getFieldValue}) => getFieldValue('mode') === 'advanced' ? <Form.Item name="productId" label="绑定付费商品" rules={[{required: true, message: '进阶考试必须绑定商品'}]} style={{flex: 1}}>
+              <Select placeholder="选择已上架商品" options={products.map(product => ({value: product.id, label: product.name}))} />
+            </Form.Item> : null}
           </Form.Item>
           <Form.Item name="durationMinutes" label="答题时长（分钟）" rules={[{required: true, message: '请输入答题时长'}]} style={{flex: 1}}>
             <InputNumber min={1} max={600} style={{width: '100%'}} />

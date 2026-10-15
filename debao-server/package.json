@@ -9,7 +9,7 @@
     "start": "node --env-file-if-exists=.env dist/server.js",
     "migrate": "node scripts/migrate.mjs",
     "admin:init": "node scripts/init-admin.mjs",
-    "test": "npm run build && node --test dist/test/*.test.js",
+    "test": "npm run build && DEBAO_TEST_FIXTURES=true node --test dist/test/*.test.js scripts/migration-mode.test.mjs",
     "check": "npm run build && npm test"
   },
   "dependencies": {

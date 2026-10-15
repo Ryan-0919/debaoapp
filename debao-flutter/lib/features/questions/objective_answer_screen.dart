@@ -1,3 +1,4 @@
+import '../../core/config/app_environment.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -10,6 +11,7 @@ import '../../data/models.dart';
 import '../../data/providers.dart';
 import '../tools/study_tools_screens.dart';
 import '../../shared/route_back_button.dart';
+import '../learning/learning_inquiries_screen.dart';
 
 /// RC objective answering flow. The default constructor deliberately keeps the
 /// local prototype data; callers opt into the API with [remoteEnabled].
@@ -17,7 +19,7 @@ class ObjectiveAnswerScreen extends StatelessWidget {
   const ObjectiveAnswerScreen({
     super.key,
     required this.title,
-    this.remoteEnabled = false,
+    this.remoteEnabled = remoteDataDefault,
     this.subjectId,
     this.mode = 'chapter',
     this.paperId,
@@ -330,6 +332,9 @@ class _ObjectiveAnswerScreenState extends ConsumerState<_ObjectiveAnswerBody>
 
   Widget _buildScaffold(BuildContext context, List<_Question> questions,
       {ObjectiveSession? session}) {
+    if (questions.isEmpty)
+      return _stateScaffold(
+          title: widget.title, child: const Center(child: Text('暂无可作答题目')));
     final safeCurrent = current.clamp(0, questions.length - 1).toInt();
     final question = questions[safeCurrent];
     final selected = answersById[question.id] ?? const <int>{};
@@ -506,7 +511,6 @@ class _ObjectiveAnswerScreenState extends ConsumerState<_ObjectiveAnswerBody>
           ),
         ),
         Container(
-          height: 68,
           color: Colors.white,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           child: SafeArea(
@@ -516,7 +520,8 @@ class _ObjectiveAnswerScreenState extends ConsumerState<_ObjectiveAnswerBody>
                 width: 96,
                 height: 44,
                 child: OutlinedButton(
-                  onPressed: safeCurrent == 0
+                  key: const ValueKey('objective-previous'),
+                  onPressed: submitting || safeCurrent == 0
                       ? null
                       : () => setState(() => current = safeCurrent - 1),
                   style: OutlinedButton.styleFrom(
@@ -539,11 +544,14 @@ class _ObjectiveAnswerScreenState extends ConsumerState<_ObjectiveAnswerBody>
                 child: SizedBox(
                   height: 44,
                   child: FilledButton(
-                    onPressed: safeCurrent < questions.length - 1
-                        ? () => setState(() => current = safeCurrent + 1)
-                        : (submitting
-                            ? null
-                            : () => _submit(context, questions)),
+                    key: const ValueKey('objective-next'),
+                    onPressed: submitting
+                        ? null
+                        : safeCurrent < questions.length - 1
+                            ? () => setState(() => current = safeCurrent + 1)
+                            : (submitting
+                                ? null
+                                : () => _submit(context, questions)),
                     style: FilledButton.styleFrom(
                       padding: EdgeInsets.zero,
                       backgroundColor: const Color(0xFF4C4BEA),
@@ -892,6 +900,8 @@ class ObjectiveReportItem {
     this.submissionId,
     this.selectedAnswers = const [],
     this.correctAnswers = const [],
+    this.explanationMediaType,
+    this.explanationMediaReference,
   });
 
   final String id;
@@ -904,6 +914,7 @@ class ObjectiveReportItem {
   final String? submissionId;
   final List<int> selectedAnswers;
   final List<int> correctAnswers;
+  final String? explanationMediaType, explanationMediaReference;
 
   List<int> get effectiveSelectedAnswers => selectedAnswers.isNotEmpty
       ? selectedAnswers
@@ -930,7 +941,7 @@ class ObjectiveReportScreen extends StatelessWidget {
   const ObjectiveReportScreen({
     super.key,
     required this.answers,
-    this.remoteEnabled = false,
+    this.remoteEnabled = remoteDataDefault,
     this.results,
     this.title = '答题报告',
     this.sessionId,
@@ -1088,6 +1099,7 @@ class _ObjectiveReportView extends StatelessWidget {
       this.serverMaxScore,
       this.serverCorrect,
       this.serverAnswered,
+      this.reportId,
       this.serverSubjectStats = const []});
 
   factory _ObjectiveReportView.fromReport(ObjectiveReport report) {
@@ -1102,12 +1114,16 @@ class _ObjectiveReportView extends StatelessWidget {
               correct: result.correct,
               analysis: result.analysis,
               options: result.options,
+              explanationMediaReference: result.explanationMediaReference,
+              explanationMediaType: result.explanationMediaType,
             ))
         .toList(growable: false);
     return _ObjectiveReportView(
       title: report.title,
       items: items,
       remote: true,
+      reportId: report.id,
+      serverCorrect: report.correct,
       serverScore: report.score,
       serverMaxScore: report.maxScore,
       serverAnswered: report.answered,
@@ -1118,6 +1134,7 @@ class _ObjectiveReportView extends StatelessWidget {
   final String title;
   final List<ObjectiveReportItem> items;
   final bool remote;
+  final String? reportId;
   final int? serverScore;
   final int? serverMaxScore;
   final int? serverCorrect;
@@ -1237,6 +1254,8 @@ class _ObjectiveReportView extends StatelessWidget {
                   options: entry.value.options,
                   analysis: entry.value.analysis,
                   remote: remote,
+                  reportId: reportId,
+                  item: entry.value,
                 )),
           ]),
       bottomNavigationBar: SafeArea(
@@ -1340,6 +1359,8 @@ class _ReviewCard extends StatelessWidget {
     this.options = const [],
     this.analysis,
     this.remote = false,
+    this.reportId,
+    this.item,
   });
 
   final int index;
@@ -1352,6 +1373,8 @@ class _ReviewCard extends StatelessWidget {
   final List<String> options;
   final String? analysis;
   final bool remote;
+  final String? reportId;
+  final ObjectiveReportItem? item;
 
   @override
   Widget build(BuildContext context) {
@@ -1370,58 +1393,122 @@ class _ReviewCard extends StatelessWidget {
         : values.map((value) => String.fromCharCode(65 + value)).join('、');
     final selectedLabel = labels(selectedValues, '未作答');
     final correctLabel = labels(correctValues, '服务端判定');
-    final explanation = analysis ?? '本题考查基本原则与法条适用。';
-    return Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-            color: Colors.white, borderRadius: BorderRadius.circular(8)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(isRight ? Icons.check_circle : Icons.cancel,
-                color:
-                    isRight ? const Color(0xFF5DA765) : const Color(0xFFFF7252),
-                size: 17),
-            const SizedBox(width: 8),
-            Expanded(
-                child: Text(title ?? '关于合同效力与当事人权利的下列说法正确的是…',
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: Color(0xFF171925), fontSize: 13, height: 1.45)))
-          ]),
-          const SizedBox(height: 8),
-          Padding(
-              padding: const EdgeInsets.only(left: 25),
-              child: Row(children: [
-                const Text('你的答案: ',
-                    style: TextStyle(color: Color(0xFF5F6574), fontSize: 12)),
-                Text(selectedLabel,
-                    style: TextStyle(
-                        color: isRight
-                            ? const Color(0xFF5DA765)
-                            : const Color(0xFFFF7252),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600)),
-                const SizedBox(width: 16),
-                const Text('正确答案: ',
-                    style: TextStyle(color: Color(0xFF5F6574), fontSize: 12)),
-                Text(correctLabel,
-                    style: const TextStyle(
-                        color: Color(0xFF5DA765),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600))
-              ])),
-          const SizedBox(height: 8),
-          Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                  color: const Color(0xFFF4F5F7),
-                  borderRadius: BorderRadius.circular(4)),
-              child: Text(remote ? '解析：$explanation' : '解析：$explanation',
-                  style: const TextStyle(
-                      color: Color(0xFF707684), fontSize: 12, height: 1.5)))
-        ]));
+    final explanation =
+        analysis?.trim().isNotEmpty == true ? analysis! : '暂未发布本题解析';
+    return InkWell(
+        key: ValueKey('review-question-$index'),
+        onTap: item == null
+            ? null
+            : () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => _QuestionReviewDetail(
+                        item: item!, reportId: reportId))),
+        child: Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+                color: Colors.white, borderRadius: BorderRadius.circular(8)),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Icon(isRight ? Icons.check_circle : Icons.cancel,
+                    color: isRight
+                        ? const Color(0xFF5DA765)
+                        : const Color(0xFFFF7252),
+                    size: 17),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: Text(title ?? '关于合同效力与当事人权利的下列说法正确的是…',
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Color(0xFF171925),
+                            fontSize: 13,
+                            height: 1.45))),
+                const Icon(Icons.chevron_right, size: 20),
+              ]),
+              const SizedBox(height: 8),
+              Padding(
+                  padding: const EdgeInsets.only(left: 25),
+                  child: Row(children: [
+                    const Text('你的答案: ',
+                        style:
+                            TextStyle(color: Color(0xFF5F6574), fontSize: 12)),
+                    Text(selectedLabel,
+                        style: TextStyle(
+                            color: isRight
+                                ? const Color(0xFF5DA765)
+                                : const Color(0xFFFF7252),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 16),
+                    const Text('正确答案: ',
+                        style:
+                            TextStyle(color: Color(0xFF5F6574), fontSize: 12)),
+                    Text(correctLabel,
+                        style: const TextStyle(
+                            color: Color(0xFF5DA765),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600))
+                  ])),
+              const SizedBox(height: 8),
+              Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFF4F5F7),
+                      borderRadius: BorderRadius.circular(4)),
+                  child: Text(remote ? '解析：$explanation' : '解析：$explanation',
+                      style: const TextStyle(
+                          color: Color(0xFF707684),
+                          fontSize: 12,
+                          height: 1.5))),
+              const SizedBox(height: 8),
+              const Text('点击查看完整解析、微课并提交错因',
+                  style: TextStyle(color: DebaoColors.brand, fontSize: 12)),
+            ])));
   }
+}
+
+class _QuestionReviewDetail extends StatelessWidget {
+  const _QuestionReviewDetail({required this.item, this.reportId});
+  final ObjectiveReportItem item;
+  final String? reportId;
+  String labels(List<int> values) => values.isEmpty
+      ? '未作答'
+      : values.map((i) => String.fromCharCode(65 + i)).join('、');
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+            title: const Text('题目解析'), leading: const DebaoRouteBackButton()),
+        body: ListView(padding: const EdgeInsets.all(20), children: [
+          SelectableText(item.title,
+              style: const TextStyle(fontSize: 18, height: 1.6)),
+          const SizedBox(height: 16),
+          for (final option in item.options.asMap().entries)
+            Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                    '${String.fromCharCode(65 + option.key)}. ${option.value}',
+                    style: const TextStyle(height: 1.5))),
+          Text('你的答案：${labels(item.effectiveSelectedAnswers)}'),
+          Text('正确答案：${labels(item.effectiveCorrectAnswers)}'),
+          const Divider(height: 32),
+          const Text('解析',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          SelectableText(
+              item.analysis?.trim().isNotEmpty == true
+                  ? item.analysis!
+                  : '暂未发布本题解析',
+              style: const TextStyle(height: 1.7)),
+          QuestionMicroLesson(
+              reference: item.explanationMediaReference,
+              type: item.explanationMediaType),
+          const Divider(height: 32),
+          if (reportId != null)
+            SubmitLearningInquiry(reportId: reportId!, questionId: item.id),
+        ]),
+      );
 }

@@ -322,6 +322,8 @@ class HomeRepository {
   final ApiTransport client;
   Future<HomeData> home() async =>
       HomeData.fromJson(await client.getData('/v1/home') as JsonMap);
+  Future<List<JsonMap>> materials() async =>
+      _items(await client.getData('/v1/materials'));
 }
 
 class AiRepository {
@@ -342,6 +344,25 @@ class AiRepository {
 }
 
 class QuestionRepository {
+  Future<List<LearningInquiry>> inquiries() async =>
+      _items(await client.getData('/v1/learning/inquiries'))
+          .map(LearningInquiry.fromJson)
+          .toList(growable: false);
+  Future<LearningInquiry> submitInquiry({
+    required String reportId,
+    required String questionId,
+    required String reason,
+    required String clientRequestId,
+  }) async =>
+      LearningInquiry.fromJson(
+          _map(await client.postData('/v1/learning/inquiries', data: {
+        'reportId': reportId,
+        'questionId': questionId,
+        'reason': reason,
+        'clientRequestId': clientRequestId,
+      })));
+  Future<List<JsonMap>> papers() async =>
+      _items(await client.getData('/v1/question-papers'));
   const QuestionRepository(this.client);
   final ApiTransport client;
   Future<List<Subject>> subjects() async =>
@@ -720,6 +741,17 @@ class CourseRepository {
       _items(await client.getData('/v1/learning/tasks'))
           .map(LearningTask.fromJson)
           .toList(growable: false);
+  Future<List<EarlyAccessRequest>> earlyAccessRequests() async =>
+      _items(await client.getData('/v1/learning/early-access'))
+          .map((item) => EarlyAccessRequest.fromJson(
+              (item['request'] as JsonMap?) ?? <String, dynamic>{}))
+          .where((item) => item.id.isNotEmpty)
+          .toList(growable: false);
+  Future<EarlyAccessRequest> requestEarlyAccess(String planId,
+          {String? reason}) async =>
+      EarlyAccessRequest.fromJson(await client.postData(
+          '/v1/learning/plans/${Uri.encodeComponent(planId)}/early-access',
+          data: {'reason': reason ?? ''}) as JsonMap);
   Future<LearningDiagnosticState> diagnostic() async =>
       LearningDiagnosticState.fromJson(
           await client.getData('/v1/learning/diagnostic') as JsonMap);

@@ -1,3 +1,4 @@
+import '../../core/config/app_environment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -35,7 +36,7 @@ final _announcementsProvider = FutureProvider<List<JsonMap>>(
 );
 
 class AnnouncementListScreen extends StatelessWidget {
-  const AnnouncementListScreen({super.key, this.remoteEnabled = false});
+  const AnnouncementListScreen({super.key, this.remoteEnabled = remoteDataDefault});
 
   final bool remoteEnabled;
 

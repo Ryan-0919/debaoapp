@@ -7,7 +7,7 @@ import {createStore} from '../store.js';
 // Each scenario gets a fresh in-memory fixture, and leaves other tests unchanged.
 async function isolated(run: (base: string) => Promise<void>) {
   const previous = {...store};
-  Object.assign(store, createStore());
+  Object.assign(store, createStore(true));
   try { await withServer(run); } finally { Object.assign(store, previous); }
 }
 

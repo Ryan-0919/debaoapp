@@ -1,3 +1,4 @@
+import '../../core/config/app_environment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,7 +11,7 @@ import 'objective_answer_screen.dart';
 import 'subjective_screens.dart';
 
 class QuestionBankScreen extends StatelessWidget {
-  const QuestionBankScreen({super.key, this.remoteEnabled = false});
+  const QuestionBankScreen({super.key, this.remoteEnabled = remoteDataDefault});
   final bool remoteEnabled;
 
   @override
@@ -122,91 +123,34 @@ class _QuestionBankScreenState extends ConsumerState<_QuestionBankBody> {
 
   Widget _remoteObjectiveBody(List<Subject> subjects) => Column(children: [
         const Opacity(opacity: 0, child: Text('按科目练习')),
-        _panel(
-          title: '历年真题',
-          children: [
-            _settingRow(
-                '年份',
-                GestureDetector(
-                  onTap: _showYearSheet,
-                  child: Row(children: [
-                    Text(selectedYear,
-                        style: const TextStyle(
-                            color: DebaoColors.ink, fontSize: 14)),
-                    const Icon(Icons.expand_more,
-                        size: 16, color: DebaoColors.muted)
-                  ]),
-                )),
-            _settingRow(
-                '卷别',
-                Row(
-                    children: ['卷一', '卷二']
-                        .map((v) => GestureDetector(
-                              onTap: () => setState(() => volume = v),
-                              child: Container(
-                                  margin: const EdgeInsets.only(left: 4),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                      color: volume == v
-                                          ? DebaoColors.brand
-                                          : DebaoColors.page,
-                                      borderRadius: BorderRadius.circular(
-                                          DebaoRadius.sm)),
-                                  child: Text(v,
-                                      style: TextStyle(
-                                          color: volume == v
-                                              ? Colors.white
-                                              : DebaoColors.body,
-                                          fontSize: 12))),
-                            ))
-                        .toList())),
-            Padding(
-              padding: const EdgeInsets.all(DebaoSpacing.lg),
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('$selectedYear年 $volume · 在线组卷',
-                              style: const TextStyle(
-                                  color: DebaoColors.body, fontSize: 13)),
-                          const SizedBox(height: 3),
-                          const Text('题量和判分以服务端返回为准',
-                              style: TextStyle(
-                                  color: DebaoColors.muted, fontSize: 11))
-                        ]),
-                    FilledButton(
-                      onPressed: subjects.isEmpty
-                          ? null
-                          : () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ObjectiveAnswerScreen(
-                                    title: '$selectedYear真题$volume',
-                                    remoteEnabled: true,
-                                    subjectId: subjects.first.id,
-                                  ),
-                                ),
-                              ),
-                      style: FilledButton.styleFrom(
-                          backgroundColor: DebaoColors.brand,
-                          minimumSize: const Size(92, 36),
-                          shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(DebaoRadius.md))),
-                      child: const Text('开始做题', style: TextStyle(fontSize: 13)),
-                    ),
-                  ]),
-            ),
-          ],
-        ),
+        _remotePaperPanel(),
         _panel(
             title: '章节练习',
             subtitle: '选择科目后读取服务端题目',
             children: subjects.map(_remoteSubjectRow).toList()),
       ]);
+
+  Widget _remotePaperPanel() {
+    final state = ref.watch(objectivePapersProvider);
+    return _panel(title: '历年真题', children: [
+      if (state.isLoading)
+        const Padding(padding: EdgeInsets.all(18), child: CircularProgressIndicator())
+      else if (state.hasError)
+        TextButton(onPressed: () => ref.invalidate(objectivePapersProvider), child: const Text('试卷加载失败，点击重试'))
+      else if (state.valueOrNull?.isEmpty ?? true)
+        const Padding(padding: EdgeInsets.all(18), child: Text('暂无已发布试卷'))
+      else
+        ...state.valueOrNull!.map((paper) => ListTile(
+          title: Text('${paper['title'] ?? ''}'),
+          subtitle: Text('${paper['year'] ?? ''} · ${paper['questionCount'] ?? 0}题'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ObjectiveAnswerScreen(
+            title: '${paper['title'] ?? '真题练习'}',
+            remoteEnabled: true, mode: 'year', paperId: '${paper['id']}',
+          ))),
+        )),
+    ]);
+  }
 
   Widget _remoteSubjectiveBody(List<Subject> subjects) => Column(children: [
         _panel(
@@ -225,7 +169,7 @@ class _QuestionBankScreenState extends ConsumerState<_QuestionBankBody> {
       ]);
 
   Widget _remoteSubjectRow(Subject subject) => InkWell(
-        onTap: () => Navigator.push(
+        onTap: subject.questionCount == 0 ? null : () => Navigator.push(
             context,
             MaterialPageRoute(
                 builder: (_) => ObjectiveAnswerScreen(

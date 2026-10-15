@@ -1,3 +1,4 @@
+import '../../core/config/app_environment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +11,8 @@ import '../community/forum_screens.dart';
 import '../courses/courses_screen.dart';
 import '../courses/course_detail_screens.dart';
 import '../tools/study_tools_screens.dart';
+import '../questions/question_bank_screen.dart';
+import '../questions/objective_answer_screen.dart';
 
 const _brand = Color(0xFF4C4BEA);
 const _page = Color(0xFFF4F5F7);
@@ -27,7 +30,7 @@ class HomeScreen extends StatelessWidget {
       this.onOpenCourses,
       this.onOpenForum,
       this.onOpenAnnouncements,
-      this.remoteEnabled = false});
+      this.remoteEnabled = remoteDataDefault});
   final VoidCallback onOpenQuestionBank;
   final VoidCallback? onOpenQuestionRecords;
   final VoidCallback? onOpenNotifications;
@@ -118,10 +121,11 @@ class _HomeScreenState extends ConsumerState<_HomeBody> {
                 ref.invalidate(forumPostsProvider('all'));
               })),
             SliverToBoxAdapter(child: _banner(data)),
-            SliverToBoxAdapter(child: _entries()),
+            SliverToBoxAdapter(child: _entries(data.featureFlags)),
             SliverToBoxAdapter(child: _promo(data.featuredProduct)),
             SliverToBoxAdapter(child: _countdown(data)),
-            SliverToBoxAdapter(child: _courses(context, data)),
+            if (data.featureFlags['hotCourses'] != false)
+              SliverToBoxAdapter(child: _courses(context, data)),
             if (showNotice &&
                 (!widget.remoteEnabled || data.announcements.isNotEmpty))
               SliverToBoxAdapter(child: _notice(data)),
@@ -180,6 +184,12 @@ class _HomeScreenState extends ConsumerState<_HomeBody> {
   }
 
   Widget _header(BuildContext context) {
+    final user = widget.remoteEnabled
+        ? ref.watch(currentUserProvider).valueOrNull
+        : null;
+    final hasUnread = user != null &&
+        (ref.watch(notificationsProvider).valueOrNull ?? const [])
+            .any((item) => !item.read);
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
       decoration: const BoxDecoration(
@@ -218,14 +228,16 @@ class _HomeScreenState extends ConsumerState<_HomeBody> {
                               remoteEnabled: widget.remoteEnabled))),
               icon: Stack(clipBehavior: Clip.none, children: [
                 const Icon(Icons.notifications_none, color: _body, size: 22),
-                Positioned(
-                    top: -1,
-                    right: -1,
-                    child: Container(
-                        width: 6,
-                        height: 6,
-                        decoration: const BoxDecoration(
-                            color: Color(0xFFFF7252), shape: BoxShape.circle))),
+                if (hasUnread || !widget.remoteEnabled)
+                  Positioned(
+                      top: -1,
+                      right: -1,
+                      child: Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                              color: Color(0xFFFF7252),
+                              shape: BoxShape.circle))),
               ]),
               visualDensity: VisualDensity.compact),
         ],
@@ -287,11 +299,8 @@ class _HomeScreenState extends ConsumerState<_HomeBody> {
             remoteBanner != null
                 ? Image.network(image,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Image.asset(
-                        images[bannerIndex.clamp(0, images.length - 1)],
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            const ColoredBox(color: Color(0xFFDDE2EE))))
+                    errorBuilder: (_, __, ___) =>
+                        const ColoredBox(color: Color(0xFFDDE2EE)))
                 : Image.asset(image,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) =>
@@ -351,8 +360,14 @@ class _HomeScreenState extends ConsumerState<_HomeBody> {
     );
   }
 
-  Widget _entries() {
-    final entries = subjective ? _subjectiveEntries : _objectiveEntries;
+  Widget _entries(Map<String, bool> flags) {
+    final base = subjective ? _subjectiveEntries : _objectiveEntries;
+    final entries = base.where((entry) {
+      if (entry.label == '题库' || entry.label == '题库入口') return flags['objectiveBank'] != false;
+      if (entry.label == '考试') return flags['objectiveExam'] != false;
+      if (entry.label == '学习资料') return flags['studyMaterials'] != false;
+      return true;
+    }).toList();
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 16),
@@ -369,33 +384,41 @@ class _HomeScreenState extends ConsumerState<_HomeBody> {
                             MaterialPageRoute(
                                 builder: (_) => AIChatScreen(
                                     remoteEnabled: widget.remoteEnabled)))
-                        : entry.label == '做题记录'
-                            ? (widget.onOpenQuestionRecords ??
-                                () => Navigator.push(
+                        : entry.label == '题库' || entry.label == '题库入口'
+                            ? () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => QuestionBankScreen(
+                                        remoteEnabled: widget.remoteEnabled)))
+                            : entry.label == '考试'
+                                ? () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                        builder: (_) => QuestionRecordsScreen(
+                                        builder: (_) => ObjectiveExamListScreen(
                                             remoteEnabled:
-                                                widget.remoteEnabled))))
-                            : entry.label == '我的课程' || entry.label == '课程'
-                                ? (widget.onOpenCourses ??
-                                    () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) => CoursesScreen(
-                                                remoteEnabled:
-                                                    widget.remoteEnabled))))
-                                : entry.label == '批改'
+                                                widget.remoteEnabled)))
+                                : entry.label == '学习资料'
                                     ? () => Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                            builder: (_) => GradingServiceScreen(
-                                                remoteEnabled:
-                                                    widget.remoteEnabled)))
-                                    : entry.label == '法条检索'
-                                        ? () =>
-                                            Navigator.push(context, MaterialPageRoute(builder: (_) => LawSearchScreen(remoteEnabled: widget.remoteEnabled)))
-                                        : null,
+                                            builder: (_) =>
+                                                StudyMaterialsScreen(
+                                                    remoteEnabled:
+                                                        widget.remoteEnabled)))
+                                    : entry.label == '做题记录'
+                                        ? (widget.onOpenQuestionRecords ??
+                                            () => Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        QuestionRecordsScreen(remoteEnabled: widget.remoteEnabled))))
+                                        : entry.label == '我的课程' || entry.label == '课程'
+                                            ? (widget.onOpenCourses ?? () => Navigator.push(context, MaterialPageRoute(builder: (_) => CoursesScreen(remoteEnabled: widget.remoteEnabled))))
+                                            : entry.label == '批改'
+                                                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => GradingServiceScreen(remoteEnabled: widget.remoteEnabled)))
+                                                : entry.label == '法条检索'
+                                                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => LawSearchScreen(remoteEnabled: widget.remoteEnabled)))
+                                                    : null,
                     child: SizedBox(
                         width: 64,
                         height: 76,
@@ -436,9 +459,11 @@ class _HomeScreenState extends ConsumerState<_HomeBody> {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
       child: Stack(fit: StackFit.expand, children: [
-        Image.asset('assets/images/home-banner-library.jpg',
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const ColoredBox(color: _brand)),
+        widget.remoteEnabled
+            ? const ColoredBox(color: _brand)
+            : Image.asset('assets/images/home-banner-library.jpg',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const ColoredBox(color: _brand)),
         const DecoratedBox(
             decoration: BoxDecoration(
                 gradient: LinearGradient(colors: [
@@ -454,7 +479,7 @@ class _HomeScreenState extends ConsumerState<_HomeBody> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                    Text('限时特惠 · 倒计时 3 天',
+                    Text(widget.remoteEnabled ? '课程推荐' : '限时特惠 · 倒计时 3 天',
                         style:
                             TextStyle(color: Color(0xCCFFFFFF), fontSize: 11)),
                     SizedBox(height: 3),
@@ -464,7 +489,12 @@ class _HomeScreenState extends ConsumerState<_HomeBody> {
                             fontSize: 15,
                             fontWeight: FontWeight.w700)),
                     SizedBox(height: 3),
-                    Text('主客一体 · 名师精讲 · 含批改服务',
+                    Text(
+                        widget.remoteEnabled
+                            ? (featuredProduct?.benefits.isNotEmpty == true
+                                ? featuredProduct!.benefits.join(' · ')
+                                : '暂无已配置商品推荐')
+                            : '主客一体 · 名师精讲 · 含批改服务',
                         style:
                             TextStyle(color: Color(0xB3FFFFFF), fontSize: 11))
                   ])),
@@ -621,12 +651,20 @@ class _HomeScreenState extends ConsumerState<_HomeBody> {
                         ClipRRect(
                           borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(8)),
-                          child: Image.asset(cover,
-                              height: 88,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  const ColoredBox(color: Color(0xFFDDE2EE))),
+                          child: widget.remoteEnabled
+                              ? const SizedBox(
+                                  height: 88,
+                                  width: double.infinity,
+                                  child: ColoredBox(
+                                      color: Color(0xFFE5E7ED),
+                                      child: Icon(Icons.menu_book_outlined)))
+                              : Image.asset(cover,
+                                  height: 88,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      const ColoredBox(
+                                          color: Color(0xFFDDE2EE))),
                         ),
                         Padding(
                           padding: const EdgeInsets.all(10),
@@ -973,8 +1011,10 @@ class _Entry {
 
 const _objectiveEntries = <_Entry>[
   _Entry(Icons.play_circle_outline, '我的课程', Color(0xFFF0F0FF), _brand),
+  _Entry(Icons.menu_book_outlined, '题库入口', Color(0xFFEDF5FF), Color(0xFF1A5FA8)),
+  _Entry(Icons.fact_check_outlined, '考试', Color(0xFFFFF1E8), Color(0xFFD2691E)),
   _Entry(
-      Icons.assignment_outlined, '做题记录', Color(0xFFEDF5FF), Color(0xFF1A5FA8)),
+      Icons.folder_open_outlined, '学习资料', Color(0xFFEAF7F7), Color(0xFF1A8B8B)),
   _Entry(Icons.error_outline, '错题本', Color(0xFFFFF1E8), Color(0xFFD2691E)),
   _Entry(Icons.star_border, '收藏夹', Color(0xFFFFF5DD), Color(0xFFA87000)),
   _Entry(
@@ -985,9 +1025,138 @@ const _subjectiveEntries = <_Entry>[
   _Entry(Icons.play_circle_outline, '课程', Color(0xFFF0F0FF), _brand),
   _Entry(Icons.balance_outlined, '法条检索', Color(0xFFEAF7F7), Color(0xFF1A8B8B)),
   _Entry(
-      Icons.assignment_outlined, '做题记录', Color(0xFFEDF5FF), Color(0xFF1A5FA8)),
+      Icons.folder_open_outlined, '学习资料', Color(0xFFEAF7F7), Color(0xFF1A8B8B)),
   _Entry(Icons.star_border, '收藏夹', Color(0xFFFFF5DD), Color(0xFFA87000)),
   _Entry(Icons.edit_note, '批改', Color(0xFFFFF1E8), Color(0xFFD2691E)),
   _Entry(
       Icons.chat_bubble_outline, 'AI答疑', Color(0xFFEAF6EF), Color(0xFF1A8B8B)),
 ];
+
+class ObjectiveExamListScreen extends ConsumerWidget {
+  const ObjectiveExamListScreen({super.key, this.remoteEnabled = true});
+  final bool remoteEnabled;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = remoteEnabled
+        ? ref.watch(objectivePapersProvider)
+        : const AsyncValue<List<JsonMap>>.data([]);
+    return Scaffold(
+        appBar: AppBar(title: const Text('客观题考试')),
+        body: state.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => Center(child: Text('考试内容暂时不可用：$error')),
+          data: (items) => items.isEmpty
+              ? const Center(child: Text('暂无已发布考试'))
+              : ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: items.map((paper) {
+                    final advanced = paper['mode'] == 'advanced';
+                    return Card(
+                        child: ListTile(
+                            leading: Icon(advanced
+                                ? Icons.lock_outline
+                                : Icons.fact_check_outlined),
+                            title: Text('${paper['title'] ?? '客观题考试'}'),
+                            subtitle: Text(
+                                '${advanced ? '进阶考试 · 付费' : paper['mode'] == 'marketing' ? '营销考试' : '公开考试'} · ${paper['questionCount'] ?? 0}题'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => ObjectiveAnswerScreen(
+                                        title: '${paper['title'] ?? '客观题考试'}',
+                                        remoteEnabled: remoteEnabled,
+                                        mode: 'exam',
+                                        paperId: '${paper['id']}')))));
+                  }).toList()),
+        ));
+  }
+}
+
+class StudyMaterialsScreen extends StatelessWidget {
+  const StudyMaterialsScreen({super.key, this.remoteEnabled = true});
+  final bool remoteEnabled;
+  @override
+  Widget build(BuildContext context) =>
+      ProviderScope(child: _StudyMaterialsBody(remoteEnabled: remoteEnabled));
+}
+
+class _StudyMaterialsBody extends ConsumerStatefulWidget {
+  const _StudyMaterialsBody({required this.remoteEnabled});
+  final bool remoteEnabled;
+
+  @override
+  ConsumerState<_StudyMaterialsBody> createState() => _StudyMaterialsBodyState();
+}
+
+class _StudyMaterialsBodyState extends ConsumerState<_StudyMaterialsBody> {
+  String _selectedCategory = '全部';
+
+  @override
+  Widget build(BuildContext context) {
+    final state = widget.remoteEnabled
+        ? ref.watch(studyMaterialsProvider)
+        : const AsyncValue<List<JsonMap>>.data([]);
+    return Scaffold(
+      appBar: AppBar(title: const Text('学习资料')),
+      body: state.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('资料暂时不可用：$e')),
+        data: (items) {
+          if (items.isEmpty) return const Center(child: Text('暂无已发布学习资料'));
+          final categories = <String>{
+            '全部',
+            ...items.map((item) => '${item['category'] ?? '未分类'}')
+          };
+          final filtered = _selectedCategory == '全部'
+              ? items
+              : items.where((item) => '${item['category'] ?? '未分类'}' == _selectedCategory).toList();
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Wrap(
+                  spacing: 8,
+                  children: categories
+                      .map((category) => ChoiceChip(
+                            label: Text(category),
+                            selected: category == _selectedCategory,
+                            onSelected: (_) => setState(() => _selectedCategory = category),
+                          ))
+                      .toList()),
+              if (filtered.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: Text('该分类暂无资料')),
+                ),
+              ...filtered
+                  .map((item) => Card(
+                          child: ListTile(
+                        leading: const Icon(Icons.article_outlined),
+                        title: Text('${item['title'] ?? ''}'),
+                        subtitle: Text(
+                            '${item['category'] ?? '未分类'} · ${item['kind'] == 'article' ? '文章不可下载' : item['downloadable'] == true ? '资料可下载' : '资料在线查看'}'),
+                        onTap: () => showDialog<void>(
+                            context: context,
+                            builder: (_) => AlertDialog(
+                                  title: Text('${item['title'] ?? ''}'),
+                                  content: Text(item['kind'] == 'article' &&
+                                          '${item['content'] ?? ''}'
+                                              .trim()
+                                              .isNotEmpty
+                                      ? '${item['content']}'
+                                      : '该资料由后台上传，当前支持在线查看。\n\n${item['reference'] ?? ''}'),
+                                  actions: [
+                                    TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('关闭'))
+                                  ],
+                                )),
+                      )))
+                  .toList()
+            ],
+          );
+        },
+      ),
+    );
+  }
+}

@@ -70,6 +70,8 @@ export default function LearningAdminLayout() {
                       "/learning-admin/question-bank/objective",
                     )
                   ? "/learning-admin/question-bank/objective/subjects"
+                  : location.pathname.startsWith("/learning-admin/inquiries")
+                    ? "/learning-admin/inquiries"
                   : location.pathname.startsWith("/learning-admin/cards")
                     ? "/learning-admin/cards"
                     : "/learning-admin/classes",
@@ -120,7 +122,12 @@ export default function LearningAdminLayout() {
               key: "/learning-admin/content-management",
               icon: <IdcardOutlined />,
               label: "学习内容",
-              children: [{ key: "/learning-admin/cards", label: "卡片管理" }],
+              children: [
+                { key: "/learning-admin/cards", label: "卡片管理" },
+                { key: "/learning-admin/inquiries", label: "学员错因答疑" },
+                { key: "/learning-admin/assessment-papers", label: "单科测试试卷" },
+                { key: "/learning-admin/early-access", label: "提前学习申请" },
+              ],
             },
             {
               key: "/learning-admin/class-management",

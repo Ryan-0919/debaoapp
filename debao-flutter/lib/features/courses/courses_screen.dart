@@ -1,10 +1,11 @@
+import '../../core/config/app_environment.dart';
+import '../learning/learning_inquiries_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design_tokens.dart';
 import '../../data/models.dart';
 import '../../data/providers.dart';
-import '../../shared/debao_components.dart';
 import '../questions/objective_answer_screen.dart';
 import '../learning/learning_center_screens.dart';
 import '../learning/learning_card_deck.dart';
@@ -288,7 +289,7 @@ class _CardStudyPage extends StatelessWidget {
 }
 
 class CoursesScreen extends StatelessWidget {
-  const CoursesScreen({super.key, this.remoteEnabled = false});
+  const CoursesScreen({super.key, this.remoteEnabled = remoteDataDefault});
   final bool remoteEnabled;
 
   @override
@@ -314,6 +315,32 @@ class _CoursesScreenState extends ConsumerState<_CoursesScreenBody> {
   final checkedInSessionIds = <String>{};
   final completedCardSessionIds = <String>{};
   bool diagnosticPromptShown = false;
+  String taskFilter = '全部';
+
+  Widget _inquiryEntry() {
+    final inquiries = widget.remoteEnabled
+        ? ref.watch(learningInquiriesProvider).valueOrNull
+        : null;
+    final waiting =
+        inquiries?.where((item) => item.status == 'pending').length ?? 0;
+    final answered =
+        inquiries?.where((item) => item.status == 'answered').length ?? 0;
+    return ListTile(
+      key: const ValueKey('learning-my-inquiries'),
+      leading:
+          const Icon(Icons.question_answer_outlined, color: DebaoColors.brand),
+      title: const Text('我的答疑'),
+      subtitle: Text(
+          inquiries == null ? '查看错因提问和老师回复' : '$waiting 条待回复 · $answered 条已回复'),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () async {
+        ref.invalidate(learningInquiriesProvider);
+        await Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const LearningInquiriesScreen()));
+        ref.invalidate(learningInquiriesProvider);
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -369,7 +396,10 @@ class _CoursesScreenState extends ConsumerState<_CoursesScreenBody> {
   @override
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: DebaoColors.page,
-        body: widget.remoteEnabled ? _remoteCalendarBody() : _calendarBody(),
+        body: SafeArea(
+          bottom: false,
+          child: widget.remoteEnabled ? _remoteCalendarBody() : _calendarBody(),
+        ),
       );
 
   Widget _remoteCalendarBody() {
@@ -383,10 +413,23 @@ class _CoursesScreenState extends ConsumerState<_CoursesScreenBody> {
     }
     final tasks = remote.asData?.value ?? const <LearningTask>[];
     final sessionsByDate = _remoteSessionsByDate(tasks);
-    final sessions = sessionsByDate[selectedKey] ?? const <_Session>[];
+    final allSessions = sessionsByDate[selectedKey] ?? const <_Session>[];
+    final sessions = allSessions
+        .where((item) =>
+            taskFilter == '全部' ||
+            switch (taskFilter) {
+              '课程' => item.type == _SessionType.main ||
+                  item.type == _SessionType.supplement,
+              '卡片' => item.type == _SessionType.card,
+              '题目' => item.type == _SessionType.practice,
+              _ => true,
+            })
+        .toList();
     if (tasks.isEmpty) {
       return ListView(padding: const EdgeInsets.only(bottom: 24), children: [
         _remoteCalendarHeader(),
+        _inquiryEntry(),
+        _taskFilters(),
         _groupEmpty('暂无学习日历数据'),
       ]);
     }
@@ -395,6 +438,8 @@ class _CoursesScreenState extends ConsumerState<_CoursesScreenBody> {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           _remoteCalendarHeader(),
+          _inquiryEntry(),
+          _taskFilters(),
           _remoteWeekStrip(sessionsByDate),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 13, 16, 8),
@@ -416,6 +461,29 @@ class _CoursesScreenState extends ConsumerState<_CoursesScreenBody> {
             ...sessions.map(_sessionCard),
         ]);
   }
+
+  Widget _taskFilters() => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Wrap(spacing: 8, children: [
+        for (final label in ['课程', '卡片', '题目', '全部'])
+          ChoiceChip(
+              label: Text(label),
+              selected: taskFilter == label,
+              onSelected: (_) => setState(() => taskFilter = label)),
+        if (taskFilter == '题目')
+          ActionChip(
+            key: const ValueKey('question-tab-my-inquiries'),
+            avatar: const Icon(Icons.question_answer_outlined, size: 16),
+            label: const Text('我的答疑'),
+            onPressed: () {
+              ref.invalidate(learningInquiriesProvider);
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const LearningInquiriesScreen()));
+            },
+          ),
+      ]));
 
   Widget _remoteWeekStrip(Map<String, List<_Session>> sessionsByDate) {
     final days = _weekFor(selectedKey);
@@ -482,7 +550,7 @@ class _CoursesScreenState extends ConsumerState<_CoursesScreenBody> {
                   quickFilter = null;
                 }),
                 child: SizedBox(
-                  height: 65,
+                  height: 76,
                   child: Column(children: [
                     Text(weekday,
                         style: const TextStyle(
@@ -534,6 +602,7 @@ class _CoursesScreenState extends ConsumerState<_CoursesScreenBody> {
   Map<String, List<_Session>> _remoteSessionsByDate(List<LearningTask> tasks) {
     final grouped = <String, List<_Session>>{};
     for (final task in tasks) {
+      if (task.contentType == 'live') continue;
       final type = switch (task.contentType) {
         'course' => _SessionType.main,
         'card' => _SessionType.card,
@@ -629,6 +698,8 @@ class _CoursesScreenState extends ConsumerState<_CoursesScreenBody> {
     } else if (quickFilter == _QuickFilter.tomorrow) {
       sessions = _schedule[_tomorrow] ?? const <_Session>[];
     }
+    sessions =
+        sessions.where((session) => session.type != _SessionType.live).toList();
 
     return ListView(
       key: const ValueKey('courses-calendar-scroll'),
@@ -1526,27 +1597,6 @@ class _CoursesScreenState extends ConsumerState<_CoursesScreenBody> {
                     onTap: () => _open(AudioPlayerScreen(
                         courseId: 'c1', remoteEnabled: widget.remoteEnabled))),
               ]),
-              _sectionLabel('直播课程'),
-              _courseGroup([
-                _mediaCard(
-                    kind: 'live',
-                    title: '民法精讲第18讲：物权变动',
-                    detail: '张明远主讲 · 今日 19:00',
-                    action: '进入直播间',
-                    onTap: () => _open(LiveCourseScreen(
-                        courseId: 'c3',
-                        remoteEnabled: widget.remoteEnabled,
-                        title: '民法精讲第18讲：物权变动'))),
-                _mediaCard(
-                    kind: 'live',
-                    title: '法考直播冲刺班（考前30天）',
-                    detail: '多位名师主讲 · 09月01日 开课',
-                    action: '预约提醒',
-                    onTap: () => _open(LiveCourseScreen(
-                        courseId: 'c3',
-                        remoteEnabled: widget.remoteEnabled,
-                        title: '法考直播冲刺班（考前30天）'))),
-              ]),
               _sectionLabel('已完成'),
               _groupEmpty('暂无已完成课程'),
             ],
@@ -1558,15 +1608,13 @@ class _CoursesScreenState extends ConsumerState<_CoursesScreenBody> {
     final video = <Course>[];
     final training = <Course>[];
     final audio = <Course>[];
-    final live = <Course>[];
     final completed = <Course>[];
     for (final course in courses) {
       final kind = course.type.toLowerCase();
+      if (kind.contains('live') || kind.contains('直播')) continue;
       if (course.progress >= 100) completed.add(course);
       if (kind.contains('audio') || kind.contains('音频')) {
         audio.add(course);
-      } else if (kind.contains('live') || kind.contains('直播')) {
-        live.add(course);
       } else if (kind.contains('practice') ||
           kind.contains('training') ||
           kind.contains('专项') ||
@@ -1593,11 +1641,6 @@ class _CoursesScreenState extends ConsumerState<_CoursesScreenBody> {
         _groupEmpty('暂无音频课程')
       else
         _courseGroup(audio.map(_remoteAudioCard).toList(growable: false)),
-      _sectionLabel('直播课程'),
-      if (live.isEmpty)
-        _groupEmpty('暂无直播课程')
-      else
-        _courseGroup(live.map(_remoteLiveCard).toList(growable: false)),
       _sectionLabel('已完成'),
       if (completed.isEmpty)
         _groupEmpty('暂无已完成课程')
@@ -1638,17 +1681,6 @@ class _CoursesScreenState extends ConsumerState<_CoursesScreenBody> {
         action: '继续收听',
         onTap: () => _open(AudioPlayerScreen(
             courseId: course.id, remoteEnabled: widget.remoteEnabled)),
-      );
-
-  Widget _remoteLiveCard(Course course) => _mediaCard(
-        kind: 'live',
-        title: course.title,
-        detail: course.teacher.isEmpty ? '服务端直播课程' : course.teacher,
-        action: '查看课程',
-        onTap: () => _open(LiveCourseScreen(
-            courseId: course.id,
-            title: course.title,
-            remoteEnabled: widget.remoteEnabled)),
       );
 
   Widget _remoteError(String error) => Center(
@@ -1730,7 +1762,8 @@ class _CoursesScreenState extends ConsumerState<_CoursesScreenBody> {
             style: const TextStyle(color: DebaoColors.muted, fontSize: 13)),
       );
 
-  Widget _recordedCard(_RecordedCourse course, {bool remoteEnabled = false}) =>
+  Widget _recordedCard(_RecordedCourse course,
+          {bool remoteEnabled = remoteDataDefault}) =>
       Container(
         key: ValueKey('courses-recorded-${course.id}'),
         padding: const EdgeInsets.all(15),
@@ -1842,7 +1875,7 @@ class _CoursesScreenState extends ConsumerState<_CoursesScreenBody> {
     int? progress,
     required bool added,
     String? courseId,
-    bool remoteEnabled = false,
+    bool remoteEnabled = remoteDataDefault,
   }) {
     final addKey = ValueKey('courses-training-add-$name');
     return Container(

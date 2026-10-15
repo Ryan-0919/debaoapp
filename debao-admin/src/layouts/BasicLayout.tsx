@@ -12,7 +12,7 @@ const menuItems: NavigationItem[] = [
     {key: '/content/subjects', label: '科目章节'}, {key: '/content/questions', label: '题目管理'}, {key: '/content/papers', label: '试卷管理'}, {key: '/content/imports', label: '题库批量导入'}, {key: '/content/laws', label: '法条管理'},
   ]},
     {key: 'learning', label: '课程与学习', icon: <PlayCircleOutlined />, children: [
-    {key: '/courses/audio', label: '音频课程库'}, {key: '/courses/video', label: '视频课程库'}, {key: '/courses', label: '课程管理'}, {key: '/courses/live-sessions', label: '直播排期'}, {key: '/learning/records', label: '学习记录'}, {key: '/learning/plans', label: '学习计划'},
+    {key: '/courses/audio', label: '音频课程库'}, {key: '/courses/video', label: '视频课程库'}, {key: '/courses', label: '课程管理'}, {key: '/courses/live-sessions', label: '直播排期'}, {key: '/learning/records', label: '学习记录'}, {key: '/learning/plans', label: '学习计划'}, {key: '/learning/inquiries', label: '学员错因答疑'},
   ]},
   {key: 'commerce', label: '商城交易', icon: <ShoppingOutlined />, children: [
     {key: '/commerce/products', label: '商品管理'}, {key: '/commerce/orders', label: '订单管理'}, {key: '/commerce/refunds', label: '退款售后'}, {key: '/commerce/entitlements', label: '权益记录'},

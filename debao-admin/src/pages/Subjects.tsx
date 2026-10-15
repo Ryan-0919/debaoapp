@@ -2,7 +2,7 @@ import {EditOutlined, EyeOutlined, ReloadOutlined} from '@ant-design/icons';
 import {Button, Empty, Form, Input, Modal, Space, Table, Tabs, Tag, Typography, message} from 'antd';
 import {useCallback, useEffect, useState} from 'react';
 import {useNavigate, useSearchParams} from 'react-router-dom';
-import {getAdminSubjects, updateAdminSubject, type AdminSubject} from '@/services/api';
+import {createAdminSubject, getAdminSubjects, updateAdminSubject, type AdminSubject} from '@/services/api';
 
 type QuestionCategory = 'objective' | 'subjective';
 
@@ -21,6 +21,7 @@ export default function Subjects() {
   const [items, setItems] = useState<AdminSubject[]>([]);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<AdminSubject>();
+  const [creating, setCreating] = useState(false);
   const [form] = Form.useForm<{name: string}>();
   const activeType: QuestionCategory = searchParams.get('type') === 'subjective' ? 'subjective' : 'objective';
 
@@ -43,11 +44,13 @@ export default function Subjects() {
   };
 
   const saveSubject = async ({name}: {name: string}) => {
-    if (!editing) return;
+    if (!editing && !creating) return;
     try {
-      await updateAdminSubject(editing.id, {name});
+      if (editing) await updateAdminSubject(editing.id, {name});
+      else await createAdminSubject({name});
       message.success('科目名称已保存');
       setEditing(undefined);
+      setCreating(false);
       await load();
     } catch (error) {
       message.error(error instanceof Error ? error.message : '保存失败');
@@ -122,7 +125,10 @@ export default function Subjects() {
           <Typography.Title level={4} style={{margin: 0}}>科目、章节与考点</Typography.Title>
           <Typography.Text type="secondary">客观题与主观题使用独立目录，进入科目详情管理章节和考点。</Typography.Text>
         </div>
-        <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>刷新</Button>
+        <Space>
+          <Button type="primary" onClick={() => {form.resetFields(); setCreating(true);}}>新增科目</Button>
+          <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>刷新</Button>
+        </Space>
       </div>
       <Tabs
         activeKey={activeType}
@@ -133,9 +139,9 @@ export default function Subjects() {
         ]}
       />
       <Modal
-        title="编辑科目名称"
-        open={Boolean(editing)}
-        onCancel={() => setEditing(undefined)}
+        title={creating ? '新增科目' : '编辑科目名称'}
+        open={Boolean(editing) || creating}
+        onCancel={() => {setEditing(undefined); setCreating(false);}}
         onOk={() => form.submit()}
         okText="保存"
         destroyOnClose

@@ -95,7 +95,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 20));
 
-    expect(find.text('开发环境验证码已返回，请确认后登录。'), findsOneWidget);
+    expect(find.text('验证码已发送，请查收短信。'), findsOneWidget);
+    expect(tester.widget<TextField>(find.byType(TextField).at(1)).controller!.text, isEmpty);
+    await tester.enterText(find.byType(TextField).at(1), '123456');
     await tester.tap(find.text('手机号登录'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 20));

@@ -1,3 +1,4 @@
+import '../../core/config/app_environment.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -13,7 +14,7 @@ const _page = Color(0xFFF4F5F7);
 const _muted = Color(0xFF707684);
 
 class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key, this.remoteEnabled = false});
+  const LoginScreen({super.key, this.remoteEnabled = remoteDataDefault});
 
   final bool remoteEnabled;
 
@@ -313,13 +314,8 @@ class _LoginBodyState extends ConsumerState<_LoginBody> {
         setState(() => error = '验证码服务暂不可用，请稍后重试。');
         return;
       }
-      if (result.developmentCode?.isNotEmpty == true) {
-        code.text = result.developmentCode!;
-      }
       _startCountdown(result.expiresIn > 0 ? 60 : 0);
-      setState(() => error = result.developmentCode == null
-          ? '验证码已发送，请查收短信。'
-          : '开发环境验证码已返回，请确认后登录。');
+      setState(() => error = '验证码已发送，请查收短信。');
     } catch (value) {
       if (mounted) setState(() => error = _errorMessage(value));
     } finally {
@@ -350,6 +346,11 @@ class _LoginBodyState extends ConsumerState<_LoginBody> {
             code.text,
             deviceId: _deviceId,
           );
+      ref.invalidate(currentUserProvider);
+      ref.invalidate(coursesProvider);
+      ref.invalidate(ordersProvider);
+      ref.invalidate(homeDataProvider);
+      ref.invalidate(learningTasksProvider);
       if (!mounted) return;
       setState(() => busy = false);
       final router = GoRouter.maybeOf(context);

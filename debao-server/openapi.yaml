@@ -8,6 +8,62 @@ servers:
 security:
   - bearerAuth: []
 paths:
+  /learning/inquiries:
+    get:
+      summary: List the current learner's question inquiries and teacher replies
+      responses:
+        '200': {description: User-scoped inquiry list}
+        '401': {description: Authentication required}
+    post:
+      summary: Submit a wrong-answer reason or question from an owned submitted report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reportId, questionId, reason, clientRequestId]
+              properties:
+                reportId: {type: string}
+                questionId: {type: string}
+                reason: {type: string, minLength: 2, maxLength: 5000}
+                clientRequestId: {type: string, minLength: 1, maxLength: 200}
+      responses:
+        '201': {description: Inquiry saved with immutable question snapshot}
+        '200': {description: Existing inquiry for this clientRequestId}
+        '404': {description: Report or question not owned by current learner}
+        '409': {description: Idempotency key reused with different content}
+        '422': {description: Invalid inquiry}
+  /admin/learning-inquiries:
+    get:
+      security: [{cookieAuth: []}]
+      summary: Learning teachers list learner inquiries
+      description: Requires learning.questions.read permission.
+      responses:
+        '200': {description: Inquiry workbench records}
+        '403': {description: Permission denied}
+  /admin/learning-inquiries/{id}/reply:
+    post:
+      security: [{cookieAuth: []}]
+      summary: Save a teacher reply visible in the learner's My Inquiries
+      description: Requires learning.questions.write permission. Reply is audited.
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - {name: x-csrf-token, in: header, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [teacherName, reply]
+              properties:
+                teacherName: {type: string, minLength: 1, maxLength: 80}
+                reply: {type: string, minLength: 2, maxLength: 10000}
+      responses:
+        '200': {description: Reply persisted and inquiry marked answered}
+        '403': {description: Permission denied or invalid CSRF token}
+        '404': {description: Inquiry not found}
   /learning-question-media/{file}:
     get:
       security: []
@@ -1685,7 +1741,7 @@ paths:
       responses: {'200': {description: Paper list}, '401': {description: Admin authentication required}}
     post:
       security: [{cookieAuth: []}]
-      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [name, year, questionKind, totalScore], properties: {name: {type: string}, year: {type: string}, questionKind: {type: string, enum: [objective, subjective]}, subjectId: {type: string}, volume: {type: string}, mode: {type: string, enum: [real, mock, chapter]}, durationMinutes: {type: integer}, totalScore: {type: integer}, questionIds: {type: array, items: {type: string}}}}}}}
+      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [name, year, questionKind, totalScore], properties: {name: {type: string}, year: {type: string}, questionKind: {type: string, enum: [objective, subjective]}, subjectId: {type: string}, productId: {type: string, description: "进阶考试绑定的付费商品 ID"}, volume: {type: string}, mode: {type: string, enum: [real, mock, chapter, marketing, advanced]}, durationMinutes: {type: integer}, totalScore: {type: integer}, questionIds: {type: array, items: {type: string}}}}}}}
       responses: {'201': {description: Draft paper created}, '401': {description: Admin authentication required}, '403': {description: Forbidden}}
   /admin/content/papers/{id}:
     patch:
